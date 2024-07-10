@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/10 16:13:23 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/10 16:59:15 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h> // inet_addr allowed?
 #include <unistd.h>
+#include <poll.h>
 
 int	return_error(std::string message)
 {
@@ -41,7 +42,7 @@ int main(int argc, char *argv[])
 	std::string ip_address = "127.0.0.1";
 
 
-	// Set server socket and address, bind socket to address, turn on listen
+	// Set server socket and address, 
 	int serverSocketFD = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverSocketFD == -1)
 		return_error("Failed to open server socket");
@@ -49,6 +50,15 @@ int main(int argc, char *argv[])
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_port = htons(port);
 	serverAddress.sin_addr.s_addr = inet_addr(ip_address.c_str());
+
+	// Setup poll
+	// pollfd pollFDs[2];
+	// pollFDs[0].fd = serverSocketFD;
+	// pollFDs[1].fd = serverSocketFD;
+	// pollFDs[0].events = POLLIN;
+	// pollFDs[1].events = POLLIN;
+
+	// Bind socket to address, turn on listen
 	if (bind(serverSocketFD, (sockaddr*) &serverAddress, sizeof(serverAddress)) == -1)
 		return_error("bind failed");
 	if (listen(serverSocketFD, 5) == -1)
@@ -63,12 +73,12 @@ int main(int argc, char *argv[])
 		int connectionSocketFD = accept(serverSocketFD, (sockaddr*) &connectionAddress, &connectionAddressLen);
 		if (connectionSocketFD == -1)
 			return_error("Failed to open connection socket");
-		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << "\n";
+		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
 		// Read client message
 		char clientMessageBuffer[1024] = {};
 		if (read(connectionSocketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
-			return_error("recv failed");
+			return_error("Reading client message failed");
 		std::cout << clientMessageBuffer << "\n";
 
 		// Build response from file
