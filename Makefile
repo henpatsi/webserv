@@ -6,7 +6,7 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/10 11:44:03 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/07/10 13:00:25 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -37,3 +37,7 @@ fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
+
+test:
+	make
+	./webserv confs/1.conf
