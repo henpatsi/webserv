@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/11 16:01:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/11 16:46:39 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@
 #include <arpa/inet.h> // inet_addr allowed?
 #include <unistd.h>
 #include <poll.h>
+
+#include "HttpRequest.hpp"
 
 int	return_error(std::string message)
 {
@@ -77,10 +79,7 @@ int main(int argc, char *argv[])
 		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
 		// Read client message
-		char clientMessageBuffer[1024] = {};
-		if (read(connectionSocketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
-			return_error("Reading client message failed");
-		std::cout << clientMessageBuffer << "\n";
+		HttpRequest request = HttpRequest(connectionSocketFD);
 
 		// Build response from file
 		std::string responseFilename = "./html/index.html";

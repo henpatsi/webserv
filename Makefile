@@ -6,19 +6,19 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/10 13:00:25 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/07/11 16:42:13 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = webserv
 
-SOURCES = ${addsuffix .cpp, ${addprefix ./srcs/, main}}
+CLASSES = HttpRequest
+
+SOURCES = ${addsuffix .cpp, ${addprefix ./srcs/, main $(CLASSES)}}
 
 OBJECTS = ${SOURCES:.cpp=.o}
 
-#INCLUDES = 
-
-FLAGS = -Wall -Wextra -Werror -std=c++11
+FLAGS = -Wall -Wextra -Werror -std=c++11 -I ./includes
 
 COMP = c++ $(FLAGS)
 
