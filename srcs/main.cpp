@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/12 08:25:46 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/12 08:59:48 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,20 +103,35 @@ int main(int argc, char *argv[])
 		// Parse request into HttpRequest object
 		HttpRequest request = HttpRequest(requestMessageString);
 
-		// Build response from file
-		std::string responseFilename = "./html/index.html";
-		std::ifstream responseFile;
-		responseFile.open(responseFilename);
-		if (!configFile.is_open())
-			return_error("Failed to open file: " + responseFilename);
-		std::string response = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n";
-		std::string line;
-		while (responseFile.good())
+		// Build response
+		std::string response;
+		if (request.getMethod() == "GET")
 		{
-			std::getline(responseFile, line);
-			if ((responseFile.rdstate() & std::ios_base::badbit) != 0)
-				return_error("Reading response failed");
-			response += line + "\n";
+			std::string responseFilename;
+			if (request.getResourcePath() == "/")
+				responseFilename = "./html/index.html";
+			else
+				responseFilename = "./html/404.html";
+
+			std::ifstream responseFile;
+			responseFile.open(responseFilename);
+			if (!configFile.is_open())
+				return_error("Failed to open file: " + responseFilename);
+			response = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n";
+
+			std::string line;
+			while (responseFile.good())
+			{
+				std::getline(responseFile, line);
+				if ((responseFile.rdstate() & std::ios_base::badbit) != 0)
+					return_error("Reading response failed");
+				response += line + "\n";
+			}
+		}
+		else
+		{
+			response = "HTTP/1.1 405\r\nContent-Type: text/html\r\n\r\n";
+			response += "<html><body><h1>405 Method Not Allowed</h1></body></html>";
 		}
 
 		// Respond to client
