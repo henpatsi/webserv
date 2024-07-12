@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "ServerConfig.hpp"
 
 #define MANAGEREXCEPTION std::exception { \
             const char * what() const noexcept; \
@@ -12,7 +13,7 @@ class ServerManager
 {
     private:
         std::string _path;
-        std::vector<ServerConfig*> servers;
+        std::vector<ServerConfig *> servers;
     public:
         ServerManager(std::string path);
         ~ServerManager();

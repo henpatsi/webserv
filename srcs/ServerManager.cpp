@@ -59,7 +59,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 
     // Initialises the Serverconfigs with the correct string
     bool success = true;
-    for (auto& config : configs)
+    for (std::stringstream& config : configs)
     {
         try
         {
@@ -68,7 +68,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
         catch (const std::exception e)
         {
             success = false;
-            std::cerr << "Error: " << e.what() << "\n";
+            std::cerr << e.what() << "\n";
         }
     }
     if  (!success)
