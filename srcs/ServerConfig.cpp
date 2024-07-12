@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <arpa/inet.h> 
+#include <iostream>
 
 ServerConfig::ServerConfig(std::stringstream& config)
 {
@@ -147,4 +148,28 @@ ServerConfig::InvalidKeyException::InvalidKeyException(std::string key) : _key(k
 const char *ServerConfig::InvalidKeyException::what() const noexcept
 {
     return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
+}
+
+static unsigned int ServerConfigs::convertIP(std::string ip)
+{
+    std::stringstream s(ip);
+    std::string val;
+    unsigned int ip_long = 0;
+    for (int i = 0; i < 4 && std::getline(s, val, '.'); i++)
+    {
+        try
+        {
+            char x = std::atoi(val.c_str());
+            ip_long += x << (i * 8);
+        }
+        catch(const std::exception& e)
+        {
+            return (-1);
+        }
+        
+        
+    }
+    std::cout << ip_long << "\n";
+    std::cout << inet_addr(ip.c_str()) << "\n";
+    return ip_long;
 }

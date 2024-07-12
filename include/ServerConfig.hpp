@@ -68,6 +68,7 @@ class ServerConfig {
         void parseAddress(std::string pair, std::string key);
         void parseRoute(std::string pair, std::string key);
         void parseRequestSize(std::string pair, std::string key);
+        static unsigned int convertIP(std::string ip)
 };
 
 #endif
