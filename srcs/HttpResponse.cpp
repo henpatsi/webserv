@@ -16,18 +16,27 @@ HttpResponse::HttpResponse(HttpRequest& request)
 	{
 		// TODO show directory instead of loading index.html by default?
 		// Build path
-		if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html"))
+		if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html") != std::string::npos)
 		{
 			this->filePath = "./html" + request.getResourcePath();
 			if (this->filePath.back() == '/')
 				this->filePath += "index.html";
+		}
+		else if (request.getResourcePath().find(".png") != std::string::npos || request.getResourcePath().find(".jpg") != std::string::npos)
+		{
+			this->filePath = "./images" + request.getResourcePath();
+		}
+		else
+		{
+			buildErrorResponse(response, 404, "Not Found");
+			return ;
 		}
 
 		std::cout << "file path = " << this->filePath << "\n";
 
 		// Try open file
 		this->file.open(this->filePath);
-		if (!this->file.is_open())
+		if (!this->file.good())
 		{
 			buildErrorResponse(response, 404, "Not Found");
 			return ;
@@ -46,9 +55,12 @@ HttpResponse::HttpResponse(HttpRequest& request)
 			this->content += line + "\n";
 		}
 
+		this->code = 200;
+
 		this->response = "HTTP/1.1 " + std::to_string(this->code) + "\r\n";
 		this->response += "Content-Type: " + this->contentType + "\r\n\r\n";
 		this->response += this->content;
+
 	}
 	else
 	{

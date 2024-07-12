@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/12 08:59:48 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/12 12:51:01 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
 
 		// Build response into HttpResponse object
 		HttpResponse response = HttpResponse(request);
+		//std::cout << response.getResponse() << "\n";
 
 		// Respond to client
 		if (write(connectionSocketFD, response.getResponse().c_str(), response.getResponse().size()) == -1)
