@@ -26,13 +26,17 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		{
 			this->filePath = "./images" + request.getResourcePath();
 		}
+		else if (request.getResourcePath().find(".pdf") != std::string::npos)
+		{
+			this->filePath = "./docs" + request.getResourcePath();
+		}
 		else
 		{
 			buildErrorResponse(response, 404, "Not Found");
 			return ;
 		}
 
-		std::cout << "file path = " << this->filePath << "\n";
+		// std::cout << "file path = " << this->filePath << "\n";
 
 		// Try open file
 		this->file.open(this->filePath);
@@ -60,7 +64,6 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		this->response = "HTTP/1.1 " + std::to_string(this->code) + "\r\n";
 		this->response += "Content-Type: " + this->contentType + "\r\n\r\n";
 		this->response += this->content;
-
 	}
 	else
 	{

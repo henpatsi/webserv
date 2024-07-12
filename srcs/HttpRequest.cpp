@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/12 08:53:18 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/12 16:09:09 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,12 +19,12 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	std::istringstream sstream(requestMessageString);
 
 	sstream >> this->method;
-	std::cout << "Method: " << this->method << "\n";
+	// std::cout << "Method: " << this->method << "\n";
 	
 	std::string url;
 	sstream >> url;
 	this->resourcePath = url.substr(0, url.find('?'));
-	std::cout << "Resource path: " << this->resourcePath << "\n";
+	// std::cout << "Resource path: " << this->resourcePath << "\n";
 
 	if (url.find('?') != std::string::npos)
 	{
@@ -42,7 +42,7 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 		}
 	}
 
-	std::cout << "Parameters:\n";
-	for (std::map<std::string, std::string>::iterator it = this->paramenters.begin(); it != this->paramenters.end(); it++)
-		std::cout << it->first << " = " << it->second << "\n";
+	// std::cout << "Parameters:\n";
+	// for (std::map<std::string, std::string>::iterator it = this->paramenters.begin(); it != this->paramenters.end(); it++)
+	// 	std::cout << it->first << " = " << it->second << "\n";
 }
