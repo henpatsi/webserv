@@ -6,12 +6,13 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/11 16:46:39 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/12 08:25:46 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
 #include <fstream>
+#include <exception>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,11 +22,28 @@
 
 #include "HttpRequest.hpp"
 
+# ifndef REQUEST_READ_BUFFER_SIZE
+#  define REQUEST_READ_BUFFER_SIZE 1024
+# endif
+
 int	return_error(std::string message)
 {
 	std::cerr << message << "\n";
 	perror("");
 	exit (1);
+}
+
+std::string readRequestMessage(int socketFD)
+{
+	std::string requestString;
+	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {};
+	
+	// TODO check if full message read, read more if not
+	if (read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
+		throw std::system_error();
+
+	requestString += clientMessageBuffer;
+	return requestString;
 }
 
 int main(int argc, char *argv[])
@@ -78,8 +96,12 @@ int main(int argc, char *argv[])
 			return_error("Failed to open connection socket");
 		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
-		// Read client message
-		HttpRequest request = HttpRequest(connectionSocketFD);
+		// Read client message into string
+		std::string requestMessageString = readRequestMessage(connectionSocketFD);
+		std::cout << requestMessageString << "\n";
+
+		// Parse request into HttpRequest object
+		HttpRequest request = HttpRequest(requestMessageString);
 
 		// Build response from file
 		std::string responseFilename = "./html/index.html";
