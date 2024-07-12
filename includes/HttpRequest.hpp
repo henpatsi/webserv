@@ -23,15 +23,14 @@ class HttpRequest
 {
 	public:
 		HttpRequest(std::string requestMessageString);
-		~HttpRequest(void);
 
 		std::string getMethod(void) { return this->method; }
-		std::string getResourcePath(void) { return this->resource_path; }
+		std::string getResourcePath(void) { return this->resourcePath; }
 		std::string getParameter(std::string key) { return this->paramenters[key]; }
 	
 	private:
 		std::string	method;
-		std::string	resource_path;
+		std::string	resourcePath;
 		std::map<std::string, std::string> paramenters = {};
 };
 

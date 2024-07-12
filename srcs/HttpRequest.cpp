@@ -23,8 +23,8 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	
 	std::string url;
 	sstream >> url;
-	this->resource_path = url.substr(0, url.find('?'));
-	std::cout << "Resource path: " << this->resource_path << "\n";
+	this->resourcePath = url.substr(0, url.find('?'));
+	std::cout << "Resource path: " << this->resourcePath << "\n";
 
 	if (url.find('?') != std::string::npos)
 	{
@@ -46,14 +46,3 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	for (std::map<std::string, std::string>::iterator it = this->paramenters.begin(); it != this->paramenters.end(); it++)
 		std::cout << it->first << " = " << it->second << "\n";
 }
-
-// DESTRUCTOR
-
-HttpRequest::~HttpRequest(void)
-{
-
-}
-
-// MEMBER FUNCTIONS
-
-

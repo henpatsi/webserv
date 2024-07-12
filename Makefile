@@ -12,7 +12,7 @@
 
 NAME = webserv
 
-CLASSES = HttpRequest
+CLASSES = HttpRequest HttpResponse
 
 SOURCES = ${addsuffix .cpp, ${addprefix ./srcs/, main $(CLASSES)}}
 

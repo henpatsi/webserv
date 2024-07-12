@@ -21,6 +21,7 @@
 #include <poll.h>
 
 #include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 # ifndef REQUEST_READ_BUFFER_SIZE
 #  define REQUEST_READ_BUFFER_SIZE 1024
@@ -103,21 +104,29 @@ int main(int argc, char *argv[])
 		// Parse request into HttpRequest object
 		HttpRequest request = HttpRequest(requestMessageString);
 
+		// Build response into HttpResponse object
+		HttpResponse reponse = HttpResponse(request);
+
 		// Build response
 		std::string response;
 		if (request.getMethod() == "GET")
 		{
 			std::string responseFilename;
 			if (request.getResourcePath() == "/")
+			{
+				response = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n";
 				responseFilename = "./html/index.html";
+			}
 			else
+			{
+				response = "HTTP/1.1 404\r\nContent-Type: text/html\r\n\r\n";
 				responseFilename = "./html/404.html";
+			}
 
 			std::ifstream responseFile;
 			responseFile.open(responseFilename);
 			if (!configFile.is_open())
 				return_error("Failed to open file: " + responseFilename);
-			response = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n";
 
 			std::string line;
 			while (responseFile.good())
