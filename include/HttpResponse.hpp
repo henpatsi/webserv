@@ -15,11 +15,6 @@ class HttpResponse
 		std::string getResponse(void);
 
 	private:
-		int code;
-		std::string contentType;
-		std::string filePath;
-		std::ifstream file;
-		std::string content;
 		std::string response;
 };
 
