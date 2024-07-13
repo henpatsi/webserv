@@ -6,38 +6,69 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/11 16:42:13 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/07/13 14:02:43 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME = webserv
+NAME=webserv
 
-CLASSES = HttpRequest HttpResponse
+########    UTILS    ########
 
-SOURCES = ${addsuffix .cpp, ${addprefix ./srcs/, main $(CLASSES)}}
+NAMECOLOR	=	\033[38;46m
+PIPECOLOR	=	\033[38;45m
+FILECOLOR	=	\033[38;42m
+OUTCOLOR	=	\033[38;44m
+RESET		=	\033[0m
+MESSAGE		=	\033[38;41m
+INDENT		=	| sed 's/^/  /'
 
-OBJECTS = ${SOURCES:.cpp=.o}
+########    FILES    ########
 
-FLAGS = -Wall -Wextra -Werror -std=c++11 -I ./includes
+SRCDIR		=	srcs/
+OBJDIR		=	obj/
+INCLUDEDIR	=	include/
 
-COMP = c++ $(FLAGS)
+FLAGS	=	-Wall -Wextra -Werror -std=c++20 \
+			-I$(INCLUDEDIR)
+
+SRC	=	$(wildcard $(SRCDIR)*.cpp)
+OBJ	=	$(addprefix $(OBJDIR), $(notdir $(SRC:.cpp=.o)))
+INC	=	$(wildcard $(INCLUDEDIR)*.hpp)
+
+########    RULES    ########
 
 all: $(NAME)
 
-$(NAME): $(OBJECTS)
-	$(COMP) $(OBJECTS) -o $(NAME)
 
-%.o: %.cpp
-	$(COMP) -c $< -o $@
+$(NAME): $(OBJDIR) $(OBJ) $(INC)
+	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)compiling executable: $(OUTCOLOR)$(NAME)$(RESET)"
+	@c++ $(FLAGS) $(OBJ) -o $(NAME)
+
+$(OBJDIR)%.o: $(SRCDIR)%.cpp
+	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)$< => $(OUTCOLOR)$@ $(RESET)"
+	@c++ $(FLAGS) -c $< -o $@
+
+$(OBJDIR):
+	@mkdir -p $@
 
 clean:
-	rm -f $(OBJECTS)
+	@echo "$(MESSAGE)removing files:$(RESET)"
+	@ls $(OBJDIR)* $(INDENT)
+	@rm -rf $(OBJDIR)
 
 fclean: clean
-	rm -f $(NAME)
+	@echo "$(MESSAGE)removing executable:$(RESET)"
+	@echo "$(OUTCOLOR)$(NAME)$(RESET)" $(INDENT)
+	@rm -rf $(NAME)
 
 re: fclean all
+
+########    TESTS    ########
 
 test:
 	make
 	./webserv confs/1.conf
+
+
+########    MISC.    ########
+.PHONY: all clean fclean re
