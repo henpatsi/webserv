@@ -2,12 +2,21 @@
 
 // CONSTRUCTOR
 
-void buildErrorResponse(std::string& response, int code, std::string message)
+void buildResponse(std::string& response, int code, std::string contentType, std::string content)
 {
 	response = "HTTP/1.1 " + std::to_string(code) + "\r\n";
-	response += "Content-Type: text/html\r\n\r\n";
-	response += "<html><body><h1>" + std::to_string(code) + " ";
-	response += message + "</h1></body></html>";
+	response += "Content-Type: " + contentType + "\r\n\r\n";
+	response += content;
+}
+
+void buildErrorResponse(std::string& response, int code, std::string message)
+{
+	std::string content;
+
+	content = "<html><body><h1>" + std::to_string(code) + " ";
+	content += message + "</h1></body></html>";
+
+	buildResponse(response, code, "text/html", content);
 }
 
 void buildGetResponse(std::string& response, HttpRequest& request)
@@ -18,7 +27,7 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 	std::string contentType;
 	int responseCode;
 
-	// TODO show directory instead of loading index.html by default?
+	// TODO check if directory listing is allowed
 	// Build path
 	if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html") != std::string::npos)
 	{
@@ -39,7 +48,7 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 	}
 	else
 	{
-		buildErrorResponse(response, 404, "Not Found");
+		buildErrorResponse(response, 400, "Bad Request");
 		return ;
 	}
 
@@ -68,9 +77,7 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 
 	responseCode = 200;
 
-	response = "HTTP/1.1 " + std::to_string(responseCode) + "\r\n";
-	response += "Content-Type: " + contentType + "\r\n\r\n";
-	response += content;
+	buildResponse(response, responseCode, contentType, content);
 }
 
 HttpResponse::HttpResponse(HttpRequest& request)
