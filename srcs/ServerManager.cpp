@@ -2,11 +2,12 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <list>
+#include <vector>
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
     // keeps track of the stringstreams for each server
-    std::list<std::stringstream> configs;
+    std::vector<std::stringstream *> configs;
+    int x = 0;
     // utils for locations to have { } and for error handling
     bool is_in_server = false;
     int depth = 0;
@@ -20,7 +21,8 @@ ServerManager::ServerManager(const std::string path) : _path(path)
     for (std::string line; std::getline(config, line); )
     {
         // ignores lines starting with #
-        if (line[line.find_first_not_of(" \f\n\r\t\v")] != '#')
+        size_t firstIndex = line.find_first_not_of(" \f\n\r\t\v");
+        if (firstIndex < line.length() && line[firstIndex] != '#')
         {
             // if we find {
             size_t open_index = line.find('{');
@@ -33,8 +35,9 @@ ServerManager::ServerManager(const std::string path) : _path(path)
                     if (is_in_server)
                         throw ServerInServerException();
                     // start this servers config stringstream
-                    std::stringstream s("");
+                    std::stringstream* s = new std::stringstream();
                     configs.push_back(s);
+                    std::cout << "num of servers " << x++ << "\n";
                     is_in_server = true;
                 }
                 depth += 1;
@@ -43,29 +46,30 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             if (close_index != std::string::npos)
             {
                 // if we are not in parenthesies, or we just got into them but close before
-                if (depth == 0 || (depth == 1 && close_index < open_index))
+                if (depth == 0)
                     throw InvalidBraceException();
                 else
                     depth--;
             }
             if (depth == 0)
                 is_in_server = false;
-            if (!is_in_server && line.find_first_not_of(" \f\n\r\t\v", line.find_last_of('}')) != std::string::npos)
-                throw CharOutsideServerBlockException();
-            configs.back() << line;
+            if (is_in_server) // remove tailing }
+                *configs.back() << line;
         }
     }
     config.close();
+    if (depth != 0)
+        throw UnclosedBraceException();
 
     // Initialises the Serverconfigs with the correct string
     bool success = true;
-    for (std::stringstream& config : configs)
+    for (std::stringstream* config : configs)
     {
         try
         {
-            servers.push_back(new ServerConfig(config));
+            servers.push_back(new ServerConfig(*config));
         }
-        catch (const std::exception e)
+        catch (const std::exception& e)
         {
             success = false;
             std::cerr << e.what() << "\n";
@@ -110,4 +114,9 @@ const char * ServerManager::CharOutsideServerBlockException::what() const noexce
 const char * ServerManager::ServerCreationException::what() const noexcept
 {
     return "Manager: ParsingError: Failed to create Servers";
+}
+
+const char * ServerManager::UnclosedBraceException::what() const noexcept
+{
+    return "Manager: ParsingError: Unclosed brace";
 }

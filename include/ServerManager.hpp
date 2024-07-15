@@ -25,6 +25,7 @@ class ServerManager
         class InvalidBraceException : MANAGEREXCEPTION;
         class CharOutsideServerBlockException : MANAGEREXCEPTION;
         class ServerCreationException : MANAGEREXCEPTION;
+        class UnclosedBraceException : MANAGEREXCEPTION;
 };
 
 
