@@ -16,7 +16,7 @@ SRCDIR		=	srcs/
 OBJDIR		=	obj/
 INCLUDEDIR	=	include/
 
-FLAGS	=	-Wall -Wextra -Werror -std=c++20 \
+FLAGS	=	-Wall -Wextra -Werror -std=c++20 -g\
 			-I$(INCLUDEDIR)
 
 SRC	=	$(wildcard $(SRCDIR)*.cpp)
