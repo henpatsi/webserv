@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 12:08:42 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 16:15:58 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@ class HttpRequest
 	private:
 		std::string	method;
 		std::string	resourcePath;
+		std::string	httpVersion;
 		std::map<std::string, std::string> urlParameters = {};
 		std::map<std::string, std::string> headers = {};
 		std::string content;

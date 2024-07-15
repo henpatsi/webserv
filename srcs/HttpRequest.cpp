@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 16:03:13 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 16:32:30 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,15 +44,18 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	if (url.find('?') != std::string::npos)
 		extractParameters(this->urlParameters, url.substr(url.find('?') + 1, std::string::npos));
 
+	// Assumes the third word in the request is the http version
+	sstream >> this->httpVersion;
+
 	// Reads the headers into a map
 	std::string line;
-	std::getline(sstream, line); // Skips the HTTP version
+	std::getline(sstream, line); // Reads the rest of the first line
 	while (std::getline(sstream, line))
 	{
 		if (line == "\r")
 			break ;
 		std::string key = line.substr(0, line.find(':'));
-		std::string value = line.substr(line.find(':') + 2, std::string::npos);
+		std::string value = line.substr(line.find(':') + 2, line.find('\r'));
 		this->headers[key] = value;
 	}
 
@@ -67,6 +70,7 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
+	std::cout << "HTTP version: " << this->httpVersion << "\n";
 	std::cout << "Url Parameters:\n";
 	for (std::map<std::string, std::string>::iterator it = this->urlParameters.begin(); it != this->urlParameters.end(); it++)
 		std::cout << it->first << " = " << it->second << "\n";
