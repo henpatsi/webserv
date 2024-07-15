@@ -19,20 +19,18 @@ struct Route {
     std::string uploadDir;
 };
 
-/* Small redsign idea making all fields the same type of struct with default value, parser, template ...*/
-
 class ServerConfig {
     private:
         std::string _name;
-        bool _isNameSet;
-        u_int16_t _port;
-        bool _isPortSet;
+        bool _isNameSet = false;
+        u_int16_t _port = 8080;
+        bool _isPortSet = false;
         struct sockaddr_in _address;
-        bool _isAddressSet;
-        long _clientBodyLimit;
-        bool _isRequestSizeSet;
+        bool _isAddressSet = false;
+        long _clientBodyLimit = 1024;
+        bool _isRequestSizeSet = false;
         std::list<struct Route> _routes; // list of Routes with location and all the info
-        bool _isRouteSet;
+        bool _isRouteSet = false;
     public:
         ServerConfig(std::stringstream& config);
         ~ServerConfig();
@@ -59,6 +57,14 @@ class ServerConfig {
                 InvalidKeyException(std::string key);
                 const char *what() const noexcept;
         };
+        class InvalidValueException : std::exception
+        {
+            private:
+                std::string _key;
+            public:
+                InvalidValueException(std::string key);
+                const char *what() const noexcept;
+        };
         class MissingLocationException : std::exception {
                 const char *what() const noexcept;
         };
@@ -68,7 +74,7 @@ class ServerConfig {
         void parseAddress(std::string pair, std::string key);
         void parseRoute(std::string pair, std::string key);
         void parseRequestSize(std::string pair, std::string key);
-        static unsigned int convertIP(std::string ip)
+        static unsigned int convertIP(std::string ip);
 };
 
 #endif

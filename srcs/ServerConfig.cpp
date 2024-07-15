@@ -6,6 +6,11 @@
 #include <arpa/inet.h> 
 #include <iostream>
 
+struct field {
+    std::string name;
+    void (ServerConfig::*parse)(std::string, std::string);
+};
+
 ServerConfig::ServerConfig(std::stringstream& config)
 {
     // default route needed?
@@ -13,49 +18,35 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // need to have an extra check for locations, as they have ',' in them
     // needs its separate check
     /* Main server parse */
-    std::map<std::string, std::function<void(std::string, std::string)>> mapable;
-    mapable.emplace("name:", parseName);
-    mapable.emplace("port:", parseName);
-    mapable.emplace("host:", parseName);
-    mapable.emplace("requstSize:", parseName);
-    mapable.emplace("location:", parseName);
-    for(std::string line; std::getline(config,line);)
+    // clean config -> remove server {
+    std::string _;
+    std::getline(config, _, '{');
+    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},});
+    bool success = true;
+    for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
-        std::stringstream content(line);
-        for (std::string key_value_pair; std::getline(content, key_value_pair, ',');)
+        key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
+        //std::cout << key_value_pair << "\n";
+        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [key_value_pair](field f){return key_value_pair.starts_with(f.name);});
+        if (it == fields.end())
+            throw InvalidKeyException(key_value_pair);
+        try
         {
-            // insanity
-            std::map<std::string, std::function<void(std::string, std::string)>>::iterator it = std::find_if(
-                mapable.begin(),
-                mapable.end(),
-                [](std::string whole, std::string key){return whole.starts_with(key);}
-            );
-            if (it == mapable.end())
-                throw InvalidKeyException(key_value_pair);
-            it->second(key_value_pair, it->first);
+            (this->*it->parse)(key_value_pair, it->name);
+        }
+        catch (const std::exception& e)
+        {
+            throw e;
         }
     }
-
-    /* set default values and throw errors */
     if (!_isRouteSet)
         throw MissingLocationException();
-    
-    if (!_isPortSet)
-    {
-        _port = 8000;
-        _address.sin_port = _port;
-    }
-
+    // default address
     if (!_isAddressSet)
     {
         _address.sin_family = AF_INET;
         _address.sin_port = _port;
-        _address.sin_addr.s_addr = inet_addr("127.0.0.1");
-    }
-
-    if (!_isRequestSizeSet)
-    {
-        _clientBodyLimit = 1024;
+        _address.sin_addr.s_addr = ServerConfig::convertIP("127.0.0.1");
     }
 }
 
@@ -66,7 +57,10 @@ void ServerConfig::parseName(std::string pair, std::string key)
 {
     if (_isNameSet)
         throw SameKeyRepeatException("name");
-    _name = pair.substr(key.length() + pair.find_first_not_of(SPACECHARS, key.length()));
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("name");
+    _name = pair.substr(index);
     _isNameSet = true;
 }
 
@@ -74,7 +68,10 @@ void ServerConfig::parsePort(std::string pair, std::string key)
 {
     if (_isPortSet)
         throw SameKeyRepeatException("port");
-    std::string s = pair.substr(key.length() + pair.find_first_not_of(SPACECHARS, key.length()));
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("port");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _port = htons(std::atol(s.c_str()));
     _address.sin_port = _port;
     _isPortSet = true;
@@ -84,10 +81,13 @@ void ServerConfig::parseAddress(std::string pair, std::string key)
 {
     if (_isAddressSet)
         throw SameKeyRepeatException("address");
-    std::string s = pair.substr(key.length() + pair.find_first_not_of(SPACECHARS, key.length()));
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("address");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _address.sin_family = AF_INET;
     _address.sin_port = _port;
-    _address.sin_addr.s_addr = inet_addr(s.c_str());
+    _address.sin_addr.s_addr = ServerConfig::convertIP(s.c_str());
     _isAddressSet = true;
 }
 
@@ -95,21 +95,20 @@ void ServerConfig::parseRequestSize(std::string pair, std::string key)
 {
     if (_isRequestSizeSet)
         throw SameKeyRepeatException("port");
-    std::string s = pair.substr(key.length() + pair.find_first_not_of(SPACECHARS, key.length()));
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _clientBodyLimit = std::atol(s.c_str());
     _isRequestSizeSet = true;
 }
 
 void ServerConfig::parseRoute(std::string pair, std::string key)
 {
-    std::string s = pair.substr(key.length() + pair.find_first_not_of(SPACECHARS, key.length()));
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     // figure out the route
     // similar to the basic parse
     _isRouteSet = true;
 }
 
 /* ---- Getters ----*/
-
 std::string ServerConfig::getName()
 {
     return _name;
@@ -150,26 +149,38 @@ const char *ServerConfig::InvalidKeyException::what() const noexcept
     return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
 }
 
-static unsigned int ServerConfigs::convertIP(std::string ip)
+ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _key(key){}
+
+const char *ServerConfig::InvalidValueException::what() const noexcept
+{
+    return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
+}
+
+const char *ServerConfig::MissingLocationException::what() const noexcept
+{
+    return "no location specified";
+}
+
+unsigned int ServerConfig::convertIP(std::string ip)
 {
     std::stringstream s(ip);
     std::string val;
     unsigned int ip_long = 0;
-    for (int i = 0; i < 4 && std::getline(s, val, '.'); i++)
+    for (int i = 4; i >= 1 && std::getline(s, val, '.'); i--)
     {
+        //std::cout << "<" << val << ">\n";
         try
         {
-            char x = std::atoi(val.c_str());
+            unsigned int x = std::atoi(val.c_str());
             ip_long += x << (i * 8);
         }
         catch(const std::exception& e)
         {
-            return (-1);
+            (void)e;
+            return (0);
         }
-        
-        
     }
-    std::cout << ip_long << "\n";
-    std::cout << inet_addr(ip.c_str()) << "\n";
+    // std::cout << ip_long << "\n";
+    // std::cout << inet_addr(ip.c_str()) << "\n";
     return ip_long;
 }
