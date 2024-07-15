@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 12:06:56 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 16:03:13 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 
 	// Reads the headers into a map
 	std::string line;
-	std::getline(sstream, line); // Skip the HTTP version
+	std::getline(sstream, line); // Skips the HTTP version
 	while (std::getline(sstream, line))
 	{
 		if (line == "\r")
@@ -60,7 +60,7 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	if (this->headers.find("Content-Length") != this->headers.end())
 	{
 		int contentLength = std::stoi(this->headers["Content-Length"]);
-		char contentBuffer[1024] = {}; // TODO make dynamic
+		char contentBuffer[300000] = {}; // TODO make dynamic
 		sstream.read(contentBuffer, contentLength);
 		this->content = contentBuffer;
 	}

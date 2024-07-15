@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 11:39:15 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 16:03:18 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@
 #include "HttpResponse.hpp"
 
 # ifndef REQUEST_READ_BUFFER_SIZE
-#  define REQUEST_READ_BUFFER_SIZE 1024
+#  define REQUEST_READ_BUFFER_SIZE 300000
 # endif
 
 int	return_error(std::string message)
@@ -41,10 +41,11 @@ std::string readRequestMessage(int socketFD)
 	
 	// TODO check if full message read, read more if not
 	// TODO make work with chunked enconding
-	if (read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
+	int readAmount = read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer));
+	if (readAmount == -1)
 		throw std::system_error();
-
 	requestString += clientMessageBuffer;
+
 	return requestString;
 }
 
