@@ -6,7 +6,7 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/13 14:02:43 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/07/15 09:28:49 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,10 +14,10 @@ NAME=webserv
 
 ########    UTILS    ########
 
-NAMECOLOR	=	\033[38;46m
-PIPECOLOR	=	\033[38;45m
-FILECOLOR	=	\033[38;42m
-OUTCOLOR	=	\033[38;44m
+NAMECOLOR	=	\033[1;36m
+PIPECOLOR	=	\033[1;35m
+FILECOLOR	=	\033[1;32m
+OUTCOLOR	=	\033[1;34m
 RESET		=	\033[0m
 MESSAGE		=	\033[38;41m
 INDENT		=	| sed 's/^/  /'

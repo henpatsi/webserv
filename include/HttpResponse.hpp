@@ -7,6 +7,10 @@
 # include <iostream>
 # include <fstream>
 
+# ifndef SITE_ROOT
+#  define SITE_ROOT "./www/"
+# endif
+
 class HttpResponse
 {
 	public:

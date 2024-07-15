@@ -21,7 +21,7 @@ void buildErrorResponse(std::string& response, int code, std::string message)
 
 void buildGetResponse(std::string& response, HttpRequest& request)
 {
-	std::string filename;
+	std::string filename = SITE_ROOT;
 	std::ifstream file;
 	std::string content;
 	std::string contentType;
@@ -32,19 +32,19 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 	if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html") != std::string::npos)
 	{
 		contentType = "text/html";
-		filename = "./html" + request.getResourcePath();
+		filename += "html" + request.getResourcePath();
 		if (filename.back() == '/')
 			filename += "index.html";
 	}
 	else if (request.getResourcePath().find(".png") != std::string::npos || request.getResourcePath().find(".jpg") != std::string::npos)
 	{
 		contentType = "image/" + request.getResourcePath().substr(request.getResourcePath().find(".") + 1);
-		filename = "./images" + request.getResourcePath();
+		filename += "images" + request.getResourcePath();
 	}
 	else if (request.getResourcePath().find(".pdf") != std::string::npos)
 	{
 		contentType = "application/pdf";
-		filename = "./docs" + request.getResourcePath();
+		filename += "docs" + request.getResourcePath();
 	}
 	else
 	{
