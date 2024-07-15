@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 16:03:18 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 17:32:26 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,6 +79,13 @@ int main(int argc, char *argv[])
 		return_error("bind failed");
 	if (listen(serverSocketFD, 5) == -1)
 		return_error("listen failed");
+	
+	// DEBUG: removes "Address already in use" error message
+	int yes=1;
+	if (setsockopt(serverSocketFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+		return_error("setsockopt failed");
+		return (1);
+	}
 
 	std::cout << "Server listening at addr " << inet_ntoa(serverAddress.sin_addr) << " port " << ntohs(serverAddress.sin_port) << "\n";
 

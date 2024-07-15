@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 16:32:30 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 16:35:21 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,6 +68,7 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 		this->content = contentBuffer;
 	}
 
+	/* DEBUG PRINT */
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
 	std::cout << "HTTP version: " << this->httpVersion << "\n";
