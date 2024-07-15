@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/13 15:09:33 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 11:50:31 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,13 +27,14 @@ class HttpRequest
 		std::string getMethod(void) { return this->method; }
 		std::string getResourcePath(void) { return this->resourcePath; }
 		std::string getUrlParameter(std::string key) { return this->urlParameters[key]; }
-		std::string getPostParameter(std::string key) { return this->postParameters[key]; }
+		std::string getHeader(std::string key) { return this->headers[key]; }
 	
 	private:
 		std::string	method;
 		std::string	resourcePath;
 		std::map<std::string, std::string> urlParameters = {};
-		std::map<std::string, std::string> postParameters = {};
+		std::map<std::string, std::string> headers = {};
+		std::string content;
 };
 
 #endif

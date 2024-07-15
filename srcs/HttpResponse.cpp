@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   HttpResponse.cpp                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
+/*   Updated: 2024/07/15 11:02:12 by hpatsi           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "HttpResponse.hpp"
 
 // CONSTRUCTOR
@@ -85,9 +97,9 @@ HttpResponse::HttpResponse(HttpRequest& request)
 	if (request.getMethod() == "GET")
 		buildGetResponse(this->response, request);
 	else if (request.getMethod() == "POST")
-		buildErrorResponse(response, 42, "Method Not Yet Implemented");
+		buildErrorResponse(response, 501, "Not Implemented");
 	else if (request.getMethod() == "DELETE")
-		buildErrorResponse(response, 42, "Method Not Yet Implemented");
+		buildErrorResponse(response, 501, "Not Implemented");
 	else
 		buildErrorResponse(response, 405, "Method Not Allowed");
 }

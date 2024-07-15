@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/13 15:08:55 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 12:06:56 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,27 +40,39 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	sstream >> url;
 	// Extracts path from the url
 	this->resourcePath = url.substr(0, url.find('?'));
-
-	// Gets the parameters from the url
+	// Extracts the parameters from the url into a map
 	if (url.find('?') != std::string::npos)
 		extractParameters(this->urlParameters, url.substr(url.find('?') + 1, std::string::npos));
 
-	// Gets the parameters from the post request
-	if (this->method == "POST")
+	// Reads the headers into a map
+	std::string line;
+	std::getline(sstream, line); // Skip the HTTP version
+	while (std::getline(sstream, line))
 	{
-		// Get last line of request message
-		std::string postParametersString;
-		while (sstream.good())
-			sstream >> postParametersString;
-		extractParameters(this->postParameters, postParametersString);
+		if (line == "\r")
+			break ;
+		std::string key = line.substr(0, line.find(':'));
+		std::string value = line.substr(line.find(':') + 2, std::string::npos);
+		this->headers[key] = value;
 	}
 
-	std::cout << "Method: " << this->method << "\n";
+	// Reads the body content if content length specified
+	if (this->headers.find("Content-Length") != this->headers.end())
+	{
+		int contentLength = std::stoi(this->headers["Content-Length"]);
+		char contentBuffer[1024] = {}; // TODO make dynamic
+		sstream.read(contentBuffer, contentLength);
+		this->content = contentBuffer;
+	}
+
+	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
 	std::cout << "Url Parameters:\n";
 	for (std::map<std::string, std::string>::iterator it = this->urlParameters.begin(); it != this->urlParameters.end(); it++)
 		std::cout << it->first << " = " << it->second << "\n";
-	std::cout << "Post Parameters:\n";
-	for (std::map<std::string, std::string>::iterator it = this->postParameters.begin(); it != this->postParameters.end(); it++)
+	std::cout << "Headers:\n";
+	for (std::map<std::string, std::string>::iterator it = this->headers.begin(); it != this->headers.end(); it++)
 		std::cout << it->first << " = " << it->second << "\n";
+	std::cout << "Content:\n " << this->content << "\n";
+	std::cout << "REQUEST INFO FINISHED\n\n";
 }

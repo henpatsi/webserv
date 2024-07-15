@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 10:01:10 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/15 11:39:15 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ std::string readRequestMessage(int socketFD)
 	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {};
 	
 	// TODO check if full message read, read more if not
+	// TODO make work with chunked enconding
 	if (read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
 		throw std::system_error();
 
@@ -72,13 +73,6 @@ int main(int argc, char *argv[])
 	serverAddress.sin_port = htons(port);
 	serverAddress.sin_addr.s_addr = inet_addr(ip_address.c_str());
 
-	// Setup poll
-	// pollfd pollFDs[2];
-	// pollFDs[0].fd = serverSocketFD;
-	// pollFDs[1].fd = serverSocketFD;
-	// pollFDs[0].events = POLLIN;
-	// pollFDs[1].events = POLLIN;
-
 	// Bind socket to address, turn on listen
 	if (bind(serverSocketFD, (sockaddr*) &serverAddress, sizeof(serverAddress)) == -1)
 		return_error("bind failed");
@@ -95,11 +89,11 @@ int main(int argc, char *argv[])
 		int connectionSocketFD = accept(serverSocketFD, (sockaddr*) &connectionAddress, &connectionAddressLen);
 		if (connectionSocketFD == -1)
 			return_error("Failed to open connection socket");
-		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
+		std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
 		// Read client message into string
 		std::string requestMessageString = readRequestMessage(connectionSocketFD);
-		std::cout << requestMessageString << "\n";
+		std::cout << "\n" << requestMessageString << "\n";
 
 		// Parse request into HttpRequest object
 		HttpRequest request = HttpRequest(requestMessageString);
