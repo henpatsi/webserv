@@ -138,14 +138,19 @@ ServerConfig::SameKeyRepeatException::SameKeyRepeatException(std::string key) : 
 
 const char *ServerConfig::SameKeyRepeatException::what() const noexcept
 {
-    return (std::stringstream("ServerConfig: SameKeyRepetition: ") << _key.c_str()).str().c_str();
+    return _key.c_str();
 }
 
 ServerConfig::InvalidKeyException::InvalidKeyException(std::string key) : _key(key){}
 
 const char *ServerConfig::InvalidKeyException::what() const noexcept
 {
-    return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
+    return _key.c_str();
+}
+
+const char *ServerConfig::MissingLocationException::what() const noexcept
+{
+    return "No location specified";
 }
 
 ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _key(key){}
