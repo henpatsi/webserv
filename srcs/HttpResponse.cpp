@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 11:02:12 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 10:35:17 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,9 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 
 HttpResponse::HttpResponse(HttpRequest& request)
 {
-	if (request.getMethod() == "GET")
+	if (request.isBadRequest())
+		buildErrorResponse(response, 400, "Bad Request");
+	else if (request.getMethod() == "GET")
 		buildGetResponse(this->response, request);
 	else if (request.getMethod() == "POST")
 		buildErrorResponse(response, 501, "Not Implemented");

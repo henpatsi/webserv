@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 16:35:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:13:04 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,13 +47,21 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
 
-	// Reads the headers into a map
 	std::string line;
 	std::getline(sstream, line); // Reads the rest of the first line
+	// Reads the headers into a map
 	while (std::getline(sstream, line))
 	{
 		if (line == "\r")
 			break ;
+		if (line.back() != '\r'
+			|| line.find(':') == std::string::npos
+			|| line[line.size() - 2] == ':')
+		{
+			//std::cout << "Invalid header: " << line << "\n";
+			badRequest = true;
+			return ;
+		}
 		std::string key = line.substr(0, line.find(':'));
 		std::string value = line.substr(line.find(':') + 2, line.find('\r'));
 		this->headers[key] = value;
