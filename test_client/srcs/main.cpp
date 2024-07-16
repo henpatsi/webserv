@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 16:46:08 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/15 18:10:20 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:29:21 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,8 +70,8 @@ int main (int argc, char *argv[])
 
 	std::cout << "Message sent\n";
 
-	char buf[1024];
-	int bytesReceived = recv(serverSocket, buf, 1024, 0);
+	char buf[1024] = {0};
+	int bytesReceived = recv(serverSocket, buf, 1024 - 1, 0);
 	if (bytesReceived == -1)
 	{
 		perror("recv error");

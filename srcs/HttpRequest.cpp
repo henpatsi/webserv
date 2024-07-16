@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 11:13:04 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:43:31 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,12 +16,16 @@
 
 void extractParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
+	// TODO check how NGINX handles parameters that are formatted incorrectly
 	while (1) // TODO make into e.g. do while loop
 	{
 		std::string parameter = parametersString.substr(0, parametersString.find('&'));
-		std::string key = parameter.substr(0, parameter.find('='));
-		std::string value = parameter.substr(parameter.find('=') + 1, std::string::npos);
-		parametersMap[key] = value;
+		if (parameter.find('=') != std::string::npos && parameter.front() != '=' && parameter.back() != '=')
+		{
+			std::string key = parameter.substr(0, parameter.find('='));
+			std::string value = parameter.substr(parameter.find('=') + 1, std::string::npos);
+			parametersMap[key] = value;
+		}
 		if (parametersString.find('&') == std::string::npos)
 			break ;
 		parametersString = parametersString.substr(parametersString.find('&') + 1, std::string::npos);
@@ -40,8 +44,13 @@ HttpRequest::HttpRequest(std::string requestMessageString)
 	sstream >> url;
 	// Extracts path from the url
 	this->resourcePath = url.substr(0, url.find('?'));
+	if (this->resourcePath.empty())
+	{
+		badRequest = true;
+		return ;
+	}
 	// Extracts the parameters from the url into a map
-	if (url.find('?') != std::string::npos)
+	if (url.find('?') != std::string::npos && url.back() != '?')
 		extractParameters(this->urlParameters, url.substr(url.find('?') + 1, std::string::npos));
 
 	// Assumes the third word in the request is the http version

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 08:58:34 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:29:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,11 +37,11 @@ int	return_error(std::string message)
 std::string readRequestMessage(int socketFD)
 {
 	std::string requestString;
-	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {};
+	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
 	
 	// TODO check if full message read, read more if not
 	// TODO make work with chunked enconding
-	int readAmount = read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer));
+	int readAmount = read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer) - 1);
 	if (readAmount == -1)
 		throw std::system_error();
 	requestString += clientMessageBuffer;

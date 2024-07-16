@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 10:34:56 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:41:25 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,7 @@ class HttpRequest
 		std::map<std::string, std::string> urlParameters = {};
 		std::map<std::string, std::string> headers = {};
 		std::string content;
-		bool	badRequest;
+		bool	badRequest = false;
 };
 
 #endif
