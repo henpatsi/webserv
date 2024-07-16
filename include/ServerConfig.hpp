@@ -9,7 +9,10 @@
 #define SPACECHARS " \f\n\r\t\v"
 
 struct Route {
-    uint8_t allowedMethods;
+    std::string location;
+    bool allowedGet;
+    bool allowedPost;
+    bool allowedDelete;
     std::string redirect;
     std::string root;
     bool directoryListing;
@@ -69,11 +72,21 @@ class ServerConfig {
                 const char *what() const noexcept;
         };
         /* ---- Parsers ---- */
+        /* ---- ServerParser ----*/
         void parseName(std::string pair, std::string key);
         void parsePort(std::string pair, std::string key);
         void parseAddress(std::string pair, std::string key);
         void parseRoute(std::string pair, std::string key);
         void parseRequestSize(std::string pair, std::string key);
+        /* ---- RouteParser ----*/
+        void parseAllowedMethods(std::string pair, std::string key, Route& res);
+        void parseRedirect(std::string pair, std::string key, Route& res);
+        void parseRoot(std::string pair, std::string key, Route& res);
+        void parseDirListing(std::string pair, std::string key, Route& res);
+        void parseDefaultAnswer(std::string pair, std::string key, Route& res);
+        void parseCGI(std::string pair, std::string key, Route& res);
+        void parseAcceptUpload(std::string pair, std::string key, Route& res);
+        void parseUploadDir(std::string pair, std::string key, Route& res);
         static unsigned int convertIP(std::string ip);
 };
 

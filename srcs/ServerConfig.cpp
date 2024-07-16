@@ -11,6 +11,11 @@ struct field {
     void (ServerConfig::*parse)(std::string, std::string);
 };
 
+struct routeField {
+    std::string name;
+    void (ServerConfig::*parse)(std::string, std::string, Route&);
+};
+
 ServerConfig::ServerConfig(std::stringstream& config)
 {
     // default route needed?
@@ -21,7 +26,7 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // clean config -> remove server {
     std::string _;
     std::getline(config, _, '{');
-    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},});
+    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},(field){"sizeLimit:", &ServerConfig::parseRequestSize}, (field){"location ", &ServerConfig::parseLocation}});
     for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
@@ -102,9 +107,56 @@ void ServerConfig::parseRequestSize(std::string pair, std::string key)
 void ServerConfig::parseRoute(std::string pair, std::string key)
 {
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // figure out the route
-    // similar to the basic parse
+    size_t openIndex = s.find('{');
+    size_t closeIndex = s.find('}');
+    if (openIndex == std::string::npos || closeIndex == std::string::npos || openIndex >= closeIndex)
+        throw InvalidValueException("Route");
+    std::string route = s.substr(0, openIndex);
+    std::stringstream routeContent(s.substr(openIndex, closeIndex - openIndex));
+    Route res;
+    std::vector<routeField> parsers = {
+        (routeField){"allowedMethods", &ServerConfig::parseAllowedMethods},
+        (routeField){"redirect", &ServerConfig::parseRedirect},
+        (routeField){"root", &ServerConfig::parseRoot},
+        (routeField){"dirListing", &ServerConfig::parseDirListing},
+        (routeField){"defaultAnswer", &ServerConfig::parseDefaultAnswer},
+        (routeField){"uploadDir", &ServerConfig::parseUploadDir}
+    };
+    for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair, ',');)
+    {
+        std::vector<routeField>::iterator it = std::find(parsers.begin(), parsers.end(), [keyvaluepair](routeField f){return keyvaluepair.starts_with(f.name);});
+        if (it == parsers.end())
+            throw InvalidKeyException(keyvaluepair);
+        try
+        {
+            (this->*it->parse)(keyvaluepair, it->name, res);
+        }
+        catch (const std::exception& e)
+        {
+            throw e;
+        }
+    }
+    _routes.push_back(res);
     _isRouteSet = true;
+}
+
+/* RouteParsers */
+void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("address");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    // validation missing
+    if (s.find("POST") != std::string::npos)
+        res.allowedPost = true;
+    if (s.find("GET") != std::string::npos)
+        res.allowedGet = true;
+    if (s.find("DELETE") != std::string::npos)
+        res.allowedDelete = true;
+    if (!(res.allowedDelete || res.allowedGet || res.allowedPost))
+        throw InvalidValueException("address");
+    
 }
 
 /* ---- Getters ----*/
