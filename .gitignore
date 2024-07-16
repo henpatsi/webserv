@@ -1,3 +1,5 @@
 .vscode
 webserv
-/obj
+obj
+test_client/obj
+test_client/client

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 13:12:33 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 13:31:38 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 void extractParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
 	// TODO check how NGINX handles parameters that are formatted incorrectly
+	// TODO handle multiple (repeated) ? in the url
 	while (1) // TODO make into e.g. do while loop
 	{
 		std::string parameter = parametersString.substr(0, parametersString.find('&'));
