@@ -104,10 +104,41 @@ std::string Server::GetAnswer()
                 }
             }
         }
+        else if (currentRequest->getMethod() == "POST")
+        {
+            std::string location = currentRequest->getResourcePath();
+            location.erase(0, selectedRoute.location.length());
+            location += selectedRoute.location;
+            // check for simple form
+            if (access(location.c_str(), F_OK))
+            {
+                if (access(location.c_str(), R_OK))
+                    return "200 file found + content";
+                else
+                    return "403 no rights for you";
+            }
+            if (selectedRoute.acceptUpload && (
+                currentRequest->getHeader("x-www-urlencoded") != "" ||
+                currentRequest->getHeader("multipart/form-data") != "" ||
+                currentRequest->getHeader("text-plain") != ""))
+            {
+                //check if we have access to uploaddir
+                return "200/400 upload stuff or not";
+            }
+            else
+            {
+                return "400 cant post stuff here";
+            }
+        }
+        else if (currentRequest->getMethod() == "DELETE")
+        {
+            // delete if exist or give error if not
+            return "200/400 deleting or not";
+        }
     }
     else
     {
-        return "Method not allowed or something";
+        return selectedRoute.defaultAnswer == "" ? "404 error page" : selectedRoute.defaultAnswer;
     }
 }
 
