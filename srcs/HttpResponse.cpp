@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 10:35:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 21:35:16 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,9 @@
 void buildResponse(std::string& response, int code, std::string contentType, std::string content)
 {
 	response = "HTTP/1.1 " + std::to_string(code) + "\r\n";
-	response += "Content-Type: " + contentType + "\r\n\r\n";
+	response += "Content-Type: " + contentType + "\r\n";
+	response += "Content-Length: " + std::to_string(content.length()) + "\r\n";
+	response += "\r\n";
 	response += content;
 }
 
