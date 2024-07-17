@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 09:59:38 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 12:16:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,8 +79,6 @@ int main(int argc, char *argv[])
 		if (connectionSocketFD == -1)
 			return_error("Failed to open connection socket");
 		std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
-
-		sleep(1);
 
 		// Parse request into HttpRequest object
 		HttpRequest request = HttpRequest(connectionSocketFD);

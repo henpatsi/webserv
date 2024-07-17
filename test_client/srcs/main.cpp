@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 16:46:08 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 11:29:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 14:18:23 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <cstring>
+#include <unistd.h>
 
 int main (int argc, char *argv[])
 {
@@ -60,6 +61,8 @@ int main (int argc, char *argv[])
 
 	std::cout << "Successfully connected\n";
 
+	freeaddrinfo(servinfo);
+
 	// Send message
 	int bytesSent = send(serverSocket, message.c_str(), strlen(message.c_str()), 0);
 	if (bytesSent== -1)
@@ -80,7 +83,7 @@ int main (int argc, char *argv[])
 
 	std::cout << "\nReceived:\n" << buf << "\n";
 
-	freeaddrinfo(servinfo);
+	close(serverSocket);
 
 	return (0);
 }
