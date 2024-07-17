@@ -193,7 +193,15 @@ void ServerConfig::parseDirListing(std::string pair, std::string key, Route& res
         throw InvalidValueException("Directory listing");
 }
 
-
+void ServerConfig::parseDefaultAnswer(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("Directory listing");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    // check if file exists and is not a directory
+    res.defaultAnswer = s;
+}
 
 /* ---- Getters ----*/
 std::string ServerConfig::getName()
