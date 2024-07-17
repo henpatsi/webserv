@@ -26,12 +26,12 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // clean config -> remove server {
     std::string _;
     std::getline(config, _, '{');
-    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},(field){"sizeLimit:", &ServerConfig::parseRequestSize}, (field){"location ", &ServerConfig::parseLocation}});
+    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},(field){"sizeLimit:", &ServerConfig::parseRequestSize}, (field){"location ", &ServerConfig::parseRoute}});
     for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
         //std::cout << key_value_pair << "\n";
-        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [key_value_pair](field f){return key_value_pair.starts_with(f.name);});
+        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [&](field f){return key_value_pair.starts_with(f.name);});
         if (it == fields.end())
             throw InvalidKeyException(key_value_pair);
         try
@@ -124,7 +124,7 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     };
     for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair, ',');)
     {
-        std::vector<routeField>::iterator it = std::find(parsers.begin(), parsers.end(), [keyvaluepair](routeField f){return keyvaluepair.starts_with(f.name);});
+        std::vector<routeField>::iterator it = std::find_if(parsers.begin(), parsers.end(), [&](routeField f){return keyvaluepair.starts_with(f.name);});
         if (it == parsers.end())
             throw InvalidKeyException(keyvaluepair);
         try
