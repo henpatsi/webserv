@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <fcntl.h>
 
 Server::Server(ServerConfig _config) : config(_config)
 {
@@ -60,11 +61,48 @@ std::string Server::GetAnswer()
     uint8_t requestMethod = ServerConfig::parseRequestMethod(currentRequest->getMethod());
     if (requestMethod & selectedRoute.allowedMethods)
     {
+        // check for CGI and redirects
+        if (selectedRoute.redirect != "")
+        {
+            return "302 redirecting to " + selectedRoute.redirect;
+        }
+        if (selectedRoute.CGI != "")
+        {
+            // run cgi
+            return "500 cgi doing stuff";
+        }
+        // check for methods
         if (currentRequest->getMethod() == "GET")
         {
             std::string location = currentRequest->getResourcePath();
             location.erase(0, selectedRoute.location.length());
             location += selectedRoute.location;
+            if (open(location.c_str(), O_DIRECTORY) != -1)
+            {
+                if (selectedRoute.directoryListing)
+                {
+                    // read directory
+                    return "200 content of the directory";
+                }
+                else
+                {
+                    return "403? cant read directories";
+                }
+            }
+            else
+            {
+                if (access(location.c_str(), F_OK))
+                {
+                    if (access(location.c_str(), R_OK))
+                        return "200 file found + content";
+                    else
+                        return "403 no rights for you";
+                }
+                else
+                {
+                    return "404 file not found";
+                }
+            }
         }
     }
     else
