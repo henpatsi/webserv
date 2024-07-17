@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 10:42:02 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 11:24:22 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,23 +18,24 @@ std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it r
 {
 	std::string requestString;
 	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
-	int totalReadAmount = 0;
+	int bytesRead = 0;
+	int totalBytesRead = 0;
 	
-	int readAmount = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
-	while (readAmount != 0)
+	while (totalBytesRead < MAX_HEADER_SIZE)
 	{
-		if (readAmount == -1)
+		bytesRead = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
+		if (bytesRead == -1)
 			throw std::system_error();
+		else if (bytesRead == 0)
+			break ;
+		totalBytesRead += bytesRead;
+		clientMessageBuffer[bytesRead] = '\0';
 		requestString += clientMessageBuffer;
-		// std::cout << "Read " << readAmount << " bytes\n";
+		// std::cout << "Read " << bytesRead << " bytes\n";
 		// std::cout << "Request String:\n" << requestString << "\n";
 		// std::cout << "End: " << (requestString.find("\r\n\r") != std::string::npos) << "\n";
 		if (requestString.find("\r\n\r") != std::string::npos)
 			break ;
-		totalReadAmount += readAmount;
-		if (totalReadAmount > MAX_HEADER_SIZE) // TODO set error num if this is the case
-			break ;
-		readAmount = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
 	}
 
 	std::cout << "\nRequest Message:\n" << requestString << "\n";
@@ -125,20 +126,20 @@ HttpRequest::HttpRequest(int socketFD)
 	if (this->headers.find("Content-Length") != this->headers.end())
 	{
 		int contentLength = std::stoi(this->headers["Content-Length"]);
-		char contentBuffer[300000] = {}; // TODO make dynamic
-		int readAmount = 0;
-		int totalReadAmount = 0;
+		char contentBuffer[CONTENT_READ_BUFFER_SIZE] = {0}; // TODO make dynamic?
+		int bytesRead = 0;
+		int totalBytesRead = 0;
 
-		while (totalReadAmount < contentLength)
+		while (totalBytesRead < contentLength)
 		{
-			readAmount = read(socketFD, contentBuffer, REQUEST_READ_BUFFER_SIZE - 1);
-			if (readAmount == -1)
+			// might read something past contents if there is something to read
+			// TODO make read amount be based on the content length
+			bytesRead = read(socketFD, contentBuffer, CONTENT_READ_BUFFER_SIZE - 1);
+			if (bytesRead == -1)
 				throw std::system_error();
-			totalReadAmount += readAmount;
+			totalBytesRead += bytesRead;
+			contentBuffer[bytesRead] = '\0';
 			this->content += contentBuffer;
-			// std::cout << "Read " << readAmount << " bytes\n";
-			// std::cout << "Total read " << totalReadAmount << " bytes\n";
-			// std::cout << "Content String:\n" << this->content << "\n";
 		}
 	}
 

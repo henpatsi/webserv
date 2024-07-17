@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 16:25:00 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 11:05:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,10 @@
 
 # ifndef REQUEST_READ_BUFFER_SIZE
 #  define REQUEST_READ_BUFFER_SIZE 2 // This should be able to account for the full header?
+# endif
+
+# ifndef CONTENT_READ_BUFFER_SIZE
+#  define CONTENT_READ_BUFFER_SIZE 1024
 # endif
 
 # ifndef MAX_HEADER_SIZE
