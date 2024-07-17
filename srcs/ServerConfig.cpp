@@ -172,12 +172,27 @@ void ServerConfig::parseRoot(std::string pair, std::string key, Route& res)
 {
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
-        throw InvalidValueException("redirect");
+        throw InvalidValueException("webroot");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     // validation missing
     // check if location/directory exists
     res.root = s;
 }
+
+void ServerConfig::parseDirListing(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("Directory listing");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    if (s == "true")
+        res.directoryListing = true;
+    else if (s == "false")
+        res.directoryListing = false;
+    else
+        throw InvalidValueException("Directory listing");
+}
+
 
 
 /* ---- Getters ----*/
