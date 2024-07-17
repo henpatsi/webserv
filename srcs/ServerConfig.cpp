@@ -155,8 +155,17 @@ void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route&
     if (s.find("DELETE") != std::string::npos)
         res.allowedDelete = true;
     if (!(res.allowedDelete || res.allowedGet || res.allowedPost))
-        throw InvalidValueException("address");
-    
+        throw InvalidValueException("address");   
+}
+
+void ServerConfig::parseRedirect(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("redirect");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    // validation missing
+    res.redirect = s;
 }
 
 /* ---- Getters ----*/
