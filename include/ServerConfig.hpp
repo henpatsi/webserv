@@ -36,6 +36,7 @@ class ServerConfig {
         bool _isRouteSet = false;
     public:
         ServerConfig(std::stringstream& config);
+        ServerConfig& operator=(const ServerConfig& other) = default;
         ~ServerConfig();
         /* ---- Getters ----*/
         std::string getName();
