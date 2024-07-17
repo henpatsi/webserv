@@ -203,6 +203,16 @@ void ServerConfig::parseDefaultAnswer(std::string pair, std::string key, Route& 
     res.defaultAnswer = s;
 }
 
+void ServerConfig::parseCGI(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("Uploaddir");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    // check if string is a valid file of correct file extension
+    res.CGI = s;
+}
+
 void ServerConfig::parseAcceptUpload(std::string pair, std::string key, Route& res)
 {
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
