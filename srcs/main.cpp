@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <ServerManager.hpp>
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
