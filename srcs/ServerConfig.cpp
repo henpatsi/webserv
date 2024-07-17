@@ -290,11 +290,6 @@ const char *ServerConfig::InvalidValueException::what() const noexcept
     return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
 }
 
-const char *ServerConfig::MissingLocationException::what() const noexcept
-{
-    return "no location specified";
-}
-
 unsigned int ServerConfig::convertIP(std::string ip)
 {
     std::stringstream s(ip);
