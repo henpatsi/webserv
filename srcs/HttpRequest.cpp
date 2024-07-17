@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 16:26:34 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 10:42:02 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,8 +126,20 @@ HttpRequest::HttpRequest(int socketFD)
 	{
 		int contentLength = std::stoi(this->headers["Content-Length"]);
 		char contentBuffer[300000] = {}; // TODO make dynamic
-		sstream.read(contentBuffer, contentLength);
-		this->content = contentBuffer;
+		int readAmount = 0;
+		int totalReadAmount = 0;
+
+		while (totalReadAmount < contentLength)
+		{
+			readAmount = read(socketFD, contentBuffer, REQUEST_READ_BUFFER_SIZE - 1);
+			if (readAmount == -1)
+				throw std::system_error();
+			totalReadAmount += readAmount;
+			this->content += contentBuffer;
+			// std::cout << "Read " << readAmount << " bytes\n";
+			// std::cout << "Total read " << totalReadAmount << " bytes\n";
+			// std::cout << "Content String:\n" << this->content << "\n";
+		}
 	}
 
 	/* DEBUG PRINT */
