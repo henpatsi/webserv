@@ -6,13 +6,40 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 13:31:38 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 16:26:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "HttpRequest.hpp"
 
 // CONSTRUCTOR
+
+std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it reaches end of header
+{
+	std::string requestString;
+	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
+	int totalReadAmount = 0;
+	
+	int readAmount = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
+	while (readAmount != 0)
+	{
+		if (readAmount == -1)
+			throw std::system_error();
+		requestString += clientMessageBuffer;
+		// std::cout << "Read " << readAmount << " bytes\n";
+		// std::cout << "Request String:\n" << requestString << "\n";
+		// std::cout << "End: " << (requestString.find("\r\n\r") != std::string::npos) << "\n";
+		if (requestString.find("\r\n\r") != std::string::npos)
+			break ;
+		totalReadAmount += readAmount;
+		if (totalReadAmount > MAX_HEADER_SIZE) // TODO set error num if this is the case
+			break ;
+		readAmount = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
+	}
+
+	std::cout << "\nRequest Message:\n" << requestString << "\n";
+	return requestString;
+}
 
 void extractParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
@@ -33,8 +60,9 @@ void extractParameters(std::map<std::string, std::string>& parametersMap, std::s
 	}
 }
 
-HttpRequest::HttpRequest(std::string requestMessageString)
+HttpRequest::HttpRequest(int socketFD)
 {
+	std::string requestMessageString = readRequestHeader(socketFD);
 	std::istringstream sstream(requestMessageString);
 
 	// Assumes the first word in the request is the method

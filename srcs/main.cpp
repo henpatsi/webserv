@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 11:29:53 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/17 09:59:38 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,30 +23,11 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 
-# ifndef REQUEST_READ_BUFFER_SIZE
-#  define REQUEST_READ_BUFFER_SIZE 300000
-# endif
-
 int	return_error(std::string message)
 {
 	std::cerr << message << "\n";
 	perror("");
 	exit (1);
-}
-
-std::string readRequestMessage(int socketFD)
-{
-	std::string requestString;
-	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
-	
-	// TODO check if full message read, read more if not
-	// TODO make work with chunked enconding
-	int readAmount = read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer) - 1);
-	if (readAmount == -1)
-		throw std::system_error();
-	requestString += clientMessageBuffer;
-
-	return requestString;
 }
 
 int main(int argc, char *argv[])
@@ -99,12 +80,10 @@ int main(int argc, char *argv[])
 			return_error("Failed to open connection socket");
 		std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
-		// Read client message into string
-		std::string requestMessageString = readRequestMessage(connectionSocketFD);
-		std::cout << "\nRequest Message:\n" << requestMessageString << "\n";
+		sleep(1);
 
 		// Parse request into HttpRequest object
-		HttpRequest request = HttpRequest(requestMessageString);
+		HttpRequest request = HttpRequest(connectionSocketFD);
 
 		// Build response into HttpResponse object
 		HttpResponse response = HttpResponse(request);
