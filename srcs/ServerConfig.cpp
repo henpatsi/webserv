@@ -197,10 +197,24 @@ void ServerConfig::parseDefaultAnswer(std::string pair, std::string key, Route& 
 {
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
-        throw InvalidValueException("Directory listing");
+        throw InvalidValueException("Default Answer");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     // check if file exists and is not a directory
     res.defaultAnswer = s;
+}
+
+void ServerConfig::parseAcceptUpload(std::string pair, std::string key, Route& res)
+{
+    size_t index = pair.find_first_not_of(SPACECHARS, key.length());
+    if (index == std::string::npos)
+        throw InvalidValueException("Accept Upload");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    if (s == "true")
+        res.acceptUpload = true;
+    else if (s == "false")
+        res.acceptUpload = false;
+    else
+        throw InvalidValueException("Accept Upload");
 }
 
 /* ---- Getters ----*/
