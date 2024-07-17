@@ -6,11 +6,11 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/16 09:41:29 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/07/15 17:24:49 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME=webserv
+NAME=client
 
 ########    UTILS    ########
 
@@ -29,7 +29,7 @@ OBJDIR		=	obj/
 INCLUDEDIR	=	include/
 
 FLAGS	=	-Wall -Wextra -Werror -std=c++20 \
-			-I$(INCLUDEDIR) -g
+			-I$(INCLUDEDIR)
 
 SRC	=	$(wildcard $(SRCDIR)*.cpp)
 OBJ	=	$(addprefix $(OBJDIR), $(notdir $(SRC:.cpp=.o)))
