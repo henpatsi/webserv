@@ -10,9 +10,7 @@
 
 struct Route {
     std::string location = nullptr;
-    bool allowedGet = false;
-    bool allowedPost = false;
-    bool allowedDelete = false;
+    uint8_t allowedMethods = 0;
     std::string redirect = nullptr;
     std::string root = nullptr;
     bool directoryListing = false;
@@ -89,7 +87,17 @@ class ServerConfig {
         void parseCGI(std::string pair, std::string key, Route& res);
         void parseAcceptUpload(std::string pair, std::string key, Route& res);
         void parseUploadDir(std::string pair, std::string key, Route& res);
+
         static unsigned int convertIP(std::string ip);
+        static uint8_t parseRequestMethod(std::string s)
+        {
+            if (s == "GET")
+                return (1 << 1);
+            if (s == "POST")
+                return (1 << 2);
+            if (s == "DELETE")
+                return (1 << 3);
+        }
 };
 
 #endif

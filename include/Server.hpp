@@ -12,8 +12,10 @@ public:
     Server(ServerConfig config);
     HttpRequest *currentRequest;
     std::string GetAnswer();
-    int connectionSocketFD;
     ServerConfig config;
+
+    int GetServerSocketFD() { return serverSocketFD; }
+    Route findCorrectRoute(HttpRequest request);
 
     class SocketOpenException : std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }

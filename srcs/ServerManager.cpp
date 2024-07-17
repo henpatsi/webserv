@@ -136,7 +136,7 @@ void ServerManager::runServers()
     ev.events = EPOLLIN | EPOLLET;
     for (auto& server : servers)
     {
-        if (epoll_ctl(polled, EPOLL_CTL_ADD, server->connectionSocketFD, &ev) < 0)
+        if (epoll_ctl(polled, EPOLL_CTL_ADD, server->GetServerSocketFD(), &ev) < 0)
             std::cout << "Error while polling fds\n";
         else
             std::cout << "inserted fd\n";
@@ -162,7 +162,7 @@ void ServerManager::runServers()
             for (auto& server : servers)
             {
                 // if they are trying to connect to us
-                if (events[i].data.fd == server->connectionSocketFD)
+                if (events[i].data.fd == server->GetServerSocketFD())
                 {
                     // create the incomming filedescriptor
                     incommingFD = accept(events[i].data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
@@ -201,8 +201,6 @@ void ServerManager::runServers()
                     currentFds--;
                     // close the fd
                     close(events[i].data.fd);
-                    // not sure if this can be added, but would be nice to hard remove it 
-                    events[i].data.fd = -1;
                 }
             }
         }
