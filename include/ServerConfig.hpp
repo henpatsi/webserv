@@ -9,22 +9,22 @@
 #define SPACECHARS " \f\n\r\t\v"
 
 struct Route {
-    std::string location;
-    bool allowedGet;
-    bool allowedPost;
-    bool allowedDelete;
-    std::string redirect;
-    std::string root;
-    bool directoryListing;
-    std::string defaultAnswer;
-    std::string CGI;
-    bool acceptUpload;
-    std::string uploadDir;
+    std::string location = nullptr;
+    bool allowedGet = false;
+    bool allowedPost = false;
+    bool allowedDelete = false;
+    std::string redirect = nullptr;
+    std::string root = nullptr;
+    bool directoryListing = false;
+    std::string defaultAnswer = nullptr;
+    std::string CGI = nullptr;
+    bool acceptUpload = false;
+    std::string uploadDir = nullptr;
 };
 
 class ServerConfig {
     private:
-        std::string _name;
+        std::string _name = nullptr;
         bool _isNameSet = false;
         u_int16_t _port = 8080;
         bool _isPortSet = false;
@@ -68,7 +68,8 @@ class ServerConfig {
                 InvalidValueException(std::string key);
                 const char *what() const noexcept;
         };
-        class MissingLocationException : std::exception {
+        class MissingLocationException : std::exception 
+        {
                 const char *what() const noexcept;
         };
         /* ---- Parsers ---- */
