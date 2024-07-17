@@ -19,6 +19,7 @@
 #include <arpa/inet.h> // inet_addr allowed?
 #include <unistd.h>
 #include <poll.h>
+#include <ServerManager.hpp>
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
@@ -53,7 +54,6 @@ int main(int argc, char *argv[])
 {
 	if (argc != 2)
 		return_error("Invalid amount of arguments\nUse: ./webserv [configuration file]");
-
 	// Get port and ip from config
 	std::string configFilename = argv[1];
 	std::ifstream configFile;
@@ -118,4 +118,6 @@ int main(int argc, char *argv[])
 	}
 
 	close(serverSocketFD);
+
+
 }
