@@ -6,12 +6,13 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/11 16:01:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/16 11:29:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
 #include <fstream>
+#include <exception>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,11 +20,33 @@
 #include <unistd.h>
 #include <poll.h>
 
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
+
+# ifndef REQUEST_READ_BUFFER_SIZE
+#  define REQUEST_READ_BUFFER_SIZE 300000
+# endif
+
 int	return_error(std::string message)
 {
 	std::cerr << message << "\n";
 	perror("");
 	exit (1);
+}
+
+std::string readRequestMessage(int socketFD)
+{
+	std::string requestString;
+	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
+	
+	// TODO check if full message read, read more if not
+	// TODO make work with chunked enconding
+	int readAmount = read(socketFD, clientMessageBuffer, sizeof(clientMessageBuffer) - 1);
+	if (readAmount == -1)
+		throw std::system_error();
+	requestString += clientMessageBuffer;
+
+	return requestString;
 }
 
 int main(int argc, char *argv[])
@@ -51,12 +74,12 @@ int main(int argc, char *argv[])
 	serverAddress.sin_port = htons(port);
 	serverAddress.sin_addr.s_addr = inet_addr(ip_address.c_str());
 
-	// Setup poll
-	// pollfd pollFDs[2];
-	// pollFDs[0].fd = serverSocketFD;
-	// pollFDs[1].fd = serverSocketFD;
-	// pollFDs[0].events = POLLIN;
-	// pollFDs[1].events = POLLIN;
+	// DEBUG: removes "Address already in use" error message
+	int yes=1;
+	if (setsockopt(serverSocketFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+		return_error("setsockopt failed");
+		return (1);
+	}
 
 	// Bind socket to address, turn on listen
 	if (bind(serverSocketFD, (sockaddr*) &serverAddress, sizeof(serverAddress)) == -1)
@@ -74,32 +97,21 @@ int main(int argc, char *argv[])
 		int connectionSocketFD = accept(serverSocketFD, (sockaddr*) &connectionAddress, &connectionAddressLen);
 		if (connectionSocketFD == -1)
 			return_error("Failed to open connection socket");
-		std::cout << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
+		std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocketFD << "\n";
 
-		// Read client message
-		char clientMessageBuffer[1024] = {};
-		if (read(connectionSocketFD, clientMessageBuffer, sizeof(clientMessageBuffer)) == -1)
-			return_error("Reading client message failed");
-		std::cout << clientMessageBuffer << "\n";
+		// Read client message into string
+		std::string requestMessageString = readRequestMessage(connectionSocketFD);
+		std::cout << "\nRequest Message:\n" << requestMessageString << "\n";
 
-		// Build response from file
-		std::string responseFilename = "./html/index.html";
-		std::ifstream responseFile;
-		responseFile.open(responseFilename);
-		if (!configFile.is_open())
-			return_error("Failed to open file: " + responseFilename);
-		std::string response = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n";
-		std::string line;
-		while (responseFile.good())
-		{
-			std::getline(responseFile, line);
-			if ((responseFile.rdstate() & std::ios_base::badbit) != 0)
-				return_error("Reading response failed");
-			response += line + "\n";
-		}
+		// Parse request into HttpRequest object
+		HttpRequest request = HttpRequest(requestMessageString);
+
+		// Build response into HttpResponse object
+		HttpResponse response = HttpResponse(request);
+		//std::cout << response.getResponse() << "\n";
 
 		// Respond to client
-		if (write(connectionSocketFD, response.c_str(), response.size()) == -1)
+		if (write(connectionSocketFD, response.getResponse().c_str(), response.getResponse().size()) == -1)
 			return_error("Writing response failed");
 
 		close(connectionSocketFD);
