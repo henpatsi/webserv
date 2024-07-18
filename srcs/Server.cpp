@@ -140,5 +140,6 @@ std::string Server::GetAnswer()
     {
         return selectedRoute.defaultAnswer == "" ? "404 error page" : selectedRoute.defaultAnswer;
     }
+    return "Unknown stuff for now";
 }
 

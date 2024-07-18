@@ -92,11 +92,12 @@ class ServerConfig {
         static uint8_t parseRequestMethod(std::string s)
         {
             if (s == "GET")
-                return (1 << 1);
+                return 1 << 1;
             if (s == "POST")
-                return (1 << 2);
+                return 1 << 2;
             if (s == "DELETE")
-                return (1 << 3);
+                return 1 << 3;
+            return 0;
         }
 };
 
