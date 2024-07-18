@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 11:05:32 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/18 17:39:48 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,8 @@
 # ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
 # endif
+
+void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
 
 class HttpRequest
 {

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/18 07:44:03 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/18 17:39:29 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,6 @@ std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it r
 	while (totalBytesRead < MAX_HEADER_SIZE)
 	{
 		bytesRead = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
-		// TODO check for WOULDBLOCK or whatever the macro was?
 		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
 		{
 			failedReads += 1;
@@ -51,7 +50,7 @@ std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it r
 	return requestString;
 }
 
-void extractParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
+void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
 	// TODO check how NGINX handles parameters that are formatted incorrectly
 	// TODO handle multiple (repeated) ? in the url
@@ -61,12 +60,12 @@ void extractParameters(std::map<std::string, std::string>& parametersMap, std::s
 		if (parameter.find('=') != std::string::npos && parameter.front() != '=' && parameter.back() != '=')
 		{
 			std::string key = parameter.substr(0, parameter.find('='));
-			std::string value = parameter.substr(parameter.find('=') + 1, std::string::npos);
+			std::string value = parameter.substr(parameter.find('=') + 1);
 			parametersMap[key] = value;
 		}
 		if (parametersString.find('&') == std::string::npos || parametersString.find('&') == parametersString.size() - 1)
 			break ;
-		parametersString = parametersString.substr(parametersString.find('&') + 1, std::string::npos);
+		parametersString = parametersString.substr(parametersString.find('&') + 1);
 	}
 }
 
@@ -95,7 +94,7 @@ HttpRequest::HttpRequest(int socketFD)
 	}
 	// Extracts the parameters from the url into a map
 	if (url.find('?') != std::string::npos && url.back() != '?')
-		extractParameters(this->urlParameters, url.substr(url.find('?') + 1, std::string::npos));
+		extractUrlParameters(this->urlParameters, url.substr(url.find('?') + 1));
 
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
@@ -121,7 +120,8 @@ HttpRequest::HttpRequest(int socketFD)
 			return ;
 		}
 		std::string key = line.substr(0, line.find(':'));
-		std::string value = line.substr(line.find(':') + 2, line.find('\r'));
+		std::string value = line.substr(line.find(':') + 2);
+		value.erase(value.length() - 1);
 		if (key.empty() || value.empty()) // TODO also check that not just spaces if necessary
 		{
 			//std::cout << "Invalid header: " << line << "\n";

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 21:35:16 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/18 20:01:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,65 +14,92 @@
 
 // CONSTRUCTOR
 
-void buildResponse(std::string& response, int code, std::string contentType, std::string content)
+HttpResponse::HttpResponse(HttpRequest& request)
 {
-	response = "HTTP/1.1 " + std::to_string(code) + "\r\n";
-	response += "Content-Type: " + contentType + "\r\n";
-	response += "Content-Length: " + std::to_string(content.length()) + "\r\n";
-	response += "\r\n";
-	response += content;
+	if (request.isBadRequest())
+		setErrorValues(400, "Bad Request");
+	else if (request.getMethod() == "GET")
+		prepareGetResponse(request);
+	else if (request.getMethod() == "POST")
+		preparePostResponse(request);
+	else if (request.getMethod() == "DELETE")
+		prepareDeleteResponse(request);
+	else
+		setErrorValues(405, "Method Not Allowed");
+	
+	buildResponse();
 }
 
-void buildErrorResponse(std::string& response, int code, std::string message)
+// MEMBER FUNCTIONS
+
+void HttpResponse::setErrorValues(int code, std::string message)
 {
-	std::string content;
+	this->responseCode = code;
+	this->contentType = "text/html";
 
-	content = "<html><body><h1>" + std::to_string(code) + " ";
-	content += message + "</h1></body></html>";
-
-	buildResponse(response, code, "text/html", content);
+	this->content = "<html><body><h1>" + std::to_string(code) + " ";
+	this->content += message + "</h1></body></html>";
 }
 
-void buildGetResponse(std::string& response, HttpRequest& request)
+void HttpResponse::buildResponse()
 {
-	std::string filename = SITE_ROOT;
-	std::ifstream file;
-	std::string content;
-	std::string contentType;
-	int responseCode;
+	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	this->response += "Content-Type: " + this->contentType + "\r\n";
+	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
+	this->response += "\r\n";
+	this->response += this->content;
+}
 
-	// TODO check if directory listing is allowed
-	// Build path
-	if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html") != std::string::npos)
+void HttpResponse::buildPath(std::string requestPath)
+{
+	this->path = SITE_ROOT;
+
+	// TODO do we even need any other types than html?
+	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
 	{
-		contentType = "text/html";
-		filename += "html" + request.getResourcePath();
-		if (filename.back() == '/')
-			filename += "index.html";
+		this->contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
+		this->path += "images" + requestPath;
 	}
-	else if (request.getResourcePath().find(".png") != std::string::npos || request.getResourcePath().find(".jpg") != std::string::npos)
+	else if (requestPath.find(".pdf") != std::string::npos)
 	{
-		contentType = "image/" + request.getResourcePath().substr(request.getResourcePath().find(".") + 1);
-		filename += "images" + request.getResourcePath();
+		this->contentType = "application/pdf";
+		this->path += "docs" + requestPath;
 	}
-	else if (request.getResourcePath().find(".pdf") != std::string::npos)
+	else if (requestPath.find(".html") != std::string::npos)
 	{
-		contentType = "application/pdf";
-		filename += "docs" + request.getResourcePath();
+		this->contentType = "text/html";
+		this->path += "html" + requestPath;
+	}
+	else if (requestPath.find(".") == std::string::npos)
+	{
+		// TODO check if directory listing is allowed
+		this->contentType = "text/html";
+		this->path += "html" + requestPath;
+		if (this->path.back() == '/')
+			this->path += "index.html";
+		else if (this->path.find(".html") == std::string::npos)
+			this->path += "/index.html";
 	}
 	else
 	{
-		buildErrorResponse(response, 400, "Bad Request");
-		return ;
+		// TODO make this actually return
+		setErrorValues(415, "Unsupported Media Type");
 	}
+}
+
+void HttpResponse::prepareGetResponse(HttpRequest& request)
+{
+	std::ifstream file;
+
+	buildPath(request.getResourcePath());
 
 	// std::cout << "file path = " << filename << "\n";
 
 	// Try open file
-	file.open(filename);
+	file.open(this->path);
 	if (!file.good())
 	{
-		buildErrorResponse(response, 404, "Not Found");
+		setErrorValues(404, "Not Found");
 		return ;
 	}
 
@@ -83,34 +110,72 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 		std::getline(file, line);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
 		{
-			buildErrorResponse(response, 500, "Internal Server Error");
+			setErrorValues(500, "Internal Server Error");
 			return ;
 		}
-		content += line + "\n";
+		this->content += line + "\n";
 	}
 
-	responseCode = 200;
-
-	buildResponse(response, responseCode, contentType, content);
+	this->responseCode = 200;
 }
 
-HttpResponse::HttpResponse(HttpRequest& request)
+void HttpResponse::preparePostResponse(HttpRequest& request)
 {
-	if (request.isBadRequest())
-		buildErrorResponse(response, 400, "Bad Request");
-	else if (request.getMethod() == "GET")
-		buildGetResponse(this->response, request);
-	else if (request.getMethod() == "POST")
-		buildErrorResponse(response, 501, "Not Implemented");
-	else if (request.getMethod() == "DELETE")
-		buildErrorResponse(response, 501, "Not Implemented");
+
+	// TODO store the content in a not text format?
+
+	if (request.getResourcePath() == "/upload") // Works for text file
+	{
+		std::string boundary = request.getHeader("Content-Type");
+		boundary = boundary.substr(boundary.find("boundary=") + 9);
+
+		std::string line;
+		std::istringstream contentStream(request.getContent());
+
+		// Get the filename line
+		while (std::getline(contentStream, line))
+		{
+			if (line.find("filename=") != std::string::npos)
+				break ;
+		}
+
+		std::string filename = line.substr(line.find("filename=") + 10);
+		filename.erase(filename.size() - 2);
+		//std::cout << "filename = " << filename << "\n";
+
+		std::string path = SITE_ROOT;
+		path += UPLOAD_DIR + filename;
+		std::ofstream file(path);
+		if (!file.good())
+		{
+			setErrorValues(500, "Internal Server Error");
+			return ;
+		}
+
+		std::getline(contentStream, line); // Skip the line with content type
+		std::getline(contentStream, line); // Skip the empty line
+		// Read into the file until the end of the boundary
+		bool fistLine = true;
+		while (std::getline(contentStream, line))
+		{
+			if (line.find(boundary) != std::string::npos)
+			{
+				break ;
+			}
+			if (!fistLine)
+				file << "\n";
+			else
+				fistLine = false;
+			line.erase(line.size() - 1); // To prevent extra newline at the end of the file
+			file << line;
+		}
+	}
 	else
-		buildErrorResponse(response, 405, "Method Not Allowed");
+		prepareGetResponse(request);
 }
 
-// MEMBER FUNCTIONS
-
-std::string HttpResponse::getResponse(void)
+void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
-	return this->response;
+	(void)request;
+	setErrorValues(501, "Not Implemented");
 }
