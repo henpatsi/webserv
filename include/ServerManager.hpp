@@ -29,6 +29,20 @@ class ServerManager
         class CharOutsideServerBlockException : MANAGEREXCEPTION;
         class ServerCreationException : MANAGEREXCEPTION;
         class UnclosedBraceException : MANAGEREXCEPTION;
+        class ManagerRuntimeException : std::exception {
+            private:
+                std::string error;
+            public:
+                ManagerRuntimeException(std::string error);
+                const char *what() const noexcept;
+        };
+        class ManagerEpollException : std::exception {
+            private:
+                std::string error;
+            public:
+                ManagerEpollException(std::string error);
+                const char *what() const noexcept;
+        };
 };
 
 

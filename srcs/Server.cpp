@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 
+#include "ServerManager.hpp"
+
 Server::Server(ServerConfig _config) : config(_config)
 {
     serverSocketFD = socket(AF_INET, SOCK_STREAM, 0);
@@ -143,3 +145,27 @@ std::string Server::GetAnswer()
     return "Unknown stuff for now";
 }
 
+void Server::connect(int incommingFD)
+{
+    listeningFD = incommingFD;
+    std::string requestString;
+    int bufferSize = config.getRequestSizeLimit();
+    char messageBuffer[bufferSize + 1];
+    messageBuffer[bufferSize] = '\0';
+    // todo the chunked requests
+    int readAmount = read(incommingFD, messageBuffer, bufferSize);
+    if (readAmount == -1)
+        throw ServerManager::ManagerRuntimeException("error while reading");
+    requestString += messageBuffer; 
+    currentRequest = new HttpRequest(requestString);
+}
+
+void Server::respond()
+{
+    // create request
+    std::string response = GetAnswer();
+    // try to send request
+    if (send(listeningFD, response.c_str(), response.length(), 0) == -1)
+        throw ServerManager::ManagerRuntimeException("failed to send");
+    listeningFD = -1;
+}

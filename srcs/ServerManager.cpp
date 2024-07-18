@@ -130,9 +130,11 @@ const char * ServerManager::UnclosedBraceException::what() const noexcept
 void ServerManager::runServers()
 {
     // arbitrary max epoll size 50
+    // creates poll of filedescriptors that are watched
     int polled = epoll_create1(50);
     struct epoll_event ev;
 
+    // adds all servers socket as watched filedescriptors
     ev.events = EPOLLIN | EPOLLET;
     for (auto& server : servers)
     {
@@ -175,28 +177,28 @@ void ServerManager::runServers()
                         std::cout << "Error while adding fds to the epoll\n";
                     // keep track of how many we are managing
                     currentFds++;
-                    server->SetListeningFD(incommingFD);
                     // read the incomming request into the servers current httprequest
-                    std::string requestString;
-                    int bufferSize = server->config.getRequestSizeLimit();
-                    char messageBuffer[bufferSize + 1];
-                    messageBuffer[bufferSize] = '\0';
-                    // todo the chunked requests
-                    int readAmount = read(incommingFD, messageBuffer, bufferSize);
-                    if (readAmount == -1)
-                        std::cout << "Error while reading request\n";
-                    requestString += messageBuffer; 
-                    server->currentRequest = new HttpRequest(requestString);
+                    try
+                    {
+                        server->connect(incommingFD);
+                    }
+                    catch (std::exception& e)
+                    {
+                        std::cout << e.what() << "\n";
+                    }
+
                 }
                 // if we can send them data and resolve the request
                 else if (events[i].data.fd == server->GetListeningFD())
                 {
-                    // get the appropriate answer from the server
-                    std::string response = server->GetAnswer();
-                    // send the answer and check for success
-                    if (send(events[i].data.fd, response.c_str(), response.length(), 0) == -1)
-                        std::cout << "Error while sending message\n";
-                    // remove the fd from the polled fds
+                    try
+                    {
+                        server->respond();
+                    }
+                    catch (std::exception& e)
+                    {
+                        std::cout << e.what() << "\n";
+                    }
                     if (epoll_ctl(polled, EPOLL_CTL_DEL, events[i].data.fd, &ev) < 0)
                         std::cout << "Error while removing filedescriptor from poll\n";
                     currentFds--;
@@ -206,6 +208,4 @@ void ServerManager::runServers()
             }
         }
     }
-    
-
 }
