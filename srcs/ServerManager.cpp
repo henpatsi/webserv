@@ -175,6 +175,7 @@ void ServerManager::runServers()
                         std::cout << "Error while adding fds to the epoll\n";
                     // keep track of how many we are managing
                     currentFds++;
+                    server->SetListeningFD(incommingFD);
                     // read the incomming request into the servers current httprequest
                     std::string requestString;
                     int bufferSize = server->config.getRequestSizeLimit();
@@ -188,7 +189,7 @@ void ServerManager::runServers()
                     server->currentRequest = new HttpRequest(requestString);
                 }
                 // if we can send them data and resolve the request
-                else
+                else if (events[i].data.fd == server->GetListeningFD())
                 {
                     // get the appropriate answer from the server
                     std::string response = server->GetAnswer();

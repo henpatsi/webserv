@@ -8,6 +8,7 @@
 class Server {
 private:
     int serverSocketFD;
+    int listeningFD;
 public:
     Server(ServerConfig config);
     HttpRequest *currentRequest;
@@ -15,6 +16,8 @@ public:
     ServerConfig config;
 
     int GetServerSocketFD() { return serverSocketFD; }
+    int GetListeningFD() { return listeningFD; }
+    void SetListeningFD(int incommingFd) { listeningFD = incommingFd; }
     Route findCorrectRoute(HttpRequest request);
 
     class SocketOpenException : std::exception {
