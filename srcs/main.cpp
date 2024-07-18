@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 16:30:08 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/18 07:33:15 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,6 +76,8 @@ int accept_connection(int serverSocket)
 	int connectionSocket = accept(serverSocket, (sockaddr*) &connectionAddress, &connectionAddressLen);
 	if (connectionSocket == -1)
 		exit_error("accept failed");
+	if (fcntl(connectionSocket, F_SETFL, O_NONBLOCK) == -1) // Thought this is not necessary but was blocking in HttpRequest
+		exit_error("Failed to set connection socket to non-blocking");
 
 	std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocket << "\n";
 

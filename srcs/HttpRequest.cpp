@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/17 11:24:22 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/18 07:44:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,14 +20,23 @@ std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it r
 	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
 	int bytesRead = 0;
 	int totalBytesRead = 0;
+	int failedReads = 0;
 	
 	while (totalBytesRead < MAX_HEADER_SIZE)
 	{
 		bytesRead = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
-		if (bytesRead == -1)
-			throw std::system_error();
+		// TODO check for WOULDBLOCK or whatever the macro was?
+		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
+		{
+			failedReads += 1;
+			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
+				break ;
+			sleep(1);
+			continue ;
+		}
 		else if (bytesRead == 0)
 			break ;
+		failedReads = 0; // Reset timeout
 		totalBytesRead += bytesRead;
 		clientMessageBuffer[bytesRead] = '\0';
 		requestString += clientMessageBuffer;
@@ -129,14 +138,25 @@ HttpRequest::HttpRequest(int socketFD)
 		char contentBuffer[CONTENT_READ_BUFFER_SIZE] = {0}; // TODO make dynamic?
 		int bytesRead = 0;
 		int totalBytesRead = 0;
+		int failedReads = 0;
 
 		while (totalBytesRead < contentLength)
 		{
 			// might read something past contents if there is something to read
 			// TODO make read amount be based on the content length
 			bytesRead = read(socketFD, contentBuffer, CONTENT_READ_BUFFER_SIZE - 1);
-			if (bytesRead == -1)
-				throw std::system_error();
+			if (bytesRead == -1) // If nothing to read, wait 1 second and try again
+			{
+				failedReads += 1;
+				if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
+				{
+					this->badRequest = true;
+					break ;
+				}
+				sleep(1);
+				continue ;
+			}
+			failedReads = 0; // Reset timeout
 			totalBytesRead += bytesRead;
 			contentBuffer[bytesRead] = '\0';
 			this->content += contentBuffer;
