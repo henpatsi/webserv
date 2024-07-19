@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/18 18:58:36 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 08:18:23 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,7 +45,7 @@ class HttpResponse
 		std::string content;
 		std::string response;
 
-		void setErrorValues(int responseCode, std::string message);
+		void setErrorValues(int responseCode, std::string message = "");
 		void buildResponse(void);
 		void buildPath(std::string requestPath);
 		void prepareGetResponse(HttpRequest& request);

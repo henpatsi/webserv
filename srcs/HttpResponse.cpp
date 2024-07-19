@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/18 20:01:32 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 07:42:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,8 +16,8 @@
 
 HttpResponse::HttpResponse(HttpRequest& request)
 {
-	if (request.isBadRequest())
-		setErrorValues(400, "Bad Request");
+	if (request.getFailResponseCode() != 0)
+		setErrorValues(request.getFailResponseCode());
 	else if (request.getMethod() == "GET")
 		prepareGetResponse(request);
 	else if (request.getMethod() == "POST")
@@ -25,17 +25,41 @@ HttpResponse::HttpResponse(HttpRequest& request)
 	else if (request.getMethod() == "DELETE")
 		prepareDeleteResponse(request);
 	else
-		setErrorValues(405, "Method Not Allowed");
+		setErrorValues(405);
 	
 	buildResponse();
 }
 
 // MEMBER FUNCTIONS
 
+std::string getDefaultErrorMessage(int code)
+{
+	switch (code)
+	{
+		case 400:
+			return "Bad Request";
+		case 404:
+			return "Not Found";
+		case 405:
+			return "Method Not Allowed";
+		case 415:
+			return "Unsupported Media Type";
+		case 500:
+			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
+		default:
+			return "Unknown Error";
+	}
+}
+
 void HttpResponse::setErrorValues(int code, std::string message)
 {
 	this->responseCode = code;
 	this->contentType = "text/html";
+
+	if (message == "")
+		message = getDefaultErrorMessage(code);
 
 	this->content = "<html><body><h1>" + std::to_string(code) + " ";
 	this->content += message + "</h1></body></html>";
@@ -83,7 +107,7 @@ void HttpResponse::buildPath(std::string requestPath)
 	else
 	{
 		// TODO make this actually return
-		setErrorValues(415, "Unsupported Media Type");
+		setErrorValues(415);
 	}
 }
 
@@ -99,7 +123,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	file.open(this->path);
 	if (!file.good())
 	{
-		setErrorValues(404, "Not Found");
+		setErrorValues(404);
 		return ;
 	}
 
@@ -110,7 +134,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 		std::getline(file, line);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
 		{
-			setErrorValues(500, "Internal Server Error");
+			setErrorValues(500);
 			return ;
 		}
 		this->content += line + "\n";
@@ -126,49 +150,7 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 
 	if (request.getResourcePath() == "/upload") // Works for text file
 	{
-		std::string boundary = request.getHeader("Content-Type");
-		boundary = boundary.substr(boundary.find("boundary=") + 9);
-
-		std::string line;
-		std::istringstream contentStream(request.getContent());
-
-		// Get the filename line
-		while (std::getline(contentStream, line))
-		{
-			if (line.find("filename=") != std::string::npos)
-				break ;
-		}
-
-		std::string filename = line.substr(line.find("filename=") + 10);
-		filename.erase(filename.size() - 2);
-		//std::cout << "filename = " << filename << "\n";
-
-		std::string path = SITE_ROOT;
-		path += UPLOAD_DIR + filename;
-		std::ofstream file(path);
-		if (!file.good())
-		{
-			setErrorValues(500, "Internal Server Error");
-			return ;
-		}
-
-		std::getline(contentStream, line); // Skip the line with content type
-		std::getline(contentStream, line); // Skip the empty line
-		// Read into the file until the end of the boundary
-		bool fistLine = true;
-		while (std::getline(contentStream, line))
-		{
-			if (line.find(boundary) != std::string::npos)
-			{
-				break ;
-			}
-			if (!fistLine)
-				file << "\n";
-			else
-				fistLine = false;
-			line.erase(line.size() - 1); // To prevent extra newline at the end of the file
-			file << line;
-		}
+		setErrorValues(501);
 	}
 	else
 		prepareGetResponse(request);
@@ -177,5 +159,5 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
 	(void)request;
-	setErrorValues(501, "Not Implemented");
+	setErrorValues(501);
 }

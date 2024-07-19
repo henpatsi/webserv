@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/18 17:39:29 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 08:30:20 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 
 // CONSTRUCTOR
 
-std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it reaches end of header
+std::string HttpRequest::readRequestHeader(int socketFD) // Reads 1 byte at a time until it reaches end of header
 {
 	std::string requestString;
 	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
@@ -29,7 +29,10 @@ std::string readRequestHeader(int socketFD) // Reads 1 byte at a time until it r
 		{
 			failedReads += 1;
 			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
+			{
+				this->failResponseCode = 408;
 				break ;
+			}
 			sleep(1);
 			continue ;
 		}
@@ -69,16 +72,68 @@ void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std
 	}
 }
 
+void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::string rawContent, std::string boundary)
+{
+	std::string boundaryStart = "--" + boundary;
+	std::string boundaryEnd = "--" + boundary + "--";
+	std::string boundaryContent = rawContent.substr(rawContent.find(boundaryStart) + boundaryStart.size());
+	boundaryContent = boundaryContent.substr(0, boundaryContent.find(boundaryEnd));
+
+	// For each section of the boundary, extract the data into multipartDataVector
+	while (1)
+	{
+		multipartData data;
+		std::string boundarySection = boundaryContent.substr(0, boundaryContent.find(boundaryStart));
+
+		std::istringstream sstream(boundarySection);
+		std::string line;
+
+		getline(sstream, line); // Read the rest of the boundary line
+		// Read relevant headers
+		while (getline(sstream, line))
+		{
+			if (line.find("Content-Disposition:") != std::string::npos)
+			{
+				data.name = line.substr(line.find("name=\"") + 6);
+				data.name.erase(data.name.find("\""));
+				data.filename = line.substr(line.find("filename=\"") + 10);
+				data.filename.erase(data.filename.find("\""));
+			}
+			else if (line.find("Content-Type:") != std::string::npos)
+			{
+				data.contentType = line.substr(line.find("Content-Type:") + 14);
+				data.contentType.erase(data.contentType.find("\r"));
+			}
+			else if (line == "\r")
+				break ;
+		}
+		// Read data
+		while (getline(sstream, line))
+		{
+			data.data += line + "\n";
+		}
+
+		multipartDataVector.push_back(data);
+
+		if (boundaryContent.find(boundaryStart) == std::string::npos)
+			break ;
+		else
+			boundaryContent = boundaryContent.substr(boundaryContent.find(boundaryStart) + boundaryStart.size());
+	}
+}
+
 HttpRequest::HttpRequest(int socketFD)
 {
 	std::string requestMessageString = readRequestHeader(socketFD);
+	if (this->failResponseCode != 0)
+		return ;
 	std::istringstream sstream(requestMessageString);
 
 	// Assumes the first word in the request is the method
 	sstream >> this->method;
 	if (this->method.empty())
 	{
-		badRequest = true;
+		this->failResponseCode = 400;
 		return ;
 	}
 
@@ -89,7 +144,7 @@ HttpRequest::HttpRequest(int socketFD)
 	this->resourcePath = url.substr(0, url.find('?'));
 	if (this->resourcePath.empty())
 	{
-		badRequest = true;
+		this->failResponseCode = 400;
 		return ;
 	}
 	// Extracts the parameters from the url into a map
@@ -100,7 +155,7 @@ HttpRequest::HttpRequest(int socketFD)
 	sstream >> this->httpVersion;
 	if (this->httpVersion.empty())
 	{
-		badRequest = true;
+		this->failResponseCode = 400;
 		return ;
 	}
 
@@ -116,7 +171,7 @@ HttpRequest::HttpRequest(int socketFD)
 			|| line[line.size() - 2] == ':')
 		{
 			//std::cout << "Invalid header: " << line << "\n";
-			badRequest = true;
+			this->failResponseCode = 400;
 			return ;
 		}
 		std::string key = line.substr(0, line.find(':'));
@@ -125,7 +180,7 @@ HttpRequest::HttpRequest(int socketFD)
 		if (key.empty() || value.empty()) // TODO also check that not just spaces if necessary
 		{
 			//std::cout << "Invalid header: " << line << "\n";
-			badRequest = true;
+			this->failResponseCode = 400;
 			return ;
 		}
 		this->headers[key] = value;
@@ -150,7 +205,7 @@ HttpRequest::HttpRequest(int socketFD)
 				failedReads += 1;
 				if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
 				{
-					this->badRequest = true;
+					this->failResponseCode = 408;
 					break ;
 				}
 				sleep(1);
@@ -159,20 +214,35 @@ HttpRequest::HttpRequest(int socketFD)
 			failedReads = 0; // Reset timeout
 			totalBytesRead += bytesRead;
 			contentBuffer[bytesRead] = '\0';
-			this->content += contentBuffer;
+			this->rawContent += contentBuffer;
 		}
+	}
+
+	// Extracts multipart data if content type is multipart/form-data
+	if (this->getHeader("Content-Type").find("multipart/form-data") != std::string::npos)
+	{
+		std::string boundary = this->getHeader("Content-Type");
+		boundary = boundary.substr(boundary.find("boundary=") + 9);
+		extractMultipartData(this->multipartDataVector, this->rawContent, boundary);
 	}
 
 	/* DEBUG PRINT */
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
 	std::cout << "HTTP version: " << this->httpVersion << "\n";
-	std::cout << "Url Parameters:\n";
+	std::cout << "Url parameters:\n";
 	for (std::map<std::string, std::string>::iterator it = this->urlParameters.begin(); it != this->urlParameters.end(); it++)
 		std::cout << "  " << it->first << " = " << it->second << "\n";
 	std::cout << "Headers:\n";
 	for (std::map<std::string, std::string>::iterator it = this->headers.begin(); it != this->headers.end(); it++)
 		std::cout << "  " << it->first << " = " << it->second << "\n";
-	std::cout << "Content:\n " << this->content << "\n";
+	if (this->multipartDataVector.size() > 0)
+	{
+		std::cout << "Multipart data:\n";
+		for (multipartData data : multipartDataVector)
+			std::cout << "Name: " << data.name << "\nFilename: " << data.filename << "\nContent-Type: " << data.contentType << "\nData: " << data.data << "\n\n";
+	}
+	else
+		std::cout << "Raw content:\n " << this->rawContent << "\n";
 	std::cout << "REQUEST INFO FINISHED\n\n";
 }
