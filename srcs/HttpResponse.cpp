@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 07:42:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 15:46:13 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 
 HttpResponse::HttpResponse(HttpRequest& request)
 {
+	buildPath(request.getResourcePath());
+
 	if (request.getFailResponseCode() != 0)
 		setErrorValues(request.getFailResponseCode());
 	else if (request.getMethod() == "GET")
@@ -28,6 +30,8 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		setErrorValues(405);
 	
 	buildResponse();
+
+	std::cout << "Response code: " << this->responseCode << "\n";
 }
 
 // MEMBER FUNCTIONS
@@ -42,6 +46,10 @@ std::string getDefaultErrorMessage(int code)
 			return "Not Found";
 		case 405:
 			return "Method Not Allowed";
+		case 408:
+			return "Request Timeout";
+		case 411:
+			return "Length Required";
 		case 415:
 			return "Unsupported Media Type";
 		case 500:
@@ -113,9 +121,9 @@ void HttpResponse::buildPath(std::string requestPath)
 
 void HttpResponse::prepareGetResponse(HttpRequest& request)
 {
-	std::ifstream file;
+	(void) request;
 
-	buildPath(request.getResourcePath());
+	std::ifstream file;
 
 	// std::cout << "file path = " << filename << "\n";
 
@@ -146,9 +154,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 void HttpResponse::preparePostResponse(HttpRequest& request)
 {
 
-	// TODO store the content in a not text format?
-
-	if (request.getResourcePath() == "/upload") // Works for text file
+	if (request.getResourcePath() == "/upload")
 	{
 		setErrorValues(501);
 	}

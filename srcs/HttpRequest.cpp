@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 12:12:07 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 16:51:11 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,28 +22,28 @@ void debugPrint(HttpRequest request)
 	std::cout << "HTTP version: " << request.getHttpVersion() << "\n";
 	std::cout << "Url parameters:\n";
 	std::map<std::string, std::string> urlParameters = request.getUrlParameters();
-	for (std::map<std::string, std::string>::iterator it = urlParameters.begin(); it != urlParameters.end(); it++)
-		std::cout << "  " << it->first << " = " << it->second << "\n";
+	for (auto param : urlParameters)
+		std::cout << "  " << param.first << " = " << param.second << "\n";
 	std::cout << "Headers:\n";
 	std::map<std::string, std::string> headers = request.getHeaders();
-	for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); it++)
-		std::cout << "  " << it->first << " = " << it->second << "\n";
+	for (auto param : headers)
+		std::cout << "  " << param.first << " = " << param.second << "\n";
 	std::vector<multipartData> multipartDataVector = request.getMultipartData();
 	if (multipartDataVector.size() > 0)
 	{
-		std::cout << "Multipart data:\n";
+		std::cout << "Multipart data:";
 		for (multipartData data : multipartDataVector)
-			std::cout << "Name: " << data.name << "\nFilename: " << data.filename << "\nContent-Type: " << data.contentType << "\nData: " << data.data << "\n";
+			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  Content-Type: " << data.contentType << "\n  Data: " << data.data << "\n";
 	}
 	else if (request.getUrlEncodedData().size() > 0)
 	{
 		std::cout << "Url encoded data:\n";
 		std::map<std::string, std::string> urlEncodedData = request.getUrlEncodedData();
-		for (std::map<std::string, std::string>::iterator it = urlEncodedData.begin(); it != urlEncodedData.end(); it++)
-			std::cout << it->first << " = " << it->second << "\n";
+		for (auto param : urlEncodedData)
+			std::cout << "  " << param.first << " = " << param.second << "\n";
 	}
 	else
-		std::cout << "Raw content:\n " << request.getRawContent() << "\n";
+		std::cout << "Raw content:\n  " << request.getRawContent() << "\n";
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
 }
 
@@ -116,17 +116,17 @@ void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::
 	}
 }
 
-std::string HttpRequest::readRequestHeader(int socketFD) // Reads 1 byte at a time until it reaches end of header
+std::string HttpRequest::readLine(int socketFD)
 {
-	std::string requestString;
-	char clientMessageBuffer[REQUEST_READ_BUFFER_SIZE] = {0};
+	// Reads 1 byte at a time until it reaches end of line to not read too much
+	char readBuffer[2] = {0};
 	int bytesRead = 0;
-	int totalBytesRead = 0;
 	int failedReads = 0;
-	
-	while (totalBytesRead < MAX_HEADER_SIZE)
+	std::string line;
+
+	while (1)
 	{
-		bytesRead = read(socketFD, clientMessageBuffer, REQUEST_READ_BUFFER_SIZE - 1);
+		bytesRead = read(socketFD, readBuffer, 1);
 		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
 		{
 			failedReads += 1;
@@ -138,18 +138,75 @@ std::string HttpRequest::readRequestHeader(int socketFD) // Reads 1 byte at a ti
 			sleep(1);
 			continue ;
 		}
-		else if (bytesRead == 0)
-			break ;
 		failedReads = 0; // Reset timeout
-		totalBytesRead += bytesRead;
-		clientMessageBuffer[bytesRead] = '\0';
-		requestString += clientMessageBuffer;
-		if (requestString.find("\r\n\r\n") != std::string::npos)
+		if (bytesRead == 0)
+		{
+			this->failResponseCode = 400;
 			break ;
+		}
+		line += readBuffer[0];
+		if (readBuffer[0] == '\n')
+			break ;
+	}
+	return (line);
+}
+
+std::string HttpRequest::readRequestHeader(int socketFD)
+{
+	std::string requestString;
+	
+	while (requestString.size() < MAX_HEADER_SIZE)
+	{
+		std::string line = readLine(socketFD);
+		if (line == "\r\n" || this->failResponseCode != 0)
+			break ;
+		requestString += line;
 	}
 
 	std::cout << "\nRequest Message:\n" << requestString << "\n";
 	return requestString;
+}
+
+void HttpRequest::readContent(int socketFD, int contentLength)
+{
+	char contentBuffer[CONTENT_READ_BUFFER_SIZE + 1] = {0};
+	int contentReadSize;
+	int bytesRead = 0;
+	int failedReads = 0;
+
+	while (contentLength > 0)
+	{
+		contentReadSize = contentLength > CONTENT_READ_BUFFER_SIZE ? CONTENT_READ_BUFFER_SIZE : contentLength;
+		bytesRead = read(socketFD, contentBuffer, contentReadSize);
+		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
+		{
+			failedReads += 1;
+			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
+			{
+				this->failResponseCode = 408;
+				break ;
+			}
+			sleep(1);
+			continue ;
+		}
+		failedReads = 0; // Reset timeout
+		contentBuffer[bytesRead] = '\0';
+		this->rawContent += contentBuffer;
+		contentLength -= bytesRead;
+	}
+}
+
+void HttpRequest::readChunkedContent(int socketFD)
+{
+	std::string line = readLine(socketFD);
+	int chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
+	while (chunkSize > 0)
+	{
+		readContent(socketFD, chunkSize);
+		line = readLine(socketFD); // Reads the CRLF
+		line = readLine(socketFD);
+		chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
+	}
 }
 
 void HttpRequest::parseFirstLine(std::istringstream& sstream)
@@ -218,36 +275,10 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 void HttpRequest::parseBody(int socketFD)
 {
 	// Reads the body content if content length specified
-	if (this->headers.find("Content-Length") != this->headers.end())
-	{
-		int contentLength = std::stoi(this->headers["Content-Length"]);
-		char contentBuffer[CONTENT_READ_BUFFER_SIZE] = {0}; // TODO make dynamic?
-		int bytesRead = 0;
-		int totalBytesRead = 0;
-		int failedReads = 0;
-
-		while (totalBytesRead < contentLength)
-		{
-			// might read something past contents if there is something to read
-			// TODO make read amount be based on the content length
-			bytesRead = read(socketFD, contentBuffer, CONTENT_READ_BUFFER_SIZE - 1);
-			if (bytesRead == -1) // If nothing to read, wait 1 second and try again
-			{
-				failedReads += 1;
-				if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
-				{
-					this->failResponseCode = 408;
-					break ;
-				}
-				sleep(1);
-				continue ;
-			}
-			failedReads = 0; // Reset timeout
-			totalBytesRead += bytesRead;
-			contentBuffer[bytesRead] = '\0';
-			this->rawContent += contentBuffer;
-		}
-	}
+	if (this->headers["Transfer-Encoding"] == "chunked")
+		readChunkedContent(socketFD);
+	else if (this->headers.find("Content-Length") != this->headers.end())
+		readContent(socketFD, std::stoi(this->headers["Content-Length"]));
 
 	// Extracts the data from the body content from known content types
 	if (this->getHeader("Content-Type").find("multipart/form-data") != std::string::npos)

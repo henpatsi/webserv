@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 11:10:08 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 16:37:16 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,10 +20,6 @@
 # include <vector>
 
 #include <unistd.h>
-
-# ifndef REQUEST_READ_BUFFER_SIZE
-#  define REQUEST_READ_BUFFER_SIZE 2 // This should be able to account for the full header?
-# endif
 
 # ifndef CONTENT_READ_BUFFER_SIZE
 #  define CONTENT_READ_BUFFER_SIZE 1024
@@ -71,7 +67,10 @@ class HttpRequest
 		std::map<std::string, std::string> urlEncodedData = {};
 		int	failResponseCode = 0;
 
+		std::string readLine(int socketFD);
 		std::string readRequestHeader(int socketFD);
+		void readContent(int socketFD, int contentLength);
+		void readChunkedContent(int socketFD);
 		void parseFirstLine(std::istringstream& sstream);
 		void parseHeader(std::istringstream& sstream);
 		void parseBody(int socketFD);
