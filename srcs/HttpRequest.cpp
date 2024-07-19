@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 16:51:11 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 17:32:39 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,106 +14,64 @@
 
 // CONSTRUCTOR
 
-void debugPrint(HttpRequest request)
+HttpRequest::HttpRequest(int socketFD)
+{
+	try
+	{
+		/* code */
+		std::string requestMessageString = readRequestHeader(socketFD);
+		if (this->failResponseCode != 0)
+			return ;
+		std::istringstream sstream(requestMessageString);
+
+		parseFirstLine(sstream);
+		parseHeader(sstream);
+		parseBody(socketFD);
+
+		debugPrint();
+	}
+	catch (RequestException& e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+}
+
+// MEMBER FUNCTIONS
+
+void HttpRequest::setErrorAndThrow(int responseCode)
+{
+	this->failResponseCode = responseCode;
+	throw RequestException();
+}
+
+void HttpRequest::debugPrint()
 {
 	/* DEBUG PRINT */
-	std::cout << "\nMethod: " << request.getMethod() << "\n";
-	std::cout << "Resource path: " << request.getResourcePath() << "\n";
-	std::cout << "HTTP version: " << request.getHttpVersion() << "\n";
+	std::cout << "\nMethod: " << this->method << "\n";
+	std::cout << "Resource path: " << this->resourcePath << "\n";
+	std::cout << "HTTP version: " << this->httpVersion << "\n";
 	std::cout << "Url parameters:\n";
-	std::map<std::string, std::string> urlParameters = request.getUrlParameters();
-	for (auto param : urlParameters)
+	for (auto param : this->urlParameters)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 	std::cout << "Headers:\n";
-	std::map<std::string, std::string> headers = request.getHeaders();
-	for (auto param : headers)
+	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
-	std::vector<multipartData> multipartDataVector = request.getMultipartData();
-	if (multipartDataVector.size() > 0)
+
+	if (this->multipartDataVector.size() > 0)
 	{
 		std::cout << "Multipart data:";
-		for (multipartData data : multipartDataVector)
+		for (multipartData data : this->multipartDataVector)
 			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  Content-Type: " << data.contentType << "\n  Data: " << data.data << "\n";
 	}
-	else if (request.getUrlEncodedData().size() > 0)
+	else if (this->urlEncodedData.size() > 0)
 	{
 		std::cout << "Url encoded data:\n";
-		std::map<std::string, std::string> urlEncodedData = request.getUrlEncodedData();
-		for (auto param : urlEncodedData)
+		for (auto param : this->urlEncodedData)
 			std::cout << "  " << param.first << " = " << param.second << "\n";
 	}
 	else
-		std::cout << "Raw content:\n  " << request.getRawContent() << "\n";
+		std::cout << "Raw content:\n  " << this->rawContent << "\n";
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
-}
-
-void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
-{
-	// TODO check how NGINX handles parameters that are formatted incorrectly
-	// TODO handle multiple (repeated) ? in the url
-	while (1)
-	{
-		std::string parameter = parametersString.substr(0, parametersString.find('&'));
-		if (parameter.find('=') != std::string::npos && parameter.front() != '=' && parameter.back() != '=')
-		{
-			std::string key = parameter.substr(0, parameter.find('='));
-			std::string value = parameter.substr(parameter.find('=') + 1);
-			parametersMap[key] = value;
-		}
-		if (parametersString.find('&') == std::string::npos || parametersString.find('&') == parametersString.size() - 1)
-			break ;
-		parametersString = parametersString.substr(parametersString.find('&') + 1);
-	}
-}
-
-void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::string rawContent, std::string boundary)
-{
-	std::string boundaryStart = "--" + boundary;
-	std::string boundaryEnd = "--" + boundary + "--";
-	std::string boundaryContent = rawContent.substr(rawContent.find(boundaryStart) + boundaryStart.size());
-	boundaryContent = boundaryContent.substr(0, boundaryContent.find(boundaryEnd));
-
-	// For each section of the boundary, extract the data into multipartDataVector
-	while (1)
-	{
-		multipartData data;
-		std::string boundarySection = boundaryContent.substr(0, boundaryContent.find(boundaryStart));
-
-		std::istringstream sstream(boundarySection);
-		std::string line;
-
-		getline(sstream, line); // Read the rest of the boundary line
-		// Read relevant headers
-		while (getline(sstream, line))
-		{
-			if (line.find("Content-Disposition:") != std::string::npos)
-			{
-				data.name = line.substr(line.find("name=\"") + 6);
-				data.name.erase(data.name.find("\""));
-				data.filename = line.substr(line.find("filename=\"") + 10);
-				data.filename.erase(data.filename.find("\""));
-			}
-			else if (line.find("Content-Type:") != std::string::npos)
-			{
-				data.contentType = line.substr(line.find("Content-Type:") + 14);
-				data.contentType.erase(data.contentType.length() - 1);
-			}
-			else if (line == "\r")
-				break ;
-		}
-
-		// Read data
-		while (getline(sstream, line))
-			data.data += line + "\n";
-		data.data.erase(data.data.size() - 1); // Remove the last newline
-
-		multipartDataVector.push_back(data);
-
-		if (boundaryContent.find(boundaryStart) == std::string::npos)
-			break ;
-		else
-			boundaryContent = boundaryContent.substr(boundaryContent.find(boundaryStart) + boundaryStart.size());
-	}
 }
 
 std::string HttpRequest::readLine(int socketFD)
@@ -130,20 +88,14 @@ std::string HttpRequest::readLine(int socketFD)
 		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
 		{
 			failedReads += 1;
-			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
-			{
-				this->failResponseCode = 408;
-				break ;
-			}
+			if (failedReads > 2) // After 2 failed reads (2 sec timeout), throw exception
+				setErrorAndThrow(408);
 			sleep(1);
 			continue ;
 		}
 		failedReads = 0; // Reset timeout
 		if (bytesRead == 0)
-		{
-			this->failResponseCode = 400;
-			break ;
-		}
+			setErrorAndThrow(400);
 		line += readBuffer[0];
 		if (readBuffer[0] == '\n')
 			break ;
@@ -293,16 +245,74 @@ void HttpRequest::parseBody(int socketFD)
 	}
 }
 
-HttpRequest::HttpRequest(int socketFD)
+// HELPER FUNCTIONS
+
+void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
-	std::string requestMessageString = readRequestHeader(socketFD);
-	if (this->failResponseCode != 0)
-		return ;
-	std::istringstream sstream(requestMessageString);
-
-	parseFirstLine(sstream);
-	parseHeader(sstream);
-	parseBody(socketFD);
-
-	debugPrint(*this);
+	// TODO check how NGINX handles parameters that are formatted incorrectly
+	// TODO handle multiple (repeated) ? in the url
+	while (1)
+	{
+		std::string parameter = parametersString.substr(0, parametersString.find('&'));
+		if (parameter.find('=') != std::string::npos && parameter.front() != '=' && parameter.back() != '=')
+		{
+			std::string key = parameter.substr(0, parameter.find('='));
+			std::string value = parameter.substr(parameter.find('=') + 1);
+			parametersMap[key] = value;
+		}
+		if (parametersString.find('&') == std::string::npos || parametersString.find('&') == parametersString.size() - 1)
+			break ;
+		parametersString = parametersString.substr(parametersString.find('&') + 1);
+	}
 }
+
+void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::string rawContent, std::string boundary)
+{
+	std::string boundaryStart = "--" + boundary;
+	std::string boundaryEnd = "--" + boundary + "--";
+	std::string boundaryContent = rawContent.substr(rawContent.find(boundaryStart) + boundaryStart.size());
+	boundaryContent = boundaryContent.substr(0, boundaryContent.find(boundaryEnd));
+
+	// For each section of the boundary, extract the data into multipartDataVector
+	while (1)
+	{
+		multipartData data;
+		std::string boundarySection = boundaryContent.substr(0, boundaryContent.find(boundaryStart));
+
+		std::istringstream sstream(boundarySection);
+		std::string line;
+
+		getline(sstream, line); // Read the rest of the boundary line
+		// Read relevant headers
+		while (getline(sstream, line))
+		{
+			if (line.find("Content-Disposition:") != std::string::npos)
+			{
+				data.name = line.substr(line.find("name=\"") + 6);
+				data.name.erase(data.name.find("\""));
+				data.filename = line.substr(line.find("filename=\"") + 10);
+				data.filename.erase(data.filename.find("\""));
+			}
+			else if (line.find("Content-Type:") != std::string::npos)
+			{
+				data.contentType = line.substr(line.find("Content-Type:") + 14);
+				data.contentType.erase(data.contentType.length() - 1);
+			}
+			else if (line == "\r")
+				break ;
+		}
+
+		// Read data
+		while (getline(sstream, line))
+			data.data += line + "\n";
+		data.data.erase(data.data.size() - 1); // Remove the last newline
+
+		multipartDataVector.push_back(data);
+
+		if (boundaryContent.find(boundaryStart) == std::string::npos)
+			break ;
+		else
+			boundaryContent = boundaryContent.substr(boundaryContent.find(boundaryStart) + boundaryStart.size());
+	}
+}
+
