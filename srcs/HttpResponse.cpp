@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 15:46:13 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 22:11:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -154,7 +154,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 void HttpResponse::preparePostResponse(HttpRequest& request)
 {
 
-	if (request.getResourcePath() == "/upload")
+	if (request.getResourcePath() == "/uploads")
 	{
 		setErrorValues(501);
 	}

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 17:32:10 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 23:09:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,7 @@ class HttpRequest
 		std::string							httpVersion;
 		std::map<std::string, std::string>	urlParameters = {};
 		std::map<std::string, std::string>	headers = {};
-		std::string							rawContent;
+		std::string							rawContent = "";
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;

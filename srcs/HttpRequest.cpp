@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 17:32:39 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 23:28:27 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,7 @@ HttpRequest::HttpRequest(int socketFD)
 {
 	try
 	{
-		/* code */
 		std::string requestMessageString = readRequestHeader(socketFD);
-		if (this->failResponseCode != 0)
-			return ;
 		std::istringstream sstream(requestMessageString);
 
 		parseFirstLine(sstream);
@@ -110,7 +107,7 @@ std::string HttpRequest::readRequestHeader(int socketFD)
 	while (requestString.size() < MAX_HEADER_SIZE)
 	{
 		std::string line = readLine(socketFD);
-		if (line == "\r\n" || this->failResponseCode != 0)
+		if (line == "\r\n")
 			break ;
 		requestString += line;
 	}
@@ -134,10 +131,7 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 		{
 			failedReads += 1;
 			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
-			{
-				this->failResponseCode = 408;
-				break ;
-			}
+				setErrorAndThrow(408);
 			sleep(1);
 			continue ;
 		}
@@ -148,14 +142,14 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 	}
 }
 
-void HttpRequest::readChunkedContent(int socketFD)
+void HttpRequest::readChunkedContent(int socketFD) // TODO chunked content missing newlines???
 {
 	std::string line = readLine(socketFD);
 	int chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
 	while (chunkSize > 0)
 	{
 		readContent(socketFD, chunkSize);
-		line = readLine(socketFD); // Reads the CRLF
+		line = readLine(socketFD); // Reads the empty line
 		line = readLine(socketFD);
 		chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
 	}
@@ -166,10 +160,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Assumes the first word in the request is the method
 	sstream >> this->method;
 	if (this->method.empty())
-	{
-		this->failResponseCode = 400;
-		return ;
-	}
+		setErrorAndThrow(400);
 
 	// Assumes the second word in the request is the url
 	std::string url;
@@ -177,10 +168,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Extracts path from the url
 	this->resourcePath = url.substr(0, url.find('?'));
 	if (this->resourcePath.empty())
-	{
-		this->failResponseCode = 400;
-		return ;
-	}
+		setErrorAndThrow(400);
 	// Extracts the parameters from the url into a map
 	if (url.find('?') != std::string::npos && url.back() != '?')
 		extractUrlParameters(this->urlParameters, url.substr(url.find('?') + 1));
@@ -188,10 +176,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
 	if (this->httpVersion.empty())
-	{
-		this->failResponseCode = 400;
-		return ;
-	}
+		setErrorAndThrow(400);
 }
 
 void HttpRequest::parseHeader(std::istringstream& sstream)
@@ -206,20 +191,12 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 		if (line.back() != '\r'
 			|| line.find(':') == std::string::npos
 			|| line[line.size() - 2] == ':')
-		{
-			//std::cout << "Invalid header: " << line << "\n";
-			this->failResponseCode = 400;
-			return ;
-		}
+			setErrorAndThrow(400);
 		std::string key = line.substr(0, line.find(':'));
 		std::string value = line.substr(line.find(':') + 2);
 		value.erase(value.length() - 1);
 		if (key.empty() || value.empty()) // TODO also check that not just spaces if necessary
-		{
-			//std::cout << "Invalid header: " << line << "\n";
-			this->failResponseCode = 400;
-			return ;
-		}
+			setErrorAndThrow(400);
 		this->headers[key] = value;
 	}
 }
@@ -266,6 +243,7 @@ void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std
 	}
 }
 
+// TODO check if nested multipart datas should be handled, does NGINX handle?
 void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::string rawContent, std::string boundary)
 {
 	std::string boundaryStart = "--" + boundary;
