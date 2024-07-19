@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 08:20:24 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/19 11:10:08 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,10 +50,14 @@ class HttpRequest
 
 		std::string	getMethod(void) { return this->method; }
 		std::string	getResourcePath(void) { return this->resourcePath; }
+		std::string getHttpVersion(void) { return this->httpVersion; }
+		std::map<std::string, std::string> getUrlParameters(void) { return this->urlParameters; }
 		std::string	getUrlParameter(std::string key) { return this->urlParameters[key]; }
+		std::map<std::string, std::string> getHeaders(void) { return this->headers; }
 		std::string	getHeader(std::string key) { return this->headers[key]; }
 		std::string	getRawContent(void) { return this->rawContent; }
 		std::vector<multipartData> getMultipartData(void) { return this->multipartDataVector; }
+		std::map<std::string, std::string> getUrlEncodedData(void) { return this->urlEncodedData; }
 		int			getFailResponseCode(void) { return this->failResponseCode; }
 	
 	private:
@@ -64,9 +68,13 @@ class HttpRequest
 		std::map<std::string, std::string> headers = {};
 		std::string rawContent;
 		std::vector<multipartData> multipartDataVector = {};
+		std::map<std::string, std::string> urlEncodedData = {};
 		int	failResponseCode = 0;
 
 		std::string readRequestHeader(int socketFD);
+		void parseFirstLine(std::istringstream& sstream);
+		void parseHeader(std::istringstream& sstream);
+		void parseBody(int socketFD);
 };
 
 #endif
