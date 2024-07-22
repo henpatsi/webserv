@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 23:09:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/22 21:33:52 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,11 +34,10 @@ struct multipartData
 	std::string name;
 	std::string filename;
 	std::string contentType;
-	std::string data;
+	std::vector<char> data;
 };
 
 void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
-void extractMultipartData(std::vector<multipartData>& multipartDataVector, std::string boundary, std::string content);
 
 class HttpRequest
 {
@@ -52,7 +51,7 @@ class HttpRequest
 		std::string							getUrlParameter(std::string key) { return this->urlParameters[key]; }
 		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
-		std::string							getRawContent(void) { return this->rawContent; }
+		std::vector<char>					getRawContent(void) { return this->rawContent; }
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
@@ -69,7 +68,7 @@ class HttpRequest
 		std::string							httpVersion;
 		std::map<std::string, std::string>	urlParameters = {};
 		std::map<std::string, std::string>	headers = {};
-		std::string							rawContent = "";
+		std::vector<char>					rawContent = {};
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
@@ -78,6 +77,7 @@ class HttpRequest
 		void		setErrorAndThrow(int code);
 		std::string	readLine(int socketFD);
 		std::string	readRequestHeader(int socketFD);
+		void 		extractMultipartData();
 		void		readContent(int socketFD, int contentLength);
 		void		readChunkedContent(int socketFD);
 		void		parseFirstLine(std::istringstream& sstream);

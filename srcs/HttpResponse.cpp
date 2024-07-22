@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/19 22:11:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/22 19:16:44 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,7 +156,27 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 
 	if (request.getResourcePath() == "/uploads")
 	{
-		setErrorValues(501);
+		for (auto data : request.getMultipartData())
+		{
+			if (data.filename == "")
+				continue ;
+
+			std::string filename = SITE_ROOT;
+			filename += UPLOAD_DIR + data.filename;
+			std::ofstream file(filename);
+
+			if (!file.good())
+			{
+				setErrorValues(500);
+				return ;
+			}
+
+			file.write(data.data.data(), data.data.size());
+			file.close();
+		}
+
+		buildPath("/success.html");
+		prepareGetResponse(request);
 	}
 	else
 		prepareGetResponse(request);
