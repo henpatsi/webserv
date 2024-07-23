@@ -47,8 +47,8 @@ void HttpRequest::debugPrint()
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
 	std::cout << "HTTP version: " << this->httpVersion << "\n";
-	std::cout << "Url parameters:\n";
-	for (auto param : this->urlParameters)
+	std::cout << "URI parameters:\n";
+	for (auto param : this->URIParameters)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 	std::cout << "Headers:\n";
 	for (auto param : this->headers)
@@ -146,7 +146,7 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 	}
 }
 
-void HttpRequest::readChunkedContent(int socketFD) // TODO chunked content missing newlines???
+void HttpRequest::readChunkedContent(int socketFD)
 {
 	std::string line = readLine(socketFD);
 	int chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
@@ -166,17 +166,19 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	if (this->method.empty())
 		setErrorAndThrow(400);
 
-	// Assumes the second word in the request is the url
-	std::string url;
-	sstream >> url;
-	// Extracts path from the url
-	this->resourcePath = url.substr(0, url.find('?'));
+	// Assumes the second word in the request is the URI
+	std::string URI;
+	sstream >> URI;
+	// Extracts path from the URI
+	this->resourcePath = URI.substr(0, URI.find('?'));
+	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
+		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400);
-	// Extracts the parameters from the url into a map
-	if (url.find('?') != std::string::npos && url.back() != '?')
-		extractUrlParameters(this->urlParameters, url.substr(url.find('?') + 1));
-	
+	// Extracts the parameters from the URI into a map
+	if (URI.find('?') != std::string::npos && URI.back() != '?')
+		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
+
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
 	if (this->httpVersion.empty())
@@ -199,7 +201,7 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 		std::string key = line.substr(0, line.find(':'));
 		std::string value = line.substr(line.find(':') + 2);
 		value.erase(value.length() - 1);
-		if (key.empty() || value.empty()) // TODO also check that not just spaces if necessary
+		if (key.empty() || value.empty())
 			setErrorAndThrow(400);
 		this->headers[key] = value;
 	}
@@ -224,16 +226,14 @@ void HttpRequest::parseBody(int socketFD)
 	else if (this->getHeader("Content-Type").find("application/x-www-form-urlencoded") != std::string::npos)
 	{
 		std::string rawContentString(this->rawContent.begin(), this->rawContent.end());
-		extractUrlParameters(this->urlEncodedData, rawContentString);
+		extractURIParameters(this->urlEncodedData, rawContentString);
 	}
 }
 
 // HELPER FUNCTIONS
 
-void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
+void extractURIParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
 {
-	// TODO check how NGINX handles parameters that are formatted incorrectly
-	// TODO handle multiple (repeated) ? in the url
 	while (1)
 	{
 		std::string parameter = parametersString.substr(0, parametersString.find('&'));

@@ -19,8 +19,12 @@
 # include <iostream>
 # include <fstream>
 
+# include <unistd.h>
+# include <sys/types.h>
+# include <sys/wait.h>
+
 # ifndef SITE_ROOT
-#  define SITE_ROOT "./www/"
+#  define SITE_ROOT "www/"
 # endif
 
 # ifndef UPLOAD_DIR	
@@ -44,10 +48,12 @@ class HttpResponse
 		int responseCode;
 		std::string content;
 		std::string response;
+		bool directoryListingAllowed = true;
 
 		void setErrorValues(int responseCode, std::string message = "");
 		void buildResponse(void);
 		void buildPath(std::string requestPath);
+		void buildDirectoryList();
 		void prepareGetResponse(HttpRequest& request);
 		void preparePostResponse(HttpRequest& request);
 		void preparePutResponse(HttpRequest& request);

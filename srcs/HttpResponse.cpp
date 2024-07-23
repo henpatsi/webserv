@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 10:51:12 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/23 18:12:17 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,6 +82,60 @@ void HttpResponse::buildResponse()
 	this->response += this->content;
 }
 
+void HttpResponse::buildDirectoryList()
+{
+	std::cout << "path = " << this->path << "\n";
+
+	std::vector<std::string> files;
+
+	int pipefds[2];
+	if (pipe(pipefds) == -1)
+	{
+		setErrorValues(500);
+		return ;
+	}
+	
+	pid_t pid = fork();
+	if (pid == -1)
+	{
+		setErrorValues(500);
+		return ;
+	}
+	else if (pid == 0)
+	{
+		close(pipefds[0]);
+		dup2(pipefds[1], 1);
+		char *argv[] = {(char *) "/usr/bin/ls", (char *) this->path.c_str(), NULL};
+		execve("/usr/bin/ls", argv, NULL);
+		exit(0);
+	}
+	else
+	{
+		close(pipefds[1]);
+
+		int status;
+		waitpid(pid, &status, 0);
+
+		char buffer[1024] = {0};
+		read(pipefds[0], buffer, 1024 - 1);
+		close(pipefds[0]);
+		std::istringstream bufferStream(buffer);
+		std::string line;
+		while (std::getline(bufferStream, line))
+			files.push_back(line);
+	}
+
+	this->content = "<html><body>";
+	this->content += "<h1>Directory listing for " + this->path + "</h1>";
+	this->content += "<ul>";
+	for (std::string file : files)
+		this->content += "<li><a href=\"" + file + "\">" + file + "</a></li>";
+	this->content += "</ul>";
+	this->content += "</body></html>";
+
+	this->responseCode = 200;
+}
+
 void HttpResponse::buildPath(std::string requestPath)
 {
 	this->path = SITE_ROOT;
@@ -104,24 +158,28 @@ void HttpResponse::buildPath(std::string requestPath)
 	}
 	else if (requestPath.find(".") == std::string::npos)
 	{
-		// TODO check if directory listing is allowed
 		this->contentType = "text/html";
 		this->path += "html" + requestPath;
+
+		if (this->directoryListingAllowed)
+			return;
+
 		if (this->path.back() == '/')
 			this->path += "index.html";
 		else if (this->path.find(".html") == std::string::npos)
 			this->path += "/index.html";
 	}
 	else
-	{
-		// TODO make this actually return
 		setErrorValues(415);
-	}
 }
 
 void HttpResponse::prepareGetResponse(HttpRequest& request)
 {
-	(void) request;
+	if (this->directoryListingAllowed && request.getResourcePath().find(".") == std::string::npos)
+	{
+		buildDirectoryList();
+		return ;
+	}
 
 	std::ifstream file;
 
@@ -179,6 +237,13 @@ int writeMultipartData(std::vector<multipartData> dataVector)
 
 void HttpResponse::preparePostResponse(HttpRequest& request)
 {
+	// EXAMPLE
+	// TODO handle properly based on config
+	if (request.getResourcePath() == "/")
+	{
+		setErrorValues(405);
+		return ;
+	}
 
 	if (request.getResourcePath() == "/uploads")
 	{
