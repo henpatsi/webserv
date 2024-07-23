@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/16 10:35:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/23 10:51:12 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,63 +14,124 @@
 
 // CONSTRUCTOR
 
-void buildResponse(std::string& response, int code, std::string contentType, std::string content)
+HttpResponse::HttpResponse(HttpRequest& request)
 {
-	response = "HTTP/1.1 " + std::to_string(code) + "\r\n";
-	response += "Content-Type: " + contentType + "\r\n\r\n";
-	response += content;
+	buildPath(request.getResourcePath());
+
+	if (request.getFailResponseCode() != 0)
+		setErrorValues(request.getFailResponseCode());
+	else if (request.getMethod() == "GET")
+		prepareGetResponse(request);
+	else if (request.getMethod() == "POST")
+		preparePostResponse(request);
+	else if (request.getMethod() == "DELETE")
+		prepareDeleteResponse(request);
+	else
+		setErrorValues(405);
+	
+	buildResponse();
+
+	std::cout << "Response code: " << this->responseCode << "\n";
 }
 
-void buildErrorResponse(std::string& response, int code, std::string message)
+// MEMBER FUNCTIONS
+
+std::string getDefaultErrorMessage(int code)
 {
-	std::string content;
-
-	content = "<html><body><h1>" + std::to_string(code) + " ";
-	content += message + "</h1></body></html>";
-
-	buildResponse(response, code, "text/html", content);
+	switch (code)
+	{
+		case 400:
+			return "Bad Request";
+		case 404:
+			return "Not Found";
+		case 405:
+			return "Method Not Allowed";
+		case 408:
+			return "Request Timeout";
+		case 411:
+			return "Length Required";
+		case 415:
+			return "Unsupported Media Type";
+		case 500:
+			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
+		default:
+			return "Unknown Error";
+	}
 }
 
-void buildGetResponse(std::string& response, HttpRequest& request)
+void HttpResponse::setErrorValues(int code, std::string message)
 {
-	std::string filename = SITE_ROOT;
-	std::ifstream file;
-	std::string content;
-	std::string contentType;
-	int responseCode;
+	this->responseCode = code;
+	this->contentType = "text/html";
 
-	// TODO check if directory listing is allowed
-	// Build path
-	if (request.getResourcePath().back() == '/' || request.getResourcePath().find(".html") != std::string::npos)
+	if (message == "")
+		message = getDefaultErrorMessage(code);
+
+	this->content = "<html><body><h1>" + std::to_string(code) + " ";
+	this->content += message + "</h1></body></html>";
+}
+
+void HttpResponse::buildResponse()
+{
+	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	this->response += "Content-Type: " + this->contentType + "\r\n";
+	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
+	this->response += "\r\n";
+	this->response += this->content;
+}
+
+void HttpResponse::buildPath(std::string requestPath)
+{
+	this->path = SITE_ROOT;
+
+	// TODO do we even need any other types than html?
+	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
 	{
-		contentType = "text/html";
-		filename += "html" + request.getResourcePath();
-		if (filename.back() == '/')
-			filename += "index.html";
+		this->contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
+		this->path += "images" + requestPath;
 	}
-	else if (request.getResourcePath().find(".png") != std::string::npos || request.getResourcePath().find(".jpg") != std::string::npos)
+	else if (requestPath.find(".pdf") != std::string::npos)
 	{
-		contentType = "image/" + request.getResourcePath().substr(request.getResourcePath().find(".") + 1);
-		filename += "images" + request.getResourcePath();
+		this->contentType = "application/pdf";
+		this->path += "docs" + requestPath;
 	}
-	else if (request.getResourcePath().find(".pdf") != std::string::npos)
+	else if (requestPath.find(".html") != std::string::npos)
 	{
-		contentType = "application/pdf";
-		filename += "docs" + request.getResourcePath();
+		this->contentType = "text/html";
+		this->path += "html" + requestPath;
+	}
+	else if (requestPath.find(".") == std::string::npos)
+	{
+		// TODO check if directory listing is allowed
+		this->contentType = "text/html";
+		this->path += "html" + requestPath;
+		if (this->path.back() == '/')
+			this->path += "index.html";
+		else if (this->path.find(".html") == std::string::npos)
+			this->path += "/index.html";
 	}
 	else
 	{
-		buildErrorResponse(response, 400, "Bad Request");
-		return ;
+		// TODO make this actually return
+		setErrorValues(415);
 	}
+}
+
+void HttpResponse::prepareGetResponse(HttpRequest& request)
+{
+	(void) request;
+
+	std::ifstream file;
 
 	// std::cout << "file path = " << filename << "\n";
 
 	// Try open file
-	file.open(filename);
+	file.open(this->path);
 	if (!file.good())
 	{
-		buildErrorResponse(response, 404, "Not Found");
+		setErrorValues(404);
 		return ;
 	}
 
@@ -81,34 +142,58 @@ void buildGetResponse(std::string& response, HttpRequest& request)
 		std::getline(file, line);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
 		{
-			buildErrorResponse(response, 500, "Internal Server Error");
+			setErrorValues(500);
 			return ;
 		}
-		content += line + "\n";
+		this->content += line + "\n";
 	}
 
-	responseCode = 200;
-
-	buildResponse(response, responseCode, contentType, content);
+	this->responseCode = 200;
 }
 
-HttpResponse::HttpResponse(HttpRequest& request)
+int writeMultipartData(std::vector<multipartData> dataVector)
 {
-	if (request.isBadRequest())
-		buildErrorResponse(response, 400, "Bad Request");
-	else if (request.getMethod() == "GET")
-		buildGetResponse(this->response, request);
-	else if (request.getMethod() == "POST")
-		buildErrorResponse(response, 501, "Not Implemented");
-	else if (request.getMethod() == "DELETE")
-		buildErrorResponse(response, 501, "Not Implemented");
+	for (auto data : dataVector)
+	{
+		if (data.boundary != "")
+		{
+			writeMultipartData(data.multipartDataVector);
+			continue ;
+		}
+		else if (data.filename == "")
+			continue ;
+
+		std::string filename = SITE_ROOT;
+		filename += UPLOAD_DIR + data.filename;
+		std::ofstream file(filename);
+
+		if (!file.good())
+			return (-1);
+
+		file.write(data.data.data(), data.data.size());
+		file.close();
+	}
+
+	return (1);
+}
+
+void HttpResponse::preparePostResponse(HttpRequest& request)
+{
+
+	if (request.getResourcePath() == "/uploads")
+	{
+		if (writeMultipartData(request.getMultipartData()) == -1)
+			setErrorValues(500);
+
+		buildPath("/success.html");
+		prepareGetResponse(request);
+	}
 	else
-		buildErrorResponse(response, 405, "Method Not Allowed");
+		prepareGetResponse(request);
 }
 
-// MEMBER FUNCTIONS
-
-std::string HttpResponse::getResponse(void)
+void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
-	return this->response;
+	(void)request;
+	setErrorValues(501);
 }
