@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/22 21:33:52 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/23 10:17:50 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,13 +31,16 @@
 
 struct multipartData
 {
-	std::string name;
-	std::string filename;
-	std::string contentType;
-	std::vector<char> data;
+	std::string					name;
+	std::string					filename;
+	std::string					contentType;
+	std::vector<char>			data;
+	std::string					boundary;
+	std::vector<multipartData>	multipartDataVector = {};
 };
 
-void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
+void	extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
+int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
 
 class HttpRequest
 {
@@ -59,7 +62,7 @@ class HttpRequest
 		class RequestException : public std::exception
 		{
 			public:
-				virtual const char* what() const throw() { return "Error reading request"; };
+				virtual const char* what() const throw() { return "Error in request"; };
 		};
 	
 	private:
@@ -77,7 +80,6 @@ class HttpRequest
 		void		setErrorAndThrow(int code);
 		std::string	readLine(int socketFD);
 		std::string	readRequestHeader(int socketFD);
-		void 		extractMultipartData();
 		void		readContent(int socketFD, int contentLength);
 		void		readChunkedContent(int socketFD);
 		void		parseFirstLine(std::istringstream& sstream);

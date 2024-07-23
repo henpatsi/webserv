@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/22 21:35:34 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/23 10:53:23 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,76 +120,6 @@ std::string HttpRequest::readRequestHeader(int socketFD)
 	return requestString;
 }
 
-// TODO check if nested multipart datas should be handled, does NGINX handle?
-void HttpRequest::extractMultipartData()
-{
-	std::string boundary = this->getHeader("Content-Type");
-	boundary = boundary.substr(boundary.find("boundary=") + 9);
-	std::string boundaryStartString = "--" + boundary;
-	std::string boundaryEndString = "--" + boundary + "--";
-	std::string headerEndString = "\r\n\r\n";
-
-	std::vector<char>::iterator start;
-	std::vector<char>::iterator end;
-
-	start = this->rawContent.begin();
-	
-	// Loop through each section of the multipart data
-	while (!std::equal(boundaryEndString.begin(), boundaryEndString.end(), start))
-	{
-		multipartData data;
-
-		// Check boundary start and skip over it
-		if (!std::equal(boundaryStartString.begin(), boundaryStartString.end(), start))
-			setErrorAndThrow(400);
-		start += boundaryStartString.size() + 2;
-
-		// Get header end
-		end = std::search(start, this->rawContent.end(), headerEndString.begin(), headerEndString.end());
-		if (end == this->rawContent.end())
-			setErrorAndThrow(400);
-
-		// Read relevant headers into multipartData
-		std::string headerSection(start, end);
-		std::istringstream sstream(headerSection);
-		std::string line;
-		while (getline(sstream, line))
-		{
-			if (line.find("Content-Disposition:") != std::string::npos)
-			{
-				if (line.find("name=\"") != std::string::npos)
-				{
-					data.name = line.substr(line.find("name=\"") + 6);
-					data.name.erase(data.name.find("\""));
-				}
-				if (line.find("filename=\"") != std::string::npos)
-				{
-					data.filename = line.substr(line.find("filename=\"") + 10);
-					data.filename.erase(data.filename.find("\""));
-				}
-			}
-			else if (line.find("Content-Type:") != std::string::npos)
-			{
-				data.contentType = line.substr(line.find("Content-Type:") + 14);
-				data.contentType.erase(data.contentType.length() - 1);
-			}
-		}
-
-		// Get body iterators
-		start = end + headerEndString.size();
-		end = std::search(start, this->rawContent.end(), boundaryStartString.begin(), boundaryStartString.end());
-		if (end == this->rawContent.end())
-			setErrorAndThrow(400);
-
-		// Copy body into multipartData
-		data.data.insert(data.data.end(), start, end - 2);
-
-		this->multipartDataVector.push_back(data);
-
-		start = end;
-	}
-}
-
 void HttpRequest::readContent(int socketFD, int contentLength)
 {
 	char contentBuffer[CONTENT_READ_BUFFER_SIZE + 1] = {0};
@@ -286,7 +216,10 @@ void HttpRequest::parseBody(int socketFD)
 	// Extracts the data from the body content from known content types
 	if (this->getHeader("Content-Type").find("multipart/form-data") != std::string::npos)
 	{
-		extractMultipartData();
+		std::string boundary = this->getHeader("Content-Type");
+		boundary = boundary.substr(boundary.find("boundary=") + 9);
+		if (extractMultipartData(this->multipartDataVector, this->rawContent, boundary) == -1)
+			setErrorAndThrow(400);
 	}
 	else if (this->getHeader("Content-Type").find("application/x-www-form-urlencoded") != std::string::npos)
 	{
@@ -314,4 +247,84 @@ void extractUrlParameters(std::map<std::string, std::string>& parametersMap, std
 			break ;
 		parametersString = parametersString.substr(parametersString.find('&') + 1);
 	}
+}
+
+int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary)
+{
+	std::string boundaryStartString = "--" + boundary;
+	std::string boundaryEndString = "--" + boundary + "--";
+	std::string headerEndString = "\r\n\r\n";
+
+	std::vector<char>::iterator start;
+	std::vector<char>::iterator end;
+
+	start = rawContent.begin();
+	
+	// Loop through each section of the multipart data
+	while (!std::equal(boundaryEndString.begin(), boundaryEndString.end(), start))
+	{
+		multipartData data;
+
+		// Check boundary start and skip over it
+		if (!std::equal(boundaryStartString.begin(), boundaryStartString.end(), start))
+			return (-1);
+		start += boundaryStartString.size() + 2;
+
+		// Get header end
+		end = std::search(start, rawContent.end(), headerEndString.begin(), headerEndString.end());
+		if (end == rawContent.end())
+			return (-1);
+
+		// Read relevant headers into multipartData
+		std::string headerSection(start, end);
+		std::istringstream sstream(headerSection);
+		std::string line;
+		while (getline(sstream, line))
+		{
+			if (line.find("Content-Disposition:") != std::string::npos)
+			{
+				if (line.find("name=\"") != std::string::npos)
+				{
+					data.name = line.substr(line.find("name=\"") + 6);
+					data.name.erase(data.name.find("\""));
+				}
+				if (line.find("filename=\"") != std::string::npos)
+				{
+					data.filename = line.substr(line.find("filename=\"") + 10);
+					data.filename.erase(data.filename.find("\""));
+				}
+			}
+			else if (line.find("Content-Type:") != std::string::npos)
+			{
+				data.contentType = line.substr(line.find("Content-Type:") + 14);
+				// Get boundary of nested multipart data
+				if (data.contentType.find("boundary=") != std::string::npos)
+				{
+					data.boundary = data.contentType.substr(data.contentType.find("boundary=") + 9);
+					data.contentType.erase(data.contentType.find(";"));
+				}
+			}
+		}
+
+		// Get body iterators
+		start = end + headerEndString.size();
+		end = std::search(start, rawContent.end(), boundaryStartString.begin(), boundaryStartString.end());
+		if (end == rawContent.end())
+			return (-1);
+
+		// Copy body into multipartData
+		data.data.insert(data.data.end(), start, end - 2);
+
+		// Get nested multipart data
+		if (!data.boundary.empty())
+		{
+			if (extractMultipartData(data.multipartDataVector, data.data, data.boundary) == -1)
+				return (-1);
+		}
+
+		multipartDataVector.push_back(data);
+
+		start = end;
+	}
+	return (1);
 }

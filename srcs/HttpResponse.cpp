@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/22 19:16:44 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/23 10:51:12 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -151,29 +151,39 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	this->responseCode = 200;
 }
 
+int writeMultipartData(std::vector<multipartData> dataVector)
+{
+	for (auto data : dataVector)
+	{
+		if (data.boundary != "")
+		{
+			writeMultipartData(data.multipartDataVector);
+			continue ;
+		}
+		else if (data.filename == "")
+			continue ;
+
+		std::string filename = SITE_ROOT;
+		filename += UPLOAD_DIR + data.filename;
+		std::ofstream file(filename);
+
+		if (!file.good())
+			return (-1);
+
+		file.write(data.data.data(), data.data.size());
+		file.close();
+	}
+
+	return (1);
+}
+
 void HttpResponse::preparePostResponse(HttpRequest& request)
 {
 
 	if (request.getResourcePath() == "/uploads")
 	{
-		for (auto data : request.getMultipartData())
-		{
-			if (data.filename == "")
-				continue ;
-
-			std::string filename = SITE_ROOT;
-			filename += UPLOAD_DIR + data.filename;
-			std::ofstream file(filename);
-
-			if (!file.good())
-			{
-				setErrorValues(500);
-				return ;
-			}
-
-			file.write(data.data.data(), data.data.size());
-			file.close();
-		}
+		if (writeMultipartData(request.getMultipartData()) == -1)
+			setErrorValues(500);
 
 		buildPath("/success.html");
 		prepareGetResponse(request);
