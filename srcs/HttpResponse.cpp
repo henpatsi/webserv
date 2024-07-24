@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 11:29:02 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 17:34:39 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,7 +103,7 @@ void HttpResponse::buildResponse()
 	this->response += this->content;
 }
 
-void HttpResponse::buildDirectoryList() // TODO make sure links in subdirs work
+void HttpResponse::buildDirectoryList(HttpRequest& request)
 {
 	std::vector<std::string> files;
 
@@ -125,7 +125,12 @@ void HttpResponse::buildDirectoryList() // TODO make sure links in subdirs work
 	this->content += "<h1>Directory listing for " + this->path + "</h1>";
 	this->content += "<ul>";
 	for (std::string file : files)
-		this->content += "<li><a href=\"" + file + "\">" + file + "</a></li>";
+	{
+		std::string path = request.getResourcePath();
+		if (path.back() != '/')
+			path += "/";
+		this->content += "<li><a href=\"" + path + file + "\">" + file + "</a></li>";
+	}
 	this->content += "</ul>";
 	this->content += "</body></html>";
 
@@ -174,7 +179,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 {
 	if (this->directoryListingAllowed && request.getResourcePath() != "/uploads" && (this->path.find(".") == std::string::npos))
 	{
-		buildDirectoryList();
+		buildDirectoryList(request);
 		return ;
 	}
 

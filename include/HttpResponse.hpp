@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 11:28:41 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 17:33:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ class HttpResponse
 		void setErrorAndThrow(int code, std::string message = "");
 		void buildResponse(void);
 		void buildPath(std::string requestPath);
-		void buildDirectoryList();
+		void buildDirectoryList(HttpRequest& request);
 		void prepareGetResponse(HttpRequest& request);
 		void preparePostResponse(HttpRequest& request);
 		void preparePutResponse(HttpRequest& request);
