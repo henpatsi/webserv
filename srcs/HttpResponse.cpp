@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 11:04:53 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 11:29:02 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,9 +32,13 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		else
 			setErrorAndThrow(501);
 	}
-	catch(const std::exception& e)
+	catch(const ResponseException& e) // Known error, response ready to build
 	{
 		std::cerr << e.what() << '\n';
+	}
+	catch(...) // Something that was not considered went wrong
+	{
+		setError(500);
 	}
 
 	buildResponse();
@@ -44,17 +48,49 @@ HttpResponse::HttpResponse(HttpRequest& request)
 
 // MEMBER FUNCTIONS
 
-void HttpResponse::setErrorAndThrow(int code, std::string message)
+// Create error page with default message if none provided or other error
+void HttpResponse::setDefaultError(int code, std::string message)
 {
-	this->responseCode = code;
-	this->contentType = "text/html";
-
 	if (message == "")
 		message = this->defaultErrorMessages[code];
 
 	this->content = "<html><body><h1>" + std::to_string(code) + " ";
 	this->content += message + "</h1></body></html>";
-	
+}
+
+void HttpResponse::setError(int code, std::string message)
+{
+	this->responseCode = code;
+	this->contentType = "text/html";
+
+	if (this->customErrorPages[code] != "")
+	{
+		std::ifstream file(SITE_ROOT + this->customErrorPages[code]);
+		if (!file.good())
+		{
+			setDefaultError(code);
+			return ;
+		}
+
+		while (file.good())
+		{
+			std::string line;
+			std::getline(file, line);
+			if ((file.rdstate() & std::ios_base::badbit) != 0)
+			{
+				setDefaultError(code);
+				return ;
+			}
+			this->content += line + "\n";
+		}
+	}
+	else
+		setDefaultError(code, message);
+}
+
+void HttpResponse::setErrorAndThrow(int code, std::string message)
+{
+	setError(code, message);
 	throw ResponseException();
 }
 
@@ -67,7 +103,7 @@ void HttpResponse::buildResponse()
 	this->response += this->content;
 }
 
-void HttpResponse::buildDirectoryList()
+void HttpResponse::buildDirectoryList() // TODO make sure links in subdirs work
 {
 	std::vector<std::string> files;
 
@@ -147,10 +183,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	// Try open file
 	file.open(this->path);
 	if (!file.good())
-	{
 		setErrorAndThrow(404);
-		return ;
-	}
 
 	// Read file content into content
 	while (file.good())
@@ -165,42 +198,18 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-int writeMultipartData(std::vector<multipartData> dataVector)
-{
-	for (multipartData data : dataVector)
-	{
-		if (data.boundary != "")
-		{
-			writeMultipartData(data.multipartDataVector);
-			continue ;
-		}
-		else if (data.filename == "")
-			continue ;
-
-		std::string filename = SITE_ROOT;
-		filename += UPLOAD_DIR + data.filename;
-		std::ofstream file(filename);
-
-		if (!file.good())
-			return (-1);
-
-		file.write(data.data.data(), data.data.size());
-		file.close();
-	}
-
-	return (1);
-}
-
 void HttpResponse::preparePostResponse(HttpRequest& request)
 {
-	// EXAMPLE
+	// Example of POST where not allowed
 	// TODO handle properly based on config
 	if (request.getResourcePath() == "/")
 		setErrorAndThrow(405);
 
 	if (request.getResourcePath() == "/uploads")
 	{
-		if (writeMultipartData(request.getMultipartData()) == -1)
+		std::string directoryPath = SITE_ROOT;
+		directoryPath += UPLOAD_DIR;
+		if (writeMultipartData(request.getMultipartData(), directoryPath) == -1)
 			setErrorAndThrow(500);
 
 		buildPath("/success.html");
@@ -214,4 +223,31 @@ void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
 	(void)request;
 	setErrorAndThrow(501);
+}
+
+// HELPER FUNCTIONS
+
+int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
+{
+	for (multipartData data : dataVector)
+	{
+		if (data.boundary != "")
+		{
+			writeMultipartData(data.multipartDataVector, directory);
+			continue ;
+		}
+		else if (data.filename == "")
+			continue ;
+
+		std::string path = directory + data.filename;
+		std::ofstream file(path);
+
+		if (!file.good())
+			return (-1);
+
+		file.write(data.data.data(), data.data.size());
+		file.close();
+	}
+
+	return (1);
 }

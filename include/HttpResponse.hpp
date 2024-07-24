@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 10:59:49 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 11:28:41 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,8 @@
 # ifndef UPLOAD_DIR	
 #  define UPLOAD_DIR "uploads/"
 # endif
+
+int writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
 
 class HttpResponse
 {
@@ -73,10 +75,12 @@ class HttpResponse
 			{ 505, "HTTP Version Not Supported" }
 		};
 		std::map<int, std::string> customErrorPages = {
-			{ 400, "html/400/400.html" } // TODO get these from config file
+			{ 404, "html/400/404.html" } // TODO get these from config file
 		};
 
-		void setErrorAndThrow(int responseCode, std::string message = "");
+		void setDefaultError(int code, std::string message = "");
+		void setError(int code, std::string message = "");
+		void setErrorAndThrow(int code, std::string message = "");
 		void buildResponse(void);
 		void buildPath(std::string requestPath);
 		void buildDirectoryList();
