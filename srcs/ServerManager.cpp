@@ -88,6 +88,13 @@ ServerManager::ServerManager(const std::string path) : _path(path)
     // setup epoll
     polled = epoll_create1(EPOLL_SIZE);
     events = new epoll_event[EPOLL_SIZE];
+    try{
+        registerServerSockets();
+    }
+    catch (const std::exception& e)
+    {
+        std::cout << e.what();
+    }
 }
 
 ServerManager::~ServerManager()
@@ -133,7 +140,6 @@ const char * ServerManager::UnclosedBraceException::what() const noexcept
 
 void ServerManager::runServers()
 {
-    registerServerSockets();
     int incommingFD;
     while (1)
     {
@@ -200,6 +206,7 @@ void ServerManager::registerServerSockets()
     for (auto& server : servers)
     {
         AddToEpoll(server->GetServerSocketFD());
+        setFdNonBlocking(server->GetServerSocketFD());
     }
 }
 
@@ -215,6 +222,18 @@ int ServerManager::acceptConnection(epoll_event event)
     int incommingFd = accept(event.data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
     if (incommingFd == -1)
         std::cout << "Error\n";
+    setFdNonBlocking(incommingFd);
     temp_event.events = EPOLLIN | EPOLLET;
     temp_event.data.fd = incommingFd;
+}
+
+static void setFdNonBlocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+        throw std::system_error();
+    flags |= O_NONBLOCK;
+    int res = fcntl(fd, F_SETFL, flags);
+    if (res == -1)
+        throw std::system_error();
 }
