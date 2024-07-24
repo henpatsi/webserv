@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 18:12:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 10:24:27 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,42 +88,8 @@ void HttpResponse::buildDirectoryList()
 
 	std::vector<std::string> files;
 
-	int pipefds[2];
-	if (pipe(pipefds) == -1)
-	{
-		setErrorValues(500);
-		return ;
-	}
-	
-	pid_t pid = fork();
-	if (pid == -1)
-	{
-		setErrorValues(500);
-		return ;
-	}
-	else if (pid == 0)
-	{
-		close(pipefds[0]);
-		dup2(pipefds[1], 1);
-		char *argv[] = {(char *) "/usr/bin/ls", (char *) this->path.c_str(), NULL};
-		execve("/usr/bin/ls", argv, NULL);
-		exit(0);
-	}
-	else
-	{
-		close(pipefds[1]);
-
-		int status;
-		waitpid(pid, &status, 0);
-
-		char buffer[1024] = {0};
-		read(pipefds[0], buffer, 1024 - 1);
-		close(pipefds[0]);
-		std::istringstream bufferStream(buffer);
-		std::string line;
-		while (std::getline(bufferStream, line))
-			files.push_back(line);
-	}
+	for (auto file : std::filesystem::directory_iterator(this->path))
+		files.push_back(file.path().filename().string());
 
 	this->content = "<html><body>";
 	this->content += "<h1>Directory listing for " + this->path + "</h1>";
