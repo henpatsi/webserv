@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 10:53:23 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 10:38:19 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -183,6 +183,8 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	sstream >> this->httpVersion;
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400);
+	if (this->httpVersion != "HTTP/1.1")
+		setErrorAndThrow(505);
 }
 
 void HttpRequest::parseHeader(std::istringstream& sstream)

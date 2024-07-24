@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 10:24:27 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/24 11:04:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,19 +16,27 @@
 
 HttpResponse::HttpResponse(HttpRequest& request)
 {
-	buildPath(request.getResourcePath());
+	try
+	{
+		if (request.getFailResponseCode() != 0)
+			setErrorAndThrow(request.getFailResponseCode());
+		
+		buildPath(request.getResourcePath());
 
-	if (request.getFailResponseCode() != 0)
-		setErrorValues(request.getFailResponseCode());
-	else if (request.getMethod() == "GET")
-		prepareGetResponse(request);
-	else if (request.getMethod() == "POST")
-		preparePostResponse(request);
-	else if (request.getMethod() == "DELETE")
-		prepareDeleteResponse(request);
-	else
-		setErrorValues(405);
-	
+		if (request.getMethod() == "GET")
+			prepareGetResponse(request);
+		else if (request.getMethod() == "POST")
+			preparePostResponse(request);
+		else if (request.getMethod() == "DELETE")
+			prepareDeleteResponse(request);
+		else
+			setErrorAndThrow(501);
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+
 	buildResponse();
 
 	std::cout << "Response code: " << this->responseCode << "\n";
@@ -36,41 +44,18 @@ HttpResponse::HttpResponse(HttpRequest& request)
 
 // MEMBER FUNCTIONS
 
-std::string getDefaultErrorMessage(int code)
-{
-	switch (code)
-	{
-		case 400:
-			return "Bad Request";
-		case 404:
-			return "Not Found";
-		case 405:
-			return "Method Not Allowed";
-		case 408:
-			return "Request Timeout";
-		case 411:
-			return "Length Required";
-		case 415:
-			return "Unsupported Media Type";
-		case 500:
-			return "Internal Server Error";
-		case 501:
-			return "Not Implemented";
-		default:
-			return "Unknown Error";
-	}
-}
-
-void HttpResponse::setErrorValues(int code, std::string message)
+void HttpResponse::setErrorAndThrow(int code, std::string message)
 {
 	this->responseCode = code;
 	this->contentType = "text/html";
 
 	if (message == "")
-		message = getDefaultErrorMessage(code);
+		message = this->defaultErrorMessages[code];
 
 	this->content = "<html><body><h1>" + std::to_string(code) + " ";
 	this->content += message + "</h1></body></html>";
+	
+	throw ResponseException();
 }
 
 void HttpResponse::buildResponse()
@@ -84,12 +69,21 @@ void HttpResponse::buildResponse()
 
 void HttpResponse::buildDirectoryList()
 {
-	std::cout << "path = " << this->path << "\n";
-
 	std::vector<std::string> files;
 
-	for (auto file : std::filesystem::directory_iterator(this->path))
-		files.push_back(file.path().filename().string());
+	try
+	{
+		for (auto file : std::filesystem::directory_iterator(this->path))
+			files.push_back(file.path().filename().string());
+	}
+	catch(const std::filesystem::filesystem_error& e)
+	{
+		setErrorAndThrow(404);
+	}
+	catch (...)
+	{
+		setErrorAndThrow(500);
+	}
 
 	this->content = "<html><body>";
 	this->content += "<h1>Directory listing for " + this->path + "</h1>";
@@ -102,6 +96,7 @@ void HttpResponse::buildDirectoryList()
 	this->responseCode = 200;
 }
 
+// VERY SIMPLISTIC IMPLEMENTATION FOR TESTING PURPOSES
 void HttpResponse::buildPath(std::string requestPath)
 {
 	this->path = SITE_ROOT;
@@ -136,12 +131,12 @@ void HttpResponse::buildPath(std::string requestPath)
 			this->path += "/index.html";
 	}
 	else
-		setErrorValues(415);
+		setErrorAndThrow(415);
 }
 
 void HttpResponse::prepareGetResponse(HttpRequest& request)
 {
-	if (this->directoryListingAllowed && request.getResourcePath().find(".") == std::string::npos)
+	if (this->directoryListingAllowed && request.getResourcePath() != "/uploads" && (this->path.find(".") == std::string::npos))
 	{
 		buildDirectoryList();
 		return ;
@@ -149,13 +144,11 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 
 	std::ifstream file;
 
-	// std::cout << "file path = " << filename << "\n";
-
 	// Try open file
 	file.open(this->path);
 	if (!file.good())
 	{
-		setErrorValues(404);
+		setErrorAndThrow(404);
 		return ;
 	}
 
@@ -165,10 +158,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 		std::string line;
 		std::getline(file, line);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
-		{
-			setErrorValues(500);
-			return ;
-		}
+			setErrorAndThrow(500);
 		this->content += line + "\n";
 	}
 
@@ -177,7 +167,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 
 int writeMultipartData(std::vector<multipartData> dataVector)
 {
-	for (auto data : dataVector)
+	for (multipartData data : dataVector)
 	{
 		if (data.boundary != "")
 		{
@@ -206,15 +196,12 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 	// EXAMPLE
 	// TODO handle properly based on config
 	if (request.getResourcePath() == "/")
-	{
-		setErrorValues(405);
-		return ;
-	}
+		setErrorAndThrow(405);
 
 	if (request.getResourcePath() == "/uploads")
 	{
 		if (writeMultipartData(request.getMultipartData()) == -1)
-			setErrorValues(500);
+			setErrorAndThrow(500);
 
 		buildPath("/success.html");
 		prepareGetResponse(request);
@@ -226,5 +213,5 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
 	(void)request;
-	setErrorValues(501);
+	setErrorAndThrow(501);
 }
