@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 11:32:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 13:37:17 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,11 @@ HttpRequest::HttpRequest(int socketFD)
 	}
 	catch (RequestException& e)
 	{
-		std::cerr << e.what() << "\n";
+		std::cerr << "RequestException: " << e.what() << "\n";
+	}
+	catch(...)
+	{
+		setErrorAndThrow(500, "Unknown request error");
 	}
 }
 
@@ -335,6 +339,5 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 
 const char* HttpRequest::RequestException::what() const throw()
 {
-	std::string returnMessage = "Error in request : " + this->message;
-	return returnMessage.c_str();
+	return this->message.c_str();
 }

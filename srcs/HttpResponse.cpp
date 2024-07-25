@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 10:47:12 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 12:48:59 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,9 +32,9 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		else
 			setErrorAndThrow(501, "Request method not implemented");
 	}
-	catch(const ResponseException& e) // Known error, response ready to build
+	catch(ResponseException& e) // Known error, response ready to build
 	{
-		std::cerr << e.what() << '\n';
+		std::cerr << "ResponseException: " << e.what() << "\n";
 	}
 	catch(...) // Something that was not considered went wrong
 	{
@@ -211,6 +211,8 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 	{
 		std::string directoryPath = SITE_ROOT;
 		directoryPath += UPLOAD_DIR;
+		if (access(directoryPath.c_str(), F_OK) == -1)
+			setErrorAndThrow(404, "Upload directory not found");
 		if (writeMultipartData(request.getMultipartData(), directoryPath) == -1)
 			setErrorAndThrow(500, "Failed to open / write multipart data to file");
 
@@ -258,6 +260,5 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 
 const char* HttpResponse::ResponseException::what() const throw()
 {
-	std::string returnMessage = "Error in response : " + this->message;
-	return returnMessage.c_str();
+	return this->message.c_str();
 }
