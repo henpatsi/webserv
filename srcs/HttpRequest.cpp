@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 16:15:38 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 17:56:21 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,7 @@ std::string HttpRequest::readLine(int socketFD)
 	int bytesRead = 0;
 	int failedReads = 0;
 	std::string line;
+	int failReadMax = (TIMEOUT_SECONDS * 1000) / READ_ERROR_RETRY_MS;
 
 	while (1)
 	{
@@ -93,9 +94,9 @@ std::string HttpRequest::readLine(int socketFD)
 		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
 		{
 			failedReads += 1;
-			if (failedReads > 2) // After 2 failed reads (2 sec timeout), throw exception
+			if (failedReads > failReadMax) // After TIMEOUT_SECONDS, break
 				setErrorAndThrow(408, "Reading line timed out");
-			sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(READ_ERROR_RETRY_MS));
 			continue ;
 		}
 		failedReads = 0; // Reset timeout
@@ -130,6 +131,7 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 	int contentReadSize;
 	int bytesRead = 0;
 	int failedReads = 0;
+	int failReadMax = (TIMEOUT_SECONDS * 1000) / READ_ERROR_RETRY_MS;
 
 	while (contentLength > 0)
 	{
@@ -138,9 +140,9 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
 		{
 			failedReads += 1;
-			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
+			if (failedReads > failReadMax) // After TIMEOUT_SECONDS, break
 				setErrorAndThrow(408, "Reading content timed out");
-			sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(READ_ERROR_RETRY_MS));
 			continue ;
 		}
 		failedReads = 0; // Reset timeout
@@ -224,14 +226,17 @@ void HttpRequest::parseBody(int socketFD)
 		readChunkedContent(socketFD);
 	else if (this->headers.find("Content-Length") != this->headers.end())
 		readContent(socketFD, std::stoi(this->headers["Content-Length"]));
+	else if (this->headers.find("Content-Type") != this->headers.end())
+		setErrorAndThrow(411, "No content length specified");
 
 	// Extracts the data from the body content from known content types
 	if (this->getHeader("Content-Type").find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("Content-Type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
-		if (extractMultipartData(this->multipartDataVector, this->rawContent, boundary) == -1)
-			setErrorAndThrow(400, "Failed to extract multipart data");
+		int extractRet = extractMultipartData(this->multipartDataVector, this->rawContent, boundary);
+		if (extractRet != 0)
+			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
 	else if (this->getHeader("Content-Type").find("application/x-www-form-urlencoded") != std::string::npos)
 	{
@@ -277,13 +282,13 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 
 		// Check boundary start and skip over it
 		if (!std::equal(boundaryStartString.begin(), boundaryStartString.end(), start))
-			return (-1);
+			return (400);
 		start += boundaryStartString.size() + 2;
 
 		// Get header end
 		end = std::search(start, rawContent.end(), headerEndString.begin(), headerEndString.end());
 		if (end == rawContent.end())
-			return (-1);
+			return (400);
 
 		// Read relevant headers into multipartData
 		std::string headerSection(start, end);
@@ -320,7 +325,7 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 		start = end + headerEndString.size();
 		end = std::search(start, rawContent.end(), boundaryStartString.begin(), boundaryStartString.end());
 		if (end == rawContent.end())
-			return (-1);
+			return (400);
 
 		// Copy body into multipartData
 		data.data.insert(data.data.end(), start, end - 2);
@@ -328,15 +333,16 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 		// Get nested multipart data
 		if (!data.boundary.empty())
 		{
-			if (extractMultipartData(data.multipartDataVector, data.data, data.boundary) == -1)
-				return (-1);
+			int extractRet = extractMultipartData(data.multipartDataVector, data.data, data.boundary);
+			if (extractRet != 0)
+				return (extractRet);
 		}
 
 		multipartDataVector.push_back(data);
 
 		start = end;
 	}
-	return (1);
+	return (0);
 }
 
 // EXCEPTIONS

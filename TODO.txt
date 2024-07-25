@@ -1,5 +1,5 @@
 TODO
 
 See if timeout can be done better
-Fix speed from 1000ms to < 200 ms
+
 Check the chunked request no newlines thing

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 15:33:33 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 17:06:41 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,8 @@
 # include <map>
 # include <vector>
 # include <algorithm>
+# include <chrono>
+# include <thread>
 
 #include <unistd.h>
 
@@ -28,6 +30,14 @@
 
 # ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
+# endif
+
+# ifndef READ_ERROR_RETRY_MS
+#  define READ_ERROR_RETRY_MS 10
+# endif
+
+# ifndef TIMEOUT_SECONDS
+#  define TIMEOUT_SECONDS 2
 # endif
 
 // Temporary hard coded server config values

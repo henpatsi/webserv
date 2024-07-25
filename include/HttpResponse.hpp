@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 15:37:27 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 17:41:51 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,6 +71,7 @@ class HttpResponse
 			{ 404, "Not Found" },
 			{ 405, "Method Not Allowed" },
 			{ 408, "Request Timeout" },
+			{ 411, "Length Required" },
 			{ 413, "Payload Too Large" },
 			{ 414, "URI Too Long" },
 			{ 415, "Unsupported Media Type" },
