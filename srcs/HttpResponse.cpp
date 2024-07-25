@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 15:03:22 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 16:33:58 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,7 +93,14 @@ void HttpResponse::setErrorAndThrow(int code, std::string message)
 
 void HttpResponse::buildResponse()
 {
+	time_t timestamp = time(nullptr);
+	struct tm *timedata = std::gmtime(&timestamp);
+	char buffer[100] = {0};
+	if (std::strftime(buffer, 99, "%a, %d %b %Y %T GMT", timedata) == 0)
+		setError(500);
+
 	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	this->response += "Date: " + std::string(buffer) + "\r\n";
 	this->response += "Content-Type: " + this->contentType + "\r\n";
 	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
 	this->response += "\r\n";

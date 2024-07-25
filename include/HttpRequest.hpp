@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 10:50:11 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 15:33:33 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,14 @@
 # ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
 # endif
+
+// Temporary hard coded server config values
+
+# ifndef _clientBodyLimit
+#  define _clientBodyLimit 300000
+# endif
+
+
 
 struct multipartData
 {

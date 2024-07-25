@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 13:37:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 16:15:38 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -215,6 +215,10 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 
 void HttpRequest::parseBody(int socketFD)
 {
+	// Do not read content if it is above client body size limit
+	if (this->headers.find("Content-Length") != this->headers.end() && std::stoi(this->headers["Content-Length"]) > _clientBodyLimit)
+		setErrorAndThrow(413, "Request body larger than client body limit");
+
 	// Reads the body content if content length specified
 	if (this->headers["Transfer-Encoding"] == "chunked")
 		readChunkedContent(socketFD);
