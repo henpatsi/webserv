@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 12:48:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 15:03:22 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,6 +139,9 @@ void HttpResponse::buildPath(std::string requestPath)
 {
 	this->path = SITE_ROOT;
 
+	if (requestPath.substr(0, 8) == "/uploads")
+		return ;
+
 	// TODO do we even need any other types than html?
 	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
 	{
@@ -225,8 +228,21 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 
 void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
-	(void)request;
-	setErrorAndThrow(501, "DELETE not implemented");
+	if (request.getResourcePath().substr(0, 8) != "/uploads")
+		setErrorAndThrow(405, "DELETE not allowed for request path");
+	
+	std::string filePath = "www" + request.getResourcePath();
+	if (access(filePath.c_str(), F_OK) == -1)
+	{
+		buildPath("/failure.html");
+		prepareGetResponse(request);
+		return ;
+	}
+	if (remove(filePath.c_str()) != 0)
+		setErrorAndThrow(500, "Failed to delete file");
+	
+	buildPath("/success.html");
+	prepareGetResponse(request);
 }
 
 // HELPER FUNCTIONS
