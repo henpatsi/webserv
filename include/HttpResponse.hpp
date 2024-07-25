@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 17:33:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 11:07:50 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,13 +51,16 @@ class HttpResponse
 		class ResponseException : public std::exception
 		{
 			public:
-				virtual const char* what() const throw() { return "Error building response"; }
+				ResponseException(std::string message) : message(message) {}
+				virtual const char* what() const throw();
+			private:
+				std::string message;
 		};
 
 	private:
 		std::string path;
 		std::string contentType;
-		int responseCode;
+		int responseCode = 500;
 		std::string content;
 		std::string response;
 		bool directoryListingAllowed = true; // TODO get this from config file
@@ -78,9 +81,9 @@ class HttpResponse
 			{ 404, "html/400/404.html" } // TODO get these from config file
 		};
 
-		void setDefaultError(int code, std::string message = "");
-		void setError(int code, std::string message = "");
-		void setErrorAndThrow(int code, std::string message = "");
+		void buildDefaultErrorContent(int code);
+		void setError(int code);
+		void setErrorAndThrow(int code, std::string message);
 		void buildResponse(void);
 		void buildPath(std::string requestPath);
 		void buildDirectoryList(HttpRequest& request);

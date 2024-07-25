@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 10:38:19 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 11:32:21 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,10 +35,10 @@ HttpRequest::HttpRequest(int socketFD)
 
 // MEMBER FUNCTIONS
 
-void HttpRequest::setErrorAndThrow(int responseCode)
+void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
 {
 	this->failResponseCode = responseCode;
-	throw RequestException();
+	throw RequestException(message);
 }
 
 void HttpRequest::debugPrint()
@@ -90,13 +90,13 @@ std::string HttpRequest::readLine(int socketFD)
 		{
 			failedReads += 1;
 			if (failedReads > 2) // After 2 failed reads (2 sec timeout), throw exception
-				setErrorAndThrow(408);
+				setErrorAndThrow(408, "Reading line timed out");
 			sleep(1);
 			continue ;
 		}
 		failedReads = 0; // Reset timeout
 		if (bytesRead == 0)
-			setErrorAndThrow(400);
+			setErrorAndThrow(400, "Reached end of file while reading line");
 		line += readBuffer[0];
 		if (readBuffer[0] == '\n')
 			break ;
@@ -135,7 +135,7 @@ void HttpRequest::readContent(int socketFD, int contentLength)
 		{
 			failedReads += 1;
 			if (failedReads > 2) // After 2 failed reads (2 sec timeout), break
-				setErrorAndThrow(408);
+				setErrorAndThrow(408, "Reading content timed out");
 			sleep(1);
 			continue ;
 		}
@@ -164,7 +164,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Assumes the first word in the request is the method
 	sstream >> this->method;
 	if (this->method.empty())
-		setErrorAndThrow(400);
+		setErrorAndThrow(400, "Request is empty");
 
 	// Assumes the second word in the request is the URI
 	std::string URI;
@@ -174,7 +174,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
 		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
-		setErrorAndThrow(400);
+		setErrorAndThrow(400, "Resource path is empty");
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
@@ -182,9 +182,9 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
 	if (this->httpVersion.empty())
-		setErrorAndThrow(400);
+		setErrorAndThrow(400, "HTTP version is empty");
 	if (this->httpVersion != "HTTP/1.1")
-		setErrorAndThrow(505);
+		setErrorAndThrow(505, "HTTP version not supported");
 }
 
 void HttpRequest::parseHeader(std::istringstream& sstream)
@@ -199,12 +199,12 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 		if (line.back() != '\r'
 			|| line.find(':') == std::string::npos
 			|| line[line.size() - 2] == ':')
-			setErrorAndThrow(400);
+			setErrorAndThrow(400, "Invalid header line format");
 		std::string key = line.substr(0, line.find(':'));
 		std::string value = line.substr(line.find(':') + 2);
 		value.erase(value.length() - 1);
 		if (key.empty() || value.empty())
-			setErrorAndThrow(400);
+			setErrorAndThrow(400, "Header key or value is empty");
 		this->headers[key] = value;
 	}
 }
@@ -223,7 +223,7 @@ void HttpRequest::parseBody(int socketFD)
 		std::string boundary = this->getHeader("Content-Type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
 		if (extractMultipartData(this->multipartDataVector, this->rawContent, boundary) == -1)
-			setErrorAndThrow(400);
+			setErrorAndThrow(400, "Failed to extract multipart data");
 	}
 	else if (this->getHeader("Content-Type").find("application/x-www-form-urlencoded") != std::string::npos)
 	{
@@ -329,4 +329,12 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 		start = end;
 	}
 	return (1);
+}
+
+// EXCEPTIONS
+
+const char* HttpRequest::RequestException::what() const throw()
+{
+	std::string returnMessage = "Error in request : " + this->message;
+	return returnMessage.c_str();
 }

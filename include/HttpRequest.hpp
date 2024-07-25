@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 16:57:47 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 10:50:11 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ struct multipartData
 	std::string					name;
 	std::string					filename;
 	std::string					contentType;
-	std::vector<char>			data;
+	std::vector<char>			data = {};
 	std::string					boundary;
 	std::vector<multipartData>	multipartDataVector = {};
 };
@@ -63,7 +63,10 @@ class HttpRequest
 		class RequestException : public std::exception
 		{
 			public:
-				virtual const char* what() const throw() { return "Error in request"; };
+				RequestException(std::string message) : message(message) {};
+				virtual const char* what() const throw();
+			private:
+				std::string message;
 		};
 	
 	private:
@@ -78,7 +81,7 @@ class HttpRequest
 		int									failResponseCode = 0;
 
 		void		debugPrint(void);
-		void		setErrorAndThrow(int code);
+		void		setErrorAndThrow(int code, std::string message);
 		std::string	readLine(int socketFD);
 		std::string	readRequestHeader(int socketFD);
 		void		readContent(int socketFD, int contentLength);

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/24 17:34:39 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 10:47:12 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@ HttpResponse::HttpResponse(HttpRequest& request)
 	try
 	{
 		if (request.getFailResponseCode() != 0)
-			setErrorAndThrow(request.getFailResponseCode());
+			setErrorAndThrow(request.getFailResponseCode(), "Reuest failed");
 		
 		buildPath(request.getResourcePath());
 
@@ -30,7 +30,7 @@ HttpResponse::HttpResponse(HttpRequest& request)
 		else if (request.getMethod() == "DELETE")
 			prepareDeleteResponse(request);
 		else
-			setErrorAndThrow(501);
+			setErrorAndThrow(501, "Request method not implemented");
 	}
 	catch(const ResponseException& e) // Known error, response ready to build
 	{
@@ -49,16 +49,13 @@ HttpResponse::HttpResponse(HttpRequest& request)
 // MEMBER FUNCTIONS
 
 // Create error page with default message if none provided or other error
-void HttpResponse::setDefaultError(int code, std::string message)
+void HttpResponse::buildDefaultErrorContent(int code)
 {
-	if (message == "")
-		message = this->defaultErrorMessages[code];
-
 	this->content = "<html><body><h1>" + std::to_string(code) + " ";
-	this->content += message + "</h1></body></html>";
+	this->content += this->defaultErrorMessages[code] + "</h1></body></html>";
 }
 
-void HttpResponse::setError(int code, std::string message)
+void HttpResponse::setError(int code)
 {
 	this->responseCode = code;
 	this->contentType = "text/html";
@@ -68,7 +65,7 @@ void HttpResponse::setError(int code, std::string message)
 		std::ifstream file(SITE_ROOT + this->customErrorPages[code]);
 		if (!file.good())
 		{
-			setDefaultError(code);
+			buildDefaultErrorContent(code);
 			return ;
 		}
 
@@ -78,20 +75,20 @@ void HttpResponse::setError(int code, std::string message)
 			std::getline(file, line);
 			if ((file.rdstate() & std::ios_base::badbit) != 0)
 			{
-				setDefaultError(code);
+				buildDefaultErrorContent(code);
 				return ;
 			}
 			this->content += line + "\n";
 		}
 	}
 	else
-		setDefaultError(code, message);
+		buildDefaultErrorContent(code);
 }
 
 void HttpResponse::setErrorAndThrow(int code, std::string message)
 {
-	setError(code, message);
-	throw ResponseException();
+	setError(code);
+	throw ResponseException(message);
 }
 
 void HttpResponse::buildResponse()
@@ -114,11 +111,11 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 	}
 	catch(const std::filesystem::filesystem_error& e)
 	{
-		setErrorAndThrow(404);
+		setErrorAndThrow(404, "Directory for listing not found or not accessible");
 	}
 	catch (...)
 	{
-		setErrorAndThrow(500);
+		setErrorAndThrow(500, "Unknown error while listing directory");
 	}
 
 	this->content = "<html><body>";
@@ -172,7 +169,7 @@ void HttpResponse::buildPath(std::string requestPath)
 			this->path += "/index.html";
 	}
 	else
-		setErrorAndThrow(415);
+		setErrorAndThrow(415, "Unsupported media type in request path");
 }
 
 void HttpResponse::prepareGetResponse(HttpRequest& request)
@@ -188,7 +185,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	// Try open file
 	file.open(this->path);
 	if (!file.good())
-		setErrorAndThrow(404);
+		setErrorAndThrow(404, "Failed to open file in GET");
 
 	// Read file content into content
 	while (file.good())
@@ -196,7 +193,7 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 		std::string line;
 		std::getline(file, line);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
-			setErrorAndThrow(500);
+			setErrorAndThrow(500, "Failed to read file in GET");
 		this->content += line + "\n";
 	}
 
@@ -208,14 +205,14 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 	// Example of POST where not allowed
 	// TODO handle properly based on config
 	if (request.getResourcePath() == "/")
-		setErrorAndThrow(405);
+		setErrorAndThrow(405, "POST not allowed for request path");
 
 	if (request.getResourcePath() == "/uploads")
 	{
 		std::string directoryPath = SITE_ROOT;
 		directoryPath += UPLOAD_DIR;
 		if (writeMultipartData(request.getMultipartData(), directoryPath) == -1)
-			setErrorAndThrow(500);
+			setErrorAndThrow(500, "Failed to open / write multipart data to file");
 
 		buildPath("/success.html");
 		prepareGetResponse(request);
@@ -227,7 +224,7 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 {
 	(void)request;
-	setErrorAndThrow(501);
+	setErrorAndThrow(501, "DELETE not implemented");
 }
 
 // HELPER FUNCTIONS
@@ -250,9 +247,17 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		if (!file.good())
 			return (-1);
 
-		file.write(data.data.data(), data.data.size());
+		file.write(data.data.data(), data.data.size()); // TODO check write success
 		file.close();
 	}
 
 	return (1);
+}
+
+// EXCEPTIONS
+
+const char* HttpResponse::ResponseException::what() const throw()
+{
+	std::string returnMessage = "Error in response : " + this->message;
+	return returnMessage.c_str();
 }

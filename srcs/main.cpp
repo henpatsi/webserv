@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 10:52:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 11:32:30 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,7 +91,7 @@ void handle_request(int connectionSocket)
 
 	// Build response into HttpResponse object
 	HttpResponse response = HttpResponse(request);
-	//std::cout << response.getResponse() << "\n";
+	// std::cout << response.getResponse() << "\n";
 
 	// Respond to client
 	if (write(connectionSocket, response.getResponse().c_str(), response.getResponse().size()) == -1)
