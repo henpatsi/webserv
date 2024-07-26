@@ -216,14 +216,8 @@ void ServerManager::registerServerSockets()
     temp_event.events = EPOLLIN | EPOLLET;
     for (Server* server : servers)
     {
-        try
-        {
-            AddToEpoll(server->GetServerSocketFD());
-        }
-        catch (std::exception& e)
-        {
-            throw e;
-        }
+        AddToEpoll(server->GetServerSocketFD());
+        setFdNonBlocking(server->GetServerSocketFD());
     }
 }
 
@@ -238,9 +232,19 @@ int ServerManager::acceptConnection(epoll_event event)
 {
     int incommingFd = accept(event.data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
     if (incommingFd == -1)
-        std::cout << "Error\n"; // should be changed to exception
-    // setup new epolled filedescriptor 
+        std::cout << "Error\n";
+    setFdNonBlocking(incommingFd);
     temp_event.events = EPOLLIN | EPOLLET;
     temp_event.data.fd = incommingFd;
-    return incommingFd;
+}
+
+static void setFdNonBlocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+        throw std::system_error();
+    flags |= O_NONBLOCK;
+    int res = fcntl(fd, F_SETFL, flags);
+    if (res == -1)
+        throw std::system_error();
 }
