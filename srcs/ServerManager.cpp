@@ -3,6 +3,11 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+
+#include <sys/epoll.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
     // keeps track of the stringstreams for each server
@@ -67,7 +72,8 @@ ServerManager::ServerManager(const std::string path) : _path(path)
     {
         try
         {
-            servers.push_back(new ServerConfig(*config));
+            ServerConfig current(*config);
+            servers.push_back(new Server(current));
         }
         catch (const std::exception& e)
         {
@@ -119,4 +125,87 @@ const char * ServerManager::ServerCreationException::what() const noexcept
 const char * ServerManager::UnclosedBraceException::what() const noexcept
 {
     return "Manager: ParsingError: Unclosed brace";
+}
+
+void ServerManager::runServers()
+{
+    // arbitrary max epoll size 50
+    int polled = epoll_create1(50);
+    struct epoll_event ev;
+
+    ev.events = EPOLLIN | EPOLLET;
+    for (auto& server : servers)
+    {
+        if (epoll_ctl(polled, EPOLL_CTL_ADD, server->GetServerSocketFD(), &ev) < 0)
+            std::cout << "Error while polling fds\n";
+        else
+            std::cout << "inserted fd\n";
+    }
+    struct epoll_event *events = new epoll_event[50];
+    int currentFds = 1;
+    int numberOfEvents;
+
+    sockaddr_storage client_addr;
+    int addressSize = sizeof(client_addr);
+
+    int incommingFD;
+    while (1)
+    {
+        numberOfEvents = epoll_wait(polled, events, currentFds, -1);
+        if (numberOfEvents == -1)
+        {
+            std::cout << "epoll issue\n";
+            break;
+        }
+        for (int i = 0; i < numberOfEvents; i++)
+        {
+            for (auto& server : servers)
+            {
+                // if they are trying to connect to us
+                if (events[i].data.fd == server->GetServerSocketFD())
+                {
+                    // create the incomming filedescriptor
+                    incommingFD = accept(events[i].data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
+                    if (incommingFD == -1)
+                        std::cout << "Error while accepting message\n";
+                    ev.events = EPOLLIN | EPOLLET;
+                    ev.data.fd = incommingFD;
+                    // add it to the polled fds
+                    if (epoll_ctl(polled, EPOLL_CTL_ADD, incommingFD, &ev) < 0)
+                        std::cout << "Error while adding fds to the epoll\n";
+                    // keep track of how many we are managing
+                    currentFds++;
+                    server->SetListeningFD(incommingFD);
+                    // read the incomming request into the servers current httprequest
+                    std::string requestString;
+                    int bufferSize = server->config.getRequestSizeLimit();
+                    char messageBuffer[bufferSize + 1];
+                    messageBuffer[bufferSize] = '\0';
+                    // todo the chunked requests
+                    int readAmount = read(incommingFD, messageBuffer, bufferSize);
+                    if (readAmount == -1)
+                        std::cout << "Error while reading request\n";
+                    requestString += messageBuffer; 
+                    server->currentRequest = new HttpRequest(requestString);
+                }
+                // if we can send them data and resolve the request
+                else if (events[i].data.fd == server->GetListeningFD())
+                {
+                    // get the appropriate answer from the server
+                    std::string response = server->GetAnswer();
+                    // send the answer and check for success
+                    if (send(events[i].data.fd, response.c_str(), response.length(), 0) == -1)
+                        std::cout << "Error while sending message\n";
+                    // remove the fd from the polled fds
+                    if (epoll_ctl(polled, EPOLL_CTL_DEL, events[i].data.fd, &ev) < 0)
+                        std::cout << "Error while removing filedescriptor from poll\n";
+                    currentFds--;
+                    // close the fd
+                    close(events[i].data.fd);
+                }
+            }
+        }
+    }
+    
+
 }

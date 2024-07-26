@@ -114,12 +114,15 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     std::string route = s.substr(0, openIndex);
     std::stringstream routeContent(s.substr(openIndex, closeIndex - openIndex));
     Route res;
+    res.location = route;
     std::vector<routeField> parsers = {
         (routeField){"allowedMethods", &ServerConfig::parseAllowedMethods},
         (routeField){"redirect", &ServerConfig::parseRedirect},
         (routeField){"root", &ServerConfig::parseRoot},
         (routeField){"dirListing", &ServerConfig::parseDirListing},
         (routeField){"defaultAnswer", &ServerConfig::parseDefaultAnswer},
+        (routeField){"CGI", &ServerConfig::parseCGI},
+        (routeField){"acceptUpload", &ServerConfig::parseAcceptUpload},
         (routeField){"uploadDir", &ServerConfig::parseUploadDir}
     };
     for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair, ',');)
@@ -149,13 +152,11 @@ void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route&
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     // validation missing
     if (s.find("POST") != std::string::npos)
-        res.allowedPost = true;
+        res.allowedMethods |= parseRequestMethod("POST");
     if (s.find("GET") != std::string::npos)
-        res.allowedGet = true;
+        res.allowedMethods |= parseRequestMethod("GET");
     if (s.find("DELETE") != std::string::npos)
-        res.allowedDelete = true;
-    if (!(res.allowedDelete || res.allowedGet || res.allowedPost))
-        throw InvalidValueException("address");   
+        res.allowedMethods |= parseRequestMethod("DELETE");
 }
 
 void ServerConfig::parseRedirect(std::string pair, std::string key, Route& res)
@@ -287,7 +288,7 @@ ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _k
 
 const char *ServerConfig::InvalidValueException::what() const noexcept
 {
-    return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
+    return "invalid key";
 }
 
 unsigned int ServerConfig::convertIP(std::string ip)
