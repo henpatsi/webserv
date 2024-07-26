@@ -88,6 +88,13 @@ ServerManager::ServerManager(const std::string path) : _path(path)
     // setup epoll
     polled = epoll_create1(EPOLL_SIZE);
     events = new epoll_event[EPOLL_SIZE];
+    try{
+        registerServerSockets();
+    }
+    catch(std::exception& e)
+    {
+        std::cout << e.what();
+    }
 }
 
 ServerManager::~ServerManager()
@@ -133,21 +140,20 @@ const char * ServerManager::UnclosedBraceException::what() const noexcept
 
 void ServerManager::runServers()
 {
-    registerServerSockets();
-    int incommingFD;
     while (1)
     {
+        // waits for at least 1 event to occur
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
             for (Server* server : servers)
             {
-                // if they are trying to connect to us
+                // if someone initiates a connection to the registered sockets
                 if (events[i].data.fd == server->GetServerSocketFD())
                 {
                     try
                     {
-                        incommingFD = acceptConnection(events[i]);
+                        int incommingFD = acceptConnection(events[i]);
                         AddToEpoll(incommingFD);
                         server->connect(incommingFD);
                     }
@@ -181,6 +187,7 @@ void ServerManager::AddToEpoll(int fd)
         std::cout << "Error while polling fds\n";
     else
         std::cout << "inserted fd\n";
+    // keeps the tracked fds for epoll_wait
     trackedFds++;
 }
 
@@ -190,16 +197,25 @@ void ServerManager::DelFromEpoll(int fd)
         std::cout << "Error while removing fd\n";
     else
         std::cout << "removed fd\n";
+    // keeps the tracked fds for epoll_wait
     trackedFds--;
     close(fd);
 }
 
 void ServerManager::registerServerSockets()
 {
+    // incomming connections
     temp_event.events = EPOLLIN | EPOLLET;
-    for (auto& server : servers)
+    for (Server* server : servers)
     {
-        AddToEpoll(server->GetServerSocketFD());
+        try
+        {
+            AddToEpoll(server->GetServerSocketFD());
+        }
+        catch (std::exception& e)
+        {
+            throw e;
+        }
     }
 }
 
@@ -207,14 +223,16 @@ void ServerManager::WaitForEvents()
 {
     eventAmount = epoll_wait(polled, events, trackedFds, -1);
     if (eventAmount == -1)
-        std::cout << "epoll issue\n";
+        std::cout << "epoll issue\n"; // should be changed to exception
 }
 
 int ServerManager::acceptConnection(epoll_event event)
 {
     int incommingFd = accept(event.data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
     if (incommingFd == -1)
-        std::cout << "Error\n";
+        std::cout << "Error\n"; // should be changed to exception
+    // setup new epolled filedescriptor 
     temp_event.events = EPOLLIN | EPOLLET;
     temp_event.data.fd = incommingFd;
+    return incommingFd;
 }

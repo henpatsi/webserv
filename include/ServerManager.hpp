@@ -33,9 +33,12 @@ class ServerManager
         void AddToEpoll(int fd);
         void DelFromEpoll(int fd);
 
+        // registeres all sockets from servers to the epoll
         void registerServerSockets();
+        // creates new fd with accept and returns it throws error on accept fail
         int acceptConnection(epoll_event event);
 
+        // sets eventAmount and throws error on epoll_wait error
         void WaitForEvents();
     public:
         ServerManager(std::string path);
