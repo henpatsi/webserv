@@ -26,7 +26,13 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // clean config -> remove server {
     std::string _;
     std::getline(config, _, '{');
-    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},(field){"sizeLimit:", &ServerConfig::parseRequestSize}, (field){"location ", &ServerConfig::parseRoute}});
+    std::vector<field> fields ({
+        (field){"name:", &ServerConfig::parseName},
+        (field){"port:", &ServerConfig::parsePort},
+        (field){"host:", &ServerConfig::parseAddress},
+        (field){"sizeLimit:", &ServerConfig::parseRequestSize},
+        (field){"location ", &ServerConfig::parseRoute}
+    });
     for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));

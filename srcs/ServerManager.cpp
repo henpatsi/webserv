@@ -171,6 +171,7 @@ void ServerManager::runServers()
                     try
                     {
                         int incommingFD = acceptConnection(events[i]);
+                        setFdNonBlocking(incommingFD);
                         AddToEpoll(incommingFD);
                         server->connect(incommingFD);
                     }
