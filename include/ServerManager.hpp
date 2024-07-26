@@ -3,6 +3,9 @@
 
 #include <string>
 #include <vector>
+#include <sys/epoll.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "ServerConfig.hpp"
 #include "Server.hpp"
 
@@ -59,13 +62,6 @@ class ServerManager
                 std::string error;
             public:
                 ManagerRuntimeException(std::string error);
-                const char *what() const noexcept;
-        };
-        class ManagerEpollException : std::exception {
-            private:
-                std::string error;
-            public:
-                ManagerEpollException(std::string error);
                 const char *what() const noexcept;
         };
 };

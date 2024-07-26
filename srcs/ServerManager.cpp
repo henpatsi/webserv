@@ -4,9 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include <sys/epoll.h>
-#include <fcntl.h>
-#include <unistd.h>
+
 
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
@@ -136,6 +134,16 @@ const char * ServerManager::ServerCreationException::what() const noexcept
 const char * ServerManager::UnclosedBraceException::what() const noexcept
 {
     return "Manager: ParsingError: Unclosed brace";
+}
+
+ServerManager::ManagerRuntimeException::ManagerRuntimeException(std::string error)
+{
+    this->error = error;
+}
+
+const char *ServerManager::ManagerRuntimeException::what() const noexcept
+{
+    return error.c_str();
 }
 
 void ServerManager::runServers()
