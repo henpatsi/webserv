@@ -287,7 +287,7 @@ ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _k
 
 const char *ServerConfig::InvalidValueException::what() const noexcept
 {
-    return (std::stringstream("ServerConfig: InvalidKey: ") << _key.c_str()).str().c_str();
+    return "ServerConfig: InvalidKey";
 }
 
 unsigned int ServerConfig::convertIP(std::string ip)

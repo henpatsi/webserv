@@ -223,11 +223,13 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 		directoryPath += UPLOAD_DIR;
 		if (access(directoryPath.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		if (writeMultipartData(request.getMultipartData(), directoryPath) == -1)
-			setErrorAndThrow(500, "Failed to open / write multipart data to file");
+		int ret = writeMultipartData(request.getMultipartData(), directoryPath);
+		if (ret != 0)
+			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
 		buildPath("/success.html");
 		prepareGetResponse(request);
+		this->responseCode = 201;
 	}
 	else
 		prepareGetResponse(request);
@@ -256,27 +258,35 @@ void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
 {
+	bool containsFiles = false;
+
 	for (multipartData data : dataVector)
 	{
 		if (data.boundary != "")
 		{
-			writeMultipartData(data.multipartDataVector, directory);
+			int ret = writeMultipartData(data.multipartDataVector, directory);
+			if (ret != 0)
+				return ret;
 			continue ;
 		}
 		else if (data.filename == "")
 			continue ;
 
+		containsFiles = true;
+
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
 
 		if (!file.good())
-			return (-1);
+			return (500);
 
 		file.write(data.data.data(), data.data.size()); // TODO check write success
 		file.close();
 	}
 
-	return (1);
+	if (!containsFiles)
+		return (400);
+	return (0);
 }
 
 // EXCEPTIONS

@@ -58,13 +58,13 @@ void HttpRequest::debugPrint()
 	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 
-	//std::cout << "Raw content:\n  " << this->rawContent << "\n";
+	// std::cout << "Raw content:\n  " << std::string(this->rawContent.begin(), this->rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
 		std::cout << "Multipart data:";
 		for (multipartData data : this->multipartDataVector)
 		{
-			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  Content-Type: " << data.contentType;
+			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
 			// std::string dataString(data.data.begin(), data.data.end());
 			// std::cout << "\n  Data: '" << dataString << "'\n";
 		}
@@ -156,8 +156,12 @@ void HttpRequest::readChunkedContent(int socketFD)
 {
 	std::string line = readLine(socketFD);
 	int chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
+	int contentLength = 0;
 	while (chunkSize > 0)
 	{
+		contentLength += chunkSize;
+		if (contentLength > _clientBodyLimit)
+			setErrorAndThrow(413, "Chunked request body larger than client body limit");
 		readContent(socketFD, chunkSize);
 		line = readLine(socketFD); // Reads the empty line
 		line = readLine(socketFD);
@@ -207,6 +211,7 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 			|| line[line.size() - 2] == ':')
 			setErrorAndThrow(400, "Invalid header line format");
 		std::string key = line.substr(0, line.find(':'));
+		std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
 		std::string value = line.substr(line.find(':') + 2);
 		value.erase(value.length() - 1);
 		if (key.empty() || value.empty())
@@ -218,27 +223,34 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 void HttpRequest::parseBody(int socketFD)
 {
 	// Do not read content if it is above client body size limit
-	if (this->headers.find("Content-Length") != this->headers.end() && std::stoi(this->headers["Content-Length"]) > _clientBodyLimit)
+	if (this->headers.find("content-length") != this->headers.end() && std::stoi(this->headers["content-length"]) > _clientBodyLimit)
 		setErrorAndThrow(413, "Request body larger than client body limit");
 
-	// Reads the body content if content length specified
-	if (this->headers["Transfer-Encoding"] == "chunked")
-		readChunkedContent(socketFD);
-	else if (this->headers.find("Content-Length") != this->headers.end())
-		readContent(socketFD, std::stoi(this->headers["Content-Length"]));
-	else if (this->headers.find("Content-Type") != this->headers.end())
+	// Reads the body content if content length specified or chunked encoded
+	if (this->headers.find("transfer-encoding") != this->headers.end())
+	{
+		if (this->headers["transfer-encoding"] == "chunked")
+			readChunkedContent(socketFD);
+		else
+			setErrorAndThrow(415, "Unsupported transfer encoding");
+	}
+	else if (this->headers.find("content-length") != this->headers.end())
+		readContent(socketFD, std::stoi(this->headers["content-length"]));
+	else if (this->headers.find("content-type") != this->headers.end())
 		setErrorAndThrow(411, "No content length specified");
+	else
+		return ; // Nothing to read but no error?
 
 	// Extracts the data from the body content from known content types
-	if (this->getHeader("Content-Type").find("multipart/form-data") != std::string::npos)
+	if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
 	{
-		std::string boundary = this->getHeader("Content-Type");
+		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
 		int extractRet = extractMultipartData(this->multipartDataVector, this->rawContent, boundary);
 		if (extractRet != 0)
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
-	else if (this->getHeader("Content-Type").find("application/x-www-form-urlencoded") != std::string::npos)
+	else if (this->getHeader("content-type").find("application/x-www-form-urlencoded") != std::string::npos)
 	{
 		std::string rawContentString(this->rawContent.begin(), this->rawContent.end());
 		extractURIParameters(this->urlEncodedData, rawContentString);
@@ -296,7 +308,11 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 		std::string line;
 		while (getline(sstream, line))
 		{
-			if (line.find("Content-Disposition:") != std::string::npos)
+			std::string lowercaseLine;
+			lowercaseLine = line;
+			std::transform(lowercaseLine.begin(), lowercaseLine.end(), lowercaseLine.begin(), [](unsigned char c){ return std::tolower(c); });
+
+			if (lowercaseLine.find("content-disposition:") != std::string::npos)
 			{
 				if (line.find("name=\"") != std::string::npos)
 				{
@@ -309,9 +325,9 @@ int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::v
 					data.filename.erase(data.filename.find("\""));
 				}
 			}
-			else if (line.find("Content-Type:") != std::string::npos)
+			else if (lowercaseLine.find("content-type:") != std::string::npos)
 			{
-				data.contentType = line.substr(line.find("Content-Type:") + 14);
+				data.contentType = line.substr(lowercaseLine.find("content-type:") + 14);
 				// Get boundary of nested multipart data
 				if (data.contentType.find("boundary=") != std::string::npos)
 				{
