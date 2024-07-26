@@ -57,7 +57,18 @@ int main(int argc, char *argv[])
 	// Get port and ip from config
 	std::string configFilename = argv[1];
 
-	ServerManager serverManager(configFilename);
+	try
+	{
+		ServerManager serverManager(configFilename);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+	}
+	catch (...)
+	{
+		std::cerr << "weird" << "\n";
+	}
 
 	/*
 	std::ifstream configFile;

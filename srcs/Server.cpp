@@ -31,7 +31,7 @@ Route Server::findCorrectRoute(HttpRequest request)
     // just checks if resourcePath has the start of the location of the route
     for (Route route : config.getRoutes())
     {
-        if (!request.getResourcePath().starts_with(route.location))
+        if (!request.getResourcePath().compare(0, route.location.length(), route.location))
             continue;
         // set the current one as matching or replace if the current route matches "more"
         if (!isFound || fitting.location.length() < route.location.length())

@@ -9,7 +9,7 @@
 #include "ServerConfig.hpp"
 #include "Server.hpp"
 
-#define MANAGEREXCEPTION std::exception { \
+#define MANAGEREXCEPTION public std::exception { \
             const char * what() const noexcept; \
         }
 

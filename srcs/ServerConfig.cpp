@@ -1,5 +1,5 @@
 #include "ServerConfig.hpp"
-#include <map>
+#include <vector>
 #include <utility> 
 #include <algorithm>
 #include <functional>
@@ -36,8 +36,8 @@ ServerConfig::ServerConfig(std::stringstream& config)
     for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
-        //std::cout << key_value_pair << "\n";
-        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [&](field f){return key_value_pair.starts_with(f.name);});
+        std::cout << key_value_pair << "\n";
+        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [&](field f){return key_value_pair.compare(0, f.name.length(), f.name);});
         if (it == fields.end())
             throw InvalidKeyException(key_value_pair);
         try
@@ -46,9 +46,11 @@ ServerConfig::ServerConfig(std::stringstream& config)
         }
         catch (const std::exception& e)
         {
+            std::cout << "weird " << e.what() << "\n" ;
             throw e;
         }
     }
+
     if (!_isRouteSet)
         throw MissingLocationException();
     // default address
@@ -133,7 +135,7 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     };
     for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair, ',');)
     {
-        std::vector<routeField>::iterator it = std::find_if(parsers.begin(), parsers.end(), [&](routeField f){return keyvaluepair.starts_with(f.name);});
+        std::vector<routeField>::iterator it = std::find_if(parsers.begin(), parsers.end(), [&](routeField f){return keyvaluepair.compare(0, f.name.length(), f.name);});
         if (it == parsers.end())
             throw InvalidKeyException(keyvaluepair);
         try

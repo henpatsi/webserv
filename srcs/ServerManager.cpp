@@ -18,12 +18,11 @@ static void setFdNonBlocking(int fd)
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
     // keeps track of the stringstreams for each server
-    std::vector<std::stringstream *> configs;
+    std::vector<std::stringstream> configs;
     int x = 0;
     // utils for locations to have { } and for error handling
     bool is_in_server = false;
     int depth = 0;
-
     // checks if file is openable
     std::ifstream config{ _path };
     if (!config.is_open())
@@ -42,13 +41,12 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             {
                 // check if we are creating a new server
                 // should check if anything between server and {
-                if (line.starts_with("server"))
+                if (line.compare(0, 5, "server"))
                 {
                     if (is_in_server)
                         throw ServerInServerException();
                     // start this servers config stringstream
-                    std::stringstream* s = new std::stringstream();
-                    configs.push_back(s);
+                    configs.push_back(std::stringstream{""});
                     std::cout << "num of servers " << x++ << "\n";
                     is_in_server = true;
                 }
@@ -66,7 +64,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             if (depth == 0)
                 is_in_server = false;
             if (is_in_server) // remove tailing }
-                *configs.back() << line;
+                configs.back() << line;
         }
     }
     config.close();
@@ -75,21 +73,26 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 
     // Initialises the Serverconfigs with the correct string
     bool success = true;
-    for (std::stringstream* config : configs)
+    for (std::stringstream& configuration : configs)
     {
         try
         {
-            ServerConfig current(*config);
-            servers.push_back(new Server(current));
+            ServerConfig current(configuration);
+            //servers.push_back(new Server(current));
         }
-        catch (const std::exception& e)
+        catch (std::exception const& e)
         {
             success = false;
             std::cerr << e.what() << "\n";
         }
+        catch (...)
+        {
+            std::cerr << "really stupid" << "\n";
+        }
     }
     if  (!success)
     {
+        std::cout << "failed to create\n";
         throw ServerCreationException();
     }
     // setup epoll

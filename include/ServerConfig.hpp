@@ -43,7 +43,7 @@ class ServerConfig {
         long getRequestSizeLimit();
         std::list<struct Route> getRoutes();
         /* ---- Exceptions ----*/
-        class SameKeyRepeatException : std::exception
+        class SameKeyRepeatException : public std::exception
         {
             private:
                 std::string _key;
@@ -51,7 +51,7 @@ class ServerConfig {
                 SameKeyRepeatException(std::string key);
                 const char *what() const noexcept;
         };
-        class InvalidKeyException : std::exception
+        class InvalidKeyException : public std::exception
         {
             private:
                 std::string _key;
@@ -59,7 +59,7 @@ class ServerConfig {
                 InvalidKeyException(std::string key);
                 const char *what() const noexcept;
         };
-        class InvalidValueException : std::exception
+        class InvalidValueException : public std::exception
         {
             private:
                 std::string _key;
@@ -67,7 +67,7 @@ class ServerConfig {
                 InvalidValueException(std::string key);
                 const char *what() const noexcept;
         };
-        class MissingLocationException : std::exception 
+        class MissingLocationException : public std::exception 
         {
                 const char *what() const noexcept;
         };
