@@ -56,6 +56,10 @@ int main(int argc, char *argv[])
 		return_error("Invalid amount of arguments\nUse: ./webserv [configuration file]");
 	// Get port and ip from config
 	std::string configFilename = argv[1];
+
+	ServerManager serverManager(configFilename);
+
+	/*
 	std::ifstream configFile;
 	configFile.open(configFilename);
 	if (!configFile.is_open())
@@ -118,6 +122,6 @@ int main(int argc, char *argv[])
 	}
 
 	close(serverSocketFD);
-
+	*/
 
 }

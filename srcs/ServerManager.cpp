@@ -4,7 +4,16 @@
 #include <iostream>
 #include <vector>
 
-
+static void setFdNonBlocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+        throw std::system_error();
+    flags |= O_NONBLOCK;
+    int res = fcntl(fd, F_SETFL, flags);
+    if (res == -1)
+        throw std::system_error();
+}
 
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
@@ -236,15 +245,6 @@ int ServerManager::acceptConnection(epoll_event event)
     setFdNonBlocking(incommingFd);
     temp_event.events = EPOLLIN | EPOLLET;
     temp_event.data.fd = incommingFd;
+    return incommingFd;
 }
 
-static void setFdNonBlocking(int fd)
-{
-    int flags = fcntl(fd, F_GETFL);
-    if (flags == -1)
-        throw std::system_error();
-    flags |= O_NONBLOCK;
-    int res = fcntl(fd, F_SETFL, flags);
-    if (res == -1)
-        throw std::system_error();
-}
