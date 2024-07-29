@@ -11,7 +11,8 @@ private:
     int listeningFD;
 public:
     Server(ServerConfig config);
-    HttpRequest *currentRequest;
+    HttpRequest currentRequest;
+    HttpResponse currentResponse;
     std::string GetAnswer();
     ServerConfig config;
 

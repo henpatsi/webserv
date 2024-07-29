@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 13:33:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/29 17:19:17 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,12 +25,55 @@
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "ServerConfig.hpp"
 
 int	exit_error(std::string message)
 {
 	std::cerr << message << "\n";
 	perror("");
 	exit (1);
+}
+
+// VERY SIMPLISTIC IMPLEMENTATION FOR TESTING PURPOSES
+std::string buildPath(std::string requestPath)
+{
+	std::string path = "www/";
+
+	if (requestPath.substr(0, 8) == "/uploads")
+		return requestPath;
+
+	// TODO do we even need any other types than html?
+	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
+	{
+		// contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
+		path += "images" + requestPath;
+	}
+	else if (requestPath.find(".pdf") != std::string::npos)
+	{
+		// contentType = "application/pdf";
+		path += "docs" + requestPath;
+	}
+	else if (requestPath.find(".html") != std::string::npos)
+	{
+		// contentType = "text/html";
+		path += "html" + requestPath;
+	}
+	else if (requestPath.find(".") == std::string::npos)
+	{
+		// contentType = "text/html";
+		path += "html" + requestPath;
+
+		// if (directoryListingAllowed)
+		// 	return;
+
+		if (path.back() == '/')
+			path += "index.html";
+		else if (path.find(".html") == std::string::npos)
+			path += "/index.html";
+	}
+	// else
+	// 	setErrorAndThrow(415, "Unsupported media type in request path");
+	return path;
 }
 
 int create_server()
@@ -90,9 +133,21 @@ void handle_request(int connectionSocket)
 {
 	// Parse request into HttpRequest object
 	HttpRequest request = HttpRequest(connectionSocket);
+	
+	// Hard coding for testing purposes
+	Route route = Route();
+	route.location = buildPath(request.getResourcePath());
+	route.allowedMethods = ServerConfig::parseRequestMethod("GET");
+	route.redirect = "";
+	route.root = "www/";
+	route.directoryListing = false;
+	route.defaultAnswer = ""; // What is this?
+	route.acceptUpload = false;
+	route.CGI = "";
+	route.uploadDir = "uploads/";
 
 	// Build response into HttpResponse object
-	HttpResponse response = HttpResponse(request);
+	HttpResponse response = HttpResponse(request, route);
 	// std::cout << response.getResponse() << "\n";
 
 	// Respond to client

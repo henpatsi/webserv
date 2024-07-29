@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 17:06:41 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/29 16:02:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,8 +42,8 @@
 
 // Temporary hard coded server config values
 
-# ifndef _clientBodyLimit
-#  define _clientBodyLimit 300000
+# ifndef clientBodyLimit
+#  define clientBodyLimit 300000
 # endif
 
 
@@ -64,6 +64,7 @@ int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::
 class HttpRequest
 {
 	public:
+		HttpRequest(void);
 		HttpRequest(int socketFD);
 
 		std::string							getMethod(void) { return this->method; }

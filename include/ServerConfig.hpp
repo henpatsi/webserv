@@ -9,20 +9,20 @@
 #define SPACECHARS " \f\n\r\t\v"
 
 struct Route {
-    std::string location = nullptr;
+    std::string location;
     uint8_t allowedMethods = 0;
-    std::string redirect = nullptr;
-    std::string root = nullptr;
+    std::string redirect;
+    std::string root;
     bool directoryListing = false;
-    std::string defaultAnswer = nullptr;
-    std::string CGI = nullptr;
+    std::string defaultAnswer;
+    std::string CGI;
     bool acceptUpload = false;
-    std::string uploadDir = nullptr;
+    std::string uploadDir;
 };
 
 class ServerConfig {
     private:
-        std::string _name = nullptr;
+        std::string _name;
         bool _isNameSet = false;
         u_int16_t _port = 8080;
         bool _isPortSet = false;

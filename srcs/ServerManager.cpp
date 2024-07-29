@@ -177,16 +177,7 @@ void ServerManager::runServers()
                     currentFds++;
                     server->SetListeningFD(incommingFD);
                     // read the incomming request into the servers current httprequest
-                    std::string requestString;
-                    int bufferSize = server->config.getRequestSizeLimit();
-                    char messageBuffer[bufferSize + 1];
-                    messageBuffer[bufferSize] = '\0';
-                    // todo the chunked requests
-                    int readAmount = read(incommingFD, messageBuffer, bufferSize);
-                    if (readAmount == -1)
-                        std::cout << "Error while reading request\n";
-                    requestString += messageBuffer; 
-                    server->currentRequest = new HttpRequest(requestString);
+                    server->currentRequest = HttpRequest(incommingFD);
                 }
                 // if we can send them data and resolve the request
                 else if (events[i].data.fd == server->GetListeningFD())

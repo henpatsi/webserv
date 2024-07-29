@@ -1,5 +1,13 @@
 TODO
 
+Merge getAnswer and HttpResponse
+Merge connect and HttpRequest
+Actually use ServerManager etc.
+Make HttpRequest first read header (very short timeout), then try read request each loop
+Check HttpRequest is HTTP/1.1 compliant
+
+
+
 See if timeout can be done better
 Fix timeout starting when hovering over link?
 Check the chunked request no newlines thing

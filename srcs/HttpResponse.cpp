@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 16:33:58 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/29 16:33:30 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,14 +14,17 @@
 
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request)
+HttpResponse::HttpResponse(){};
+
+HttpResponse::HttpResponse(HttpRequest& request, Route& route)
 {
 	try
 	{
 		if (request.getFailResponseCode() != 0)
-			setErrorAndThrow(request.getFailResponseCode(), "Reuest failed");
+			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
 		
-		buildPath(request.getResourcePath());
+		this->path = route.location;
+		this->route = route;
 
 		if (request.getMethod() == "GET")
 			prepareGetResponse(request);
@@ -62,7 +65,7 @@ void HttpResponse::setError(int code)
 
 	if (this->customErrorPages[code] != "")
 	{
-		std::ifstream file(SITE_ROOT + this->customErrorPages[code]);
+		std::ifstream file(this->route.root + this->customErrorPages[code]);
 		if (!file.good())
 		{
 			buildDefaultErrorContent(code);
@@ -141,47 +144,6 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-// VERY SIMPLISTIC IMPLEMENTATION FOR TESTING PURPOSES
-void HttpResponse::buildPath(std::string requestPath)
-{
-	this->path = SITE_ROOT;
-
-	if (requestPath.substr(0, 8) == "/uploads")
-		return ;
-
-	// TODO do we even need any other types than html?
-	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
-	{
-		this->contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
-		this->path += "images" + requestPath;
-	}
-	else if (requestPath.find(".pdf") != std::string::npos)
-	{
-		this->contentType = "application/pdf";
-		this->path += "docs" + requestPath;
-	}
-	else if (requestPath.find(".html") != std::string::npos)
-	{
-		this->contentType = "text/html";
-		this->path += "html" + requestPath;
-	}
-	else if (requestPath.find(".") == std::string::npos)
-	{
-		this->contentType = "text/html";
-		this->path += "html" + requestPath;
-
-		if (this->directoryListingAllowed)
-			return;
-
-		if (this->path.back() == '/')
-			this->path += "index.html";
-		else if (this->path.find(".html") == std::string::npos)
-			this->path += "/index.html";
-	}
-	else
-		setErrorAndThrow(415, "Unsupported media type in request path");
-}
-
 void HttpResponse::prepareGetResponse(HttpRequest& request)
 {
 	if (this->directoryListingAllowed && request.getResourcePath() != "/uploads" && (this->path.find(".") == std::string::npos))
@@ -219,15 +181,15 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 
 	if (request.getResourcePath() == "/uploads")
 	{
-		std::string directoryPath = SITE_ROOT;
-		directoryPath += UPLOAD_DIR;
+		std::string directoryPath = this->route.root;
+		directoryPath += this->route.uploadDir;
 		if (access(directoryPath.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
 		int ret = writeMultipartData(request.getMultipartData(), directoryPath);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		buildPath("/success.html");
+		std::cout << "/success.html" << "\n";
 		prepareGetResponse(request);
 		this->responseCode = 201;
 	}
@@ -243,14 +205,14 @@ void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 	std::string filePath = "www" + request.getResourcePath();
 	if (access(filePath.c_str(), F_OK) == -1)
 	{
-		buildPath("/failure.html");
+		std::cout << "/failure.html" << "\n";
 		prepareGetResponse(request);
 		return ;
 	}
 	if (remove(filePath.c_str()) != 0)
 		setErrorAndThrow(500, "Failed to delete file");
 	
-	buildPath("/success.html");
+	std::cout << "/success.html" << "\n";
 	prepareGetResponse(request);
 }
 

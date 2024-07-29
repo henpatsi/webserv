@@ -6,13 +6,15 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 17:56:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/29 16:01:50 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "HttpRequest.hpp"
 
 // CONSTRUCTOR
+
+HttpRequest::HttpRequest(){};
 
 HttpRequest::HttpRequest(int socketFD)
 {
@@ -160,7 +162,7 @@ void HttpRequest::readChunkedContent(int socketFD)
 	while (chunkSize > 0)
 	{
 		contentLength += chunkSize;
-		if (contentLength > _clientBodyLimit)
+		if (contentLength > clientBodyLimit)
 			setErrorAndThrow(413, "Chunked request body larger than client body limit");
 		readContent(socketFD, chunkSize);
 		line = readLine(socketFD); // Reads the empty line
@@ -223,7 +225,7 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 void HttpRequest::parseBody(int socketFD)
 {
 	// Do not read content if it is above client body size limit
-	if (this->headers.find("content-length") != this->headers.end() && std::stoi(this->headers["content-length"]) > _clientBodyLimit)
+	if (this->headers.find("content-length") != this->headers.end() && std::stoi(this->headers["content-length"]) > clientBodyLimit)
 		setErrorAndThrow(413, "Request body larger than client body limit");
 
 	// Reads the body content if content length specified or chunked encoded
