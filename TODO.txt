@@ -1,0 +1,5 @@
+TODO
+
+See if timeout can be done better
+Fix timeout starting when hovering over link?
+Check the chunked request no newlines thing

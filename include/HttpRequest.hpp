@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 10:17:50 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 17:06:41 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,9 @@
 # include <string>
 # include <map>
 # include <vector>
+# include <algorithm>
+# include <chrono>
+# include <thread>
 
 #include <unistd.h>
 
@@ -29,17 +32,33 @@
 #  define MAX_HEADER_SIZE 4096
 # endif
 
+# ifndef READ_ERROR_RETRY_MS
+#  define READ_ERROR_RETRY_MS 10
+# endif
+
+# ifndef TIMEOUT_SECONDS
+#  define TIMEOUT_SECONDS 2
+# endif
+
+// Temporary hard coded server config values
+
+# ifndef _clientBodyLimit
+#  define _clientBodyLimit 300000
+# endif
+
+
+
 struct multipartData
 {
 	std::string					name;
 	std::string					filename;
 	std::string					contentType;
-	std::vector<char>			data;
+	std::vector<char>			data = {};
 	std::string					boundary;
 	std::vector<multipartData>	multipartDataVector = {};
 };
 
-void	extractUrlParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
+void	extractURIParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString);
 int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
 
 class HttpRequest
@@ -50,8 +69,8 @@ class HttpRequest
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
-		std::map<std::string, std::string>	getUrlParameters(void) { return this->urlParameters; }
-		std::string							getUrlParameter(std::string key) { return this->urlParameters[key]; }
+		std::map<std::string, std::string>	getURIParameters(void) { return this->URIParameters; }
+		std::string							getURIParameter(std::string key) { return this->URIParameters[key]; }
 		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::vector<char>					getRawContent(void) { return this->rawContent; }
@@ -62,14 +81,17 @@ class HttpRequest
 		class RequestException : public std::exception
 		{
 			public:
-				virtual const char* what() const throw() { return "Error in request"; };
+				RequestException(std::string message) : message(message) {};
+				virtual const char* what() const throw();
+			private:
+				std::string message;
 		};
 	
 	private:
 		std::string							method;
 		std::string							resourcePath;
 		std::string							httpVersion;
-		std::map<std::string, std::string>	urlParameters = {};
+		std::map<std::string, std::string>	URIParameters = {};
 		std::map<std::string, std::string>	headers = {};
 		std::vector<char>					rawContent = {};
 		std::vector<multipartData>			multipartDataVector = {};
@@ -77,7 +99,7 @@ class HttpRequest
 		int									failResponseCode = 0;
 
 		void		debugPrint(void);
-		void		setErrorAndThrow(int code);
+		void		setErrorAndThrow(int code, std::string message);
 		std::string	readLine(int socketFD);
 		std::string	readRequestHeader(int socketFD);
 		void		readContent(int socketFD, int contentLength);

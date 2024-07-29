@@ -6,13 +6,14 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/23 10:52:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/25 13:33:17 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
 #include <fstream>
 #include <exception>
+#include <ctime>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -79,7 +80,8 @@ int accept_connection(int serverSocket)
 	if (fcntl(connectionSocket, F_SETFL, O_NONBLOCK) == -1) // Thought this is not necessary but was blocking in HttpRequest
 		exit_error("Failed to set connection socket to non-blocking");
 
-	std::cout << "\n" << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocket << "\n";
+	time_t timeNow = std::time(nullptr);
+	std::cout << "\n" << std::asctime(std::localtime(&timeNow)) << "Connected to " << inet_ntoa(connectionAddress.sin_addr) << " on port " << ntohs(connectionAddress.sin_port) << ", socket " << connectionSocket << "\n";
 
 	return connectionSocket;
 }
@@ -91,7 +93,7 @@ void handle_request(int connectionSocket)
 
 	// Build response into HttpResponse object
 	HttpResponse response = HttpResponse(request);
-	//std::cout << response.getResponse() << "\n";
+	// std::cout << response.getResponse() << "\n";
 
 	// Respond to client
 	if (write(connectionSocket, response.getResponse().c_str(), response.getResponse().size()) == -1)
