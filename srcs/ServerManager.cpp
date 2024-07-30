@@ -169,14 +169,14 @@ void ServerManager::runServers()
             for (Server* server : servers)
             {
                 // if someone initiates a connection to the registered sockets
-                if (events[i].data.fd == server->GetServerSocketFD())
+                if (server->IsServerSocketFD(events[i].data.fd))
                 {
                     try
                     {
                         int incommingFD = acceptConnection(events[i]);
                         setFdNonBlocking(incommingFD);
                         AddToEpoll(incommingFD);
-                        server->connect(incommingFD);
+                        server->connect(incommingFD, events[i].data.fd);
                     }
                     catch (std::exception& e)
                     {
@@ -185,12 +185,12 @@ void ServerManager::runServers()
 
                 }
                 // if we can send them data and resolve the request
-                else if (events[i].data.fd == server->GetListeningFD())
+                else if (server->IsListeningFD(events[i].data.fd))
                 {
                     try
                     {
-                        server->respond();
-                        DelFromEpoll(events[i].data.fd);
+                        if (server->respond(events[i].data.fd))
+                            DelFromEpoll(events[i].data.fd);
                     }
                     catch (std::exception& e)
                     {
@@ -229,8 +229,11 @@ void ServerManager::registerServerSockets()
     temp_event.events = EPOLLIN | EPOLLET;
     for (Server* server : servers)
     {
-        AddToEpoll(server->GetServerSocketFD());
-        setFdNonBlocking(server->GetServerSocketFD());
+        for (auto& socket : server->GetSocketFDs())
+        {
+            AddToEpoll(socket.first);
+            setFdNonBlocking(socket.first);
+        }
     }
 }
 

@@ -5,100 +5,102 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <list>
+#include <vector>
 
 #define SPACECHARS " \f\n\r\t\v"
 
 struct Route {
-    std::string location = nullptr;
-    uint8_t allowedMethods = 0;
-    std::string redirect = nullptr;
-    std::string root = nullptr;
-    bool directoryListing = false;
-    std::string defaultAnswer = nullptr;
-    std::string CGI = nullptr;
-    bool acceptUpload = false;
-    std::string uploadDir = nullptr;
+	std::string	location;
+	uint8_t		allowedMethods = 0;
+	std::string	redirect;
+	std::string	root;
+	bool		directoryListing = false;
+	std::string	defaultAnswer;
+	std::string	CGI;
+	bool		acceptUpload = false;
+	std::string	uploadDir;
 };
 
 class ServerConfig {
-    private:
-        std::string _name = nullptr;
-        bool _isNameSet = false;
-        u_int16_t _port = 8080;
-        bool _isPortSet = false;
-        struct sockaddr_in _address;
-        bool _isAddressSet = false;
-        long _clientBodyLimit = 1024;
-        bool _isRequestSizeSet = false;
-        std::list<struct Route> _routes; // list of Routes with location and all the info
-        bool _isRouteSet = false;
-    public:
-        ServerConfig(std::stringstream& config);
-        ServerConfig& operator=(const ServerConfig& other) = default;
-        ~ServerConfig();
-        /* ---- Getters ----*/
-        std::string getName();
-        u_int16_t getPort();
-        struct sockaddr_in getAddress();
-        long getRequestSizeLimit();
-        std::list<struct Route> getRoutes();
-        /* ---- Exceptions ----*/
-        class SameKeyRepeatException : public std::exception
-        {
-            private:
-                std::string _key;
-            public:
-                SameKeyRepeatException(std::string key);
-                const char *what() const noexcept;
-        };
-        class InvalidKeyException : public std::exception
-        {
-            private:
-                std::string _key;
-            public:
-                InvalidKeyException(std::string key);
-                const char *what() const noexcept;
-        };
-        class InvalidValueException : public std::exception
-        {
-            private:
-                std::string _key;
-            public:
-                InvalidValueException(std::string key);
-                const char *what() const noexcept;
-        };
-        class MissingLocationException : public std::exception 
-        {
-                const char *what() const noexcept;
-        };
-        /* ---- Parsers ---- */
-        /* ---- ServerParser ----*/
-        void parseName(std::string pair, std::string key);
-        void parsePort(std::string pair, std::string key);
-        void parseAddress(std::string pair, std::string key);
-        void parseRoute(std::string pair, std::string key);
-        void parseRequestSize(std::string pair, std::string key);
-        /* ---- RouteParser ----*/
-        void parseAllowedMethods(std::string pair, std::string key, Route& res);
-        void parseRedirect(std::string pair, std::string key, Route& res);
-        void parseRoot(std::string pair, std::string key, Route& res);
-        void parseDirListing(std::string pair, std::string key, Route& res);
-        void parseDefaultAnswer(std::string pair, std::string key, Route& res);
-        void parseCGI(std::string pair, std::string key, Route& res);
-        void parseAcceptUpload(std::string pair, std::string key, Route& res);
-        void parseUploadDir(std::string pair, std::string key, Route& res);
+	private:
+		std::string                     _name;
+		bool                            _isNameSet			= false;
+		std::vector<u_int16_t>          _ports;
+		bool                            _isPortSet			= false;
+		unsigned int					_ip;
+		std::vector<struct sockaddr_in> _addresses;
+		bool                            _isAddressSet		= false;
+		long                            _clientBodyLimit	= 1024;
+		bool							_isRequestSizeSet 	= false;
+		std::list<struct Route>			_routes;
+		bool							_isRouteSet			= false;
 
-        static unsigned int convertIP(std::string ip);
-        static uint8_t parseRequestMethod(std::string s)
-        {
-            if (s == "GET")
-                return 1 << 1;
-            if (s == "POST")
-                return 1 << 2;
-            if (s == "DELETE")
-                return 1 << 3;
-            return 0;
-        }
+	public:
+		ServerConfig(std::stringstream& config);
+		~ServerConfig() {};
+
+		/* ---- Getters ----*/
+		std::string 					getName() 				{ return _name; };
+		std::vector<u_int16_t> 			getPorts() 				{ return _ports; };
+		std::vector<struct sockaddr_in>	getAddress() 			{ return _addresses; };
+		long 							getRequestSizeLimit() 	{ return _clientBodyLimit; };
+		std::list<struct Route> 		getRoutes()				{ return _routes; };
+
+		/* ---- Exceptions ----*/
+		class SameKeyRepeatException : public std::exception
+		{
+			private:
+				std::string _key;
+			public:
+				SameKeyRepeatException(std::string key) : _key(key) {};
+				const char *what() const noexcept { return _key.c_str(); };
+		};
+		class InvalidKeyException : public std::exception
+		{
+			private:
+				std::string _key;
+			public:
+				InvalidKeyException(std::string key) : _key(key) {};
+				const char *what() const noexcept { return _key.c_str(); };
+		};
+		class InvalidValueException : public std::exception
+		{
+			private:
+				std::string _key;
+			public:
+				InvalidValueException(std::string key) : _key(key) {};
+				const char *what() const noexcept { return _key.c_str(); };
+		};
+		class MissingValueException : public std::exception 
+		{
+			private:
+				std::string _key;
+			public:
+				MissingValueException(std::string key) : _key(key) {};
+				const char *what() const noexcept { return _key.c_str(); };
+		};
+		
+		/* ---- Parsers ---- */
+		/* ---- ServerParser ----*/
+		void parseName(std::string pair, std::string key);
+		void parsePort(std::string pair, std::string key);
+		void parseAddress(std::string pair, std::string key);
+		void parseRoute(std::string pair, std::string key);
+		void parseRequestSize(std::string pair, std::string key);
+
+		/* ---- RouteParser ----*/
+		void parseAllowedMethods(std::string pair, std::string key, Route& res);
+		void parseRedirect(std::string pair, std::string key, Route& res);
+		void parseRoot(std::string pair, std::string key, Route& res);
+		void parseDirListing(std::string pair, std::string key, Route& res);
+		void parseDefaultAnswer(std::string pair, std::string key, Route& res);
+		void parseCGI(std::string pair, std::string key, Route& res);
+		void parseAcceptUpload(std::string pair, std::string key, Route& res);
+		void parseUploadDir(std::string pair, std::string key, Route& res);
+
+		// TODO move separate
+		static unsigned int convertIP(std::string ip);
+		static uint8_t		parseRequestMethod(std::string s);
 };
 
 #endif

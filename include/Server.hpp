@@ -5,12 +5,15 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 
+#include <list>
+#include <algorithm>
+
 class Server {
 private:
     // sockets filedescriptor used for connecting to us
-    int serverSocketFD;
+    std::list<std::pair<int, bool>> serverSocketFDS;
     // fd created on accepting a connection
-    int listeningFD;
+    std::list<std::pair<int, HttpRequest>> listeningFDS;
     // contains all info and routes about the server
     ServerConfig config;
     // TODO used to store chuncked request and build one as soon as its done
@@ -24,14 +27,14 @@ public:
     Server(ServerConfig config);
 
     /* ---- Getters ---- */
-    int GetServerSocketFD() { return serverSocketFD; }
-    int GetListeningFD() { return listeningFD; }
-
+    int     IsServerSocketFD(int fd)    { return std::any_of(serverSocketFDS.begin(), serverSocketFDS.end(), [&](std::pair<int, bool> x){return x.first == fd && !x.second; }); }
+    bool    IsListeningFD(int fd)       { return std::any_of(listeningFDS.begin(), listeningFDS.end(), [&](std::pair<int, HttpRequest> x){return x.first == fd; });}
+    std::list<std::pair<int, bool>> GetSocketFDs() { return serverSocketFDS; }; 
     // method called on incomming request 
-    void connect(int incommingFD);
+    void connect(int incommingFD, int socketFD);
     // TODO method called when request is done
     // gets called when server can respond 
-    void respond();
+    bool respond(int fd);
 
     class SocketOpenException : std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }

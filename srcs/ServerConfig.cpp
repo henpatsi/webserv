@@ -24,6 +24,9 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // needs its separate check
     /* Main server parse */
     // clean config -> remove server {
+    _ports      = std::vector<u_int16_t>();
+    _addresses  = std::vector<struct sockaddr_in>();
+    _routes     = std::list<Route>();
     std::string _;
     std::getline(config, _, '{');
     std::vector<field> fields ({
@@ -37,7 +40,10 @@ ServerConfig::ServerConfig(std::stringstream& config)
     {
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
         std::cout << key_value_pair << "\n";
-        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [&](field f){return key_value_pair.compare(0, f.name.length(), f.name);});
+        std::vector<field>::iterator it = std::find_if(
+            fields.begin(), fields.end(),
+            [&](field f){return key_value_pair.compare(0, f.name.length(), f.name);}
+        );
         if (it == fields.end())
             throw InvalidKeyException(key_value_pair);
         try
@@ -52,17 +58,19 @@ ServerConfig::ServerConfig(std::stringstream& config)
     }
 
     if (!_isRouteSet)
-        throw MissingLocationException();
-    // default address
+        throw MissingValueException("Route");
     if (!_isAddressSet)
+        throw MissingValueException("Address");
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = _ip;
+    for (auto& port : _ports)
     {
-        _address.sin_family = AF_INET;
-        _address.sin_port = _port;
-        _address.sin_addr.s_addr = ServerConfig::convertIP("127.0.0.1");
+        addr.sin_port = port;
+        _addresses.push_back(addr);
     }
 }
-
-ServerConfig::~ServerConfig(){}
 
 /* ---- Parser Functions ---- */
 void ServerConfig::parseName(std::string pair, std::string key)
@@ -78,14 +86,12 @@ void ServerConfig::parseName(std::string pair, std::string key)
 
 void ServerConfig::parsePort(std::string pair, std::string key)
 {
-    if (_isPortSet)
-        throw SameKeyRepeatException("port");
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
         throw InvalidValueException("port");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    _port = htons(std::atol(s.c_str()));
-    _address.sin_port = _port;
+    _ports.push_back(htons(std::atol(s.c_str())));
+    _addresses.back().sin_port = _ports.back();
     _isPortSet = true;
 }
 
@@ -97,10 +103,7 @@ void ServerConfig::parseAddress(std::string pair, std::string key)
     if (index == std::string::npos)
         throw InvalidValueException("address");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    _address.sin_family = AF_INET;
-    _address.sin_port = _port;
-    _address.sin_addr.s_addr = ServerConfig::convertIP(s.c_str());
-    _isAddressSet = true;
+    _ip = convertIP(s);
 }
 
 void ServerConfig::parseRequestSize(std::string pair, std::string key)
@@ -246,58 +249,6 @@ void ServerConfig::parseUploadDir(std::string pair, std::string key, Route& res)
     res.uploadDir = s;
 }
 
-/* ---- Getters ----*/
-std::string ServerConfig::getName()
-{
-    return _name;
-}
-
-u_int16_t ServerConfig::getPort()
-{
-    return _port;
-}
-
-struct sockaddr_in ServerConfig::getAddress()
-{
-    return _address;
-}
-
-long ServerConfig::getRequestSizeLimit()
-{
-    return _clientBodyLimit;
-}
-
-std::list<struct Route> ServerConfig::getRoutes()
-{
-    return _routes;
-}
-
-/* ---- Exceptions ----*/
-ServerConfig::SameKeyRepeatException::SameKeyRepeatException(std::string key) : _key(key){}
-
-const char *ServerConfig::SameKeyRepeatException::what() const noexcept
-{
-    return _key.c_str();
-}
-
-ServerConfig::InvalidKeyException::InvalidKeyException(std::string key) : _key(key){}
-
-const char *ServerConfig::InvalidKeyException::what() const noexcept
-{
-    return _key.c_str();
-}
-
-const char *ServerConfig::MissingLocationException::what() const noexcept
-{
-    return "No location specified";
-}
-
-ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _key(key){}
-
-const char *ServerConfig::InvalidValueException::what() const noexcept
-{
-    return "invalid key";
-}
 
 unsigned int ServerConfig::convertIP(std::string ip)
 {
@@ -321,4 +272,15 @@ unsigned int ServerConfig::convertIP(std::string ip)
     // std::cout << ip_long << "\n";
     // std::cout << inet_addr(ip.c_str()) << "\n";
     return ip_long;
+}
+
+uint8_t ServerConfig::parseRequestMethod(std::string s)
+{
+    if (s == "GET")
+        return 1 << 1;
+    if (s == "POST")
+        return 1 << 2;
+    if (s == "DELETE")
+        return 1 << 3;
+    return 0;
 }
