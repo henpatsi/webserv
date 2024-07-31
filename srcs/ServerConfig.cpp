@@ -91,7 +91,6 @@ void ServerConfig::parsePort(std::string pair, std::string key)
         throw InvalidValueException("port");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _ports.push_back(htons(std::atol(s.c_str())));
-    _addresses.back().sin_port = _ports.back();
     _isPortSet = true;
 }
 
