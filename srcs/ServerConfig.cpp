@@ -27,6 +27,11 @@ ServerConfig::ServerConfig(std::stringstream& config)
     _ports      = std::vector<u_int16_t>();
     _addresses  = std::vector<struct sockaddr_in>();
     _routes     = std::list<Route>();
+    _isNameSet  = 0;
+    _isPortSet  = 0;
+    _isRouteSet = 0;
+    _isAddressSet   = 0;
+    _isRequestSizeSet = 0;
     std::string _;
     std::getline(config, _, '{');
     std::vector<field> fields ({
@@ -38,6 +43,8 @@ ServerConfig::ServerConfig(std::stringstream& config)
     });
     for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
     {
+        if (key_value_pair.compare(0, 1, "}"))
+            break;
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
         std::cout << key_value_pair << "\n";
         std::vector<field>::iterator it = std::find_if(
