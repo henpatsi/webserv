@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/29 16:33:30 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 16:43:50 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -176,8 +176,8 @@ void HttpResponse::preparePostResponse(HttpRequest& request)
 {
 	// Example of POST where not allowed
 	// TODO handle properly based on config
-	if (request.getResourcePath() == "/")
-		setErrorAndThrow(405, "POST not allowed for request path");
+	//if (request.getResourcePath() == "/")
+	//	setErrorAndThrow(405, "POST not allowed for request path");
 
 	if (request.getResourcePath() == "/uploads")
 	{
@@ -218,17 +218,19 @@ void HttpResponse::prepareDeleteResponse(HttpRequest& request)
 
 // HELPER FUNCTIONS
 
+// Returns 0 for success, error code for failure
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
 {
 	bool containsFiles = false;
 
 	for (multipartData data : dataVector)
 	{
-		if (data.boundary != "")
+		if (data.boundary != "") // Write nested multipart data
 		{
 			int ret = writeMultipartData(data.multipartDataVector, directory);
-			if (ret != 0)
+			if (ret == 0)
 				return ret;
+			containsFiles = true; // If no error, must have written a file
 			continue ;
 		}
 		else if (data.filename == "")
@@ -239,7 +241,7 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
 
-		if (!file.good())
+		if (!file.good()) // TODO Can one file fail and another succeed?
 			return (500);
 
 		file.write(data.data.data(), data.data.size()); // TODO check write success

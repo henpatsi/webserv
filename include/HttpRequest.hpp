@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/29 16:02:03 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 16:23:41 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,8 +36,8 @@
 #  define READ_ERROR_RETRY_MS 10
 # endif
 
-# ifndef TIMEOUT_SECONDS
-#  define TIMEOUT_SECONDS 2
+# ifndef HEADER_READ_TIMEOUT_MILLISECONDS
+#  define HEADER_READ_TIMEOUT_MILLISECONDS 100
 # endif
 
 // Temporary hard coded server config values
@@ -67,6 +67,8 @@ class HttpRequest
 		HttpRequest(void);
 		HttpRequest(int socketFD);
 
+		void tryReadContent(int socketFD);
+
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
@@ -78,6 +80,12 @@ class HttpRequest
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
+		bool								isComplete(void) { return this->requestComplete; }
+
+		size_t								getRemainingContentLength(void) { return this->remainingContentLength; }
+		size_t								getReadContentLength(void) { return this->readContentLength; }
+
+		void								setFailResponseCode(int code) { this->failResponseCode = code; }
 
 		class RequestException : public std::exception
 		{
@@ -94,20 +102,25 @@ class HttpRequest
 		std::string							httpVersion;
 		std::map<std::string, std::string>	URIParameters = {};
 		std::map<std::string, std::string>	headers = {};
+		size_t								remainingContentLength = 0;
+		size_t								readContentLength = 0; // To check that chunked does not go over max size
 		std::vector<char>					rawContent = {};
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
+		bool								requestComplete = false;
+		std::string							allowedMethods = "GET, POST, DELETE";
 
 		void		debugPrint(void);
 		void		setErrorAndThrow(int code, std::string message);
-		std::string	readLine(int socketFD);
+		bool		readLine(int socketFD, std::string& line, int timeoutMilliseconds = 0);
 		std::string	readRequestHeader(int socketFD);
-		void		readContent(int socketFD, int contentLength);
-		void		readChunkedContent(int socketFD);
+		bool		readContent(int socketFD);
+		bool		readChunkedContent(int socketFD);
+		void		readBody(int socketFD);
 		void		parseFirstLine(std::istringstream& sstream);
 		void		parseHeader(std::istringstream& sstream);
-		void		parseBody(int socketFD);
+		void		parseBody(void);
 };
 
 #endif

@@ -17,7 +17,8 @@ private:
     // contains all info and routes about the server
     ServerConfig config;
     // TODO used to store chuncked request and build one as soon as its done
-    HttpRequest *currentRequest;
+    HttpRequest currentRequest;
+    HttpResponse currentResponse;
 
     // private function to construce answer for public method respond
     std::string GetAnswer();

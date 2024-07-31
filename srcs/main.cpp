@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/29 17:19:17 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 16:29:41 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -134,7 +134,23 @@ void handle_request(int connectionSocket)
 {
 	// Parse request into HttpRequest object
 	HttpRequest request = HttpRequest(connectionSocket);
+
+	int failCount = 0;
+	while (!request.isComplete())
+	{
+		request.tryReadContent(connectionSocket);
+		failCount++;
+		if (failCount > 10)
+		{
+			request.setFailResponseCode(408);
+			break;
+		}
+		std::cout << "Read = " << request.getReadContentLength() << " Remaining = " << request.getRemainingContentLength() << "\n";
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 	
+	std::cout << "Request received\n";
+
 	// Hard coding for testing purposes
 	Route route = Route();
 	route.location = buildPath(request.getResourcePath());
@@ -158,7 +174,7 @@ void handle_request(int connectionSocket)
 
 int main(int argc, char *argv[])
 {
-{
+
 	try{
 		ServerManager s(argv[1]);
 		//s.runServers();
@@ -167,7 +183,7 @@ int main(int argc, char *argv[])
 	{
 		std::cerr << e.what() << std::endl;
 	}
-}
+
 
 	(void) argc;
 	(void) argv;
