@@ -3,10 +3,13 @@
 
 #include <string>
 #include <vector>
+#include <sys/epoll.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "ServerConfig.hpp"
 #include "Server.hpp"
 
-#define MANAGEREXCEPTION std::exception { \
+#define MANAGEREXCEPTION public std::exception { \
             const char * what() const noexcept; \
         }
 
@@ -15,6 +18,31 @@ class ServerManager
     private:
         std::string _path;
         std::vector<Server *> servers;
+        // epoll fields
+        const int EPOLL_SIZE = 50;
+        int polled;
+        struct epoll_event temp_event;
+        struct epoll_event* events;
+        int trackedFds;
+        int eventAmount;
+
+        // connection fields
+        const int addressSize = sizeof(sockaddr_storage);
+        sockaddr_storage client_addr;
+        /*
+         * registers and removes filedescriptors to the event poll
+         * modify ServerManager.temp_event to get the correct event type
+         */
+        void AddToEpoll(int fd);
+        void DelFromEpoll(int fd);
+
+        // registeres all sockets from servers to the epoll
+        void registerServerSockets();
+        // creates new fd with accept and returns it throws error on accept fail
+        int acceptConnection(epoll_event event);
+
+        // sets eventAmount and throws error on epoll_wait error
+        void WaitForEvents();
     public:
         ServerManager(std::string path);
         ~ServerManager();
@@ -29,6 +57,13 @@ class ServerManager
         class CharOutsideServerBlockException : MANAGEREXCEPTION;
         class ServerCreationException : MANAGEREXCEPTION;
         class UnclosedBraceException : MANAGEREXCEPTION;
+        class ManagerRuntimeException : std::exception {
+            private:
+                std::string error;
+            public:
+                ManagerRuntimeException(std::string error);
+                const char *what() const noexcept;
+        };
 };
 
 
