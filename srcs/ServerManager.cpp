@@ -41,10 +41,10 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             {
                 // check if we are creating a new server
                 // should check if anything between server and {
-                if (line.compare(0, 5, "server"))
+                if (line.compare(0, 5, "server") == 0)
                 {
-                    if (is_in_server)
-                        throw ServerInServerException();
+                    //if (is_in_server)
+                      //  throw ServerInServerException();
                     // start this servers config stringstream
                     configs.push_back(std::stringstream{""});
                     std::cout << "num of servers " << x++ << "\n";

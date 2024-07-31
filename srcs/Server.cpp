@@ -152,7 +152,7 @@ std::string Server::GetAnswer()
 
 void Server::connect(int incommingFD, int socketFD)
 {
-    listeningFDS.push_back(std::pair<int, HttpRequest>(incommingFD, HttpRequest("")));
+    listeningFDS.push_back(std::pair<int, HttpRequest>(incommingFD, HttpRequest(incommingFD)));
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
         if (it->first == socketFD)
@@ -169,7 +169,7 @@ bool Server::respond(int fd)
         if (it->first == fd)
             break;
     }
-    if (it->second.getContent() != "")
+    if (it->second.getHeader(".") != "")
     {
         std::string response = GetAnswer();
         if (send(fd, response.c_str(), response.length(), 0) == -1)
