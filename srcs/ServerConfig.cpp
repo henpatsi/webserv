@@ -281,5 +281,7 @@ uint8_t ServerConfig::parseRequestMethod(std::string s)
         return 1 << 2;
     if (s == "DELETE")
         return 1 << 3;
+    if (s == "HEAD")
+        return 1 << 4;
     return 0;
 }

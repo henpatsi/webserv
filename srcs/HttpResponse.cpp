@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:38:04 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:58:22 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,9 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
 		
 		this->path = this->route.location;
+
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
+			setErrorAndThrow(405, "Method not allowed");
 
 		if (this->request.getMethod() == "HEAD")
 			prepareHeadResponse();
@@ -106,7 +109,9 @@ void HttpResponse::buildResponse()
 	this->response += "Content-Type: " + this->contentType + "\r\n";
 	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
 	this->response += "\r\n";
-	this->response += this->content;
+
+	if (this->request.getMethod() != "HEAD")
+		this->response += this->content;
 }
 
 void HttpResponse::buildDirectoryList(void)
@@ -146,10 +151,9 @@ void HttpResponse::buildDirectoryList(void)
 void HttpResponse::prepareHeadResponse(void)
 {
 	prepareGetResponse();
-	this->content = "";
 
-	if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
-		setErrorAndThrow(405, "HEAD not allowed for request path");
+	// if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
+	// 	setErrorAndThrow(405, "HEAD not allowed for request path");
 }
 
 void HttpResponse::prepareGetResponse(void)
@@ -217,14 +221,13 @@ void HttpResponse::prepareDeleteResponse(void)
 	if (this->path == this->route.uploadDir)
 		setErrorAndThrow(405, "DELETE not allowed for request path");
 	
-	std::string filePath = "www" + this->path;
-	if (access(filePath.c_str(), F_OK) == -1)
+	if (access(this->path.c_str(), F_OK) == -1)
 	{
-		std::cout << "/failure.html" << "\n";
+		this->path = "www/html/failure.html";
 		prepareGetResponse();
 		return ;
 	}
-	if (remove(filePath.c_str()) != 0)
+	if (remove(this->path.c_str()) != 0)
 		setErrorAndThrow(500, "Failed to delete file");
 	
 	this->path = "www/html/success.html";

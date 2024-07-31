@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:33:40 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:54:02 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,20 +116,20 @@ void handle_request(int connectionSocket)
 	{
 		request.tryReadContent(connectionSocket);
 		failCount++;
-		if (failCount > 10)
+		if (failCount > 100)
 		{
 			request.setFailResponseCode(408);
 			break;
 		}
 		std::cout << "Read = " << request.getReadContentLength() << " Remaining = " << request.getRemainingContentLength() << "\n";
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 	
 	std::cout << "Request received\n";
 
 	// Hard coding for testing purposes
 	Route route = Route();
-	route.allowedMethods = ServerConfig::parseRequestMethod("GET");
+	route.allowedMethods = ServerConfig::parseRequestMethod("GET") | ServerConfig::parseRequestMethod("POST") | ServerConfig::parseRequestMethod("DELETE");
 	route.redirect = "";
 	route.root = "www";
 	route.directoryListing = true;
@@ -143,7 +143,7 @@ void handle_request(int connectionSocket)
 
 	// Build response into HttpResponse object
 	HttpResponse response = HttpResponse(request, route);
-	// std::cout << response.getResponse() << "\n";
+	std::cout << response.getResponse() << "\n";
 
 	// Respond to client
 	if (write(connectionSocket, response.getResponse().c_str(), response.getResponse().size()) == -1)
