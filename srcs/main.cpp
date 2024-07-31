@@ -16,5 +16,5 @@ int	main(void)
 	std::cout.flush();
 	ServerConfig	config(s);
 //	config.parseName("asdf:gsdf", "name:");
-	std::cout << config.getName();
+//	std::cout << config.getName();
 }
