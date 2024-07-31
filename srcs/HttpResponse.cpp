@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 16:43:50 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:38:04 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,24 +14,23 @@
 #include <filesystem>
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(){};
-
-HttpResponse::HttpResponse(HttpRequest& request, Route& route)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), request(request)
 {
 	try
 	{
-		if (request.getFailResponseCode() != 0)
-			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
+		if (this->request.getFailResponseCode() != 0)
+			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
 		
-		this->path = route.location;
-		this->route = route;
+		this->path = this->route.location;
 
-		if (request.getMethod() == "GET")
-			prepareGetResponse(request);
-		else if (request.getMethod() == "POST")
-			preparePostResponse(request);
-		else if (request.getMethod() == "DELETE")
-			prepareDeleteResponse(request);
+		if (this->request.getMethod() == "HEAD")
+			prepareHeadResponse();
+		else if (this->request.getMethod() == "GET")
+			prepareGetResponse();
+		else if (this->request.getMethod() == "POST")
+			preparePostResponse();
+		else if (this->request.getMethod() == "DELETE")
+			prepareDeleteResponse();
 		else
 			setErrorAndThrow(501, "Request method not implemented");
 	}
@@ -110,7 +109,7 @@ void HttpResponse::buildResponse()
 	this->response += this->content;
 }
 
-void HttpResponse::buildDirectoryList(HttpRequest& request)
+void HttpResponse::buildDirectoryList(void)
 {
 	std::vector<std::string> files;
 
@@ -128,15 +127,15 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 		setErrorAndThrow(500, "Unknown error while listing directory");
 	}
 
+	this->contentType = "text/html";
+
 	this->content = "<html><body>";
 	this->content += "<h1>Directory listing for " + this->path + "</h1>";
 	this->content += "<ul>";
 	for (std::string file : files)
 	{
-		std::string path = request.getResourcePath();
-		if (path.back() != '/')
-			path += "/";
-		this->content += "<li><a href=\"" + path + file + "\">" + file + "</a></li>";
+		std::string noRootPath = this->path.substr(this->route.root.length());
+		this->content += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
 	}
 	this->content += "</ul>";
 	this->content += "</body></html>";
@@ -144,13 +143,31 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-void HttpResponse::prepareGetResponse(HttpRequest& request)
+void HttpResponse::prepareHeadResponse(void)
 {
-	if (this->directoryListingAllowed && request.getResourcePath() != "/uploads" && (this->path.find(".") == std::string::npos))
+	prepareGetResponse();
+	this->content = "";
+
+	if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
+		setErrorAndThrow(405, "HEAD not allowed for request path");
+}
+
+void HttpResponse::prepareGetResponse(void)
+{
+	if (this->directoryListingAllowed && (this->path.find(".") == std::string::npos))
 	{
-		buildDirectoryList(request);
+		buildDirectoryList();
 		return ;
 	}
+
+	if (this->path.find(".html") != std::string::npos)
+		this->contentType = "text/html";
+	else if (this->path.find(".png") != std::string::npos)
+		this->contentType = "image/png";
+	else if (this->path.find(".jpg") != std::string::npos)
+		this->contentType = "image/jpg";
+	else if (this->path.find(".pdf") != std::string::npos)
+		this->contentType = "application/pdf";
 
 	std::ifstream file;
 
@@ -172,48 +189,46 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-void HttpResponse::preparePostResponse(HttpRequest& request)
+void HttpResponse::preparePostResponse(void)
 {
 	// Example of POST where not allowed
 	// TODO handle properly based on config
-	//if (request.getResourcePath() == "/")
-	//	setErrorAndThrow(405, "POST not allowed for request path");
+	if (this->path == "/")
+		setErrorAndThrow(405, "POST not allowed for request path");
 
-	if (request.getResourcePath() == "/uploads")
+	if (this->path == this->route.uploadDir)
 	{
-		std::string directoryPath = this->route.root;
-		directoryPath += this->route.uploadDir;
-		if (access(directoryPath.c_str(), F_OK) == -1)
+		if (access(this->path.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		int ret = writeMultipartData(request.getMultipartData(), directoryPath);
+		int ret = writeMultipartData(request.getMultipartData(), this->path);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		std::cout << "/success.html" << "\n";
-		prepareGetResponse(request);
+		this->path = "www/html/success.html";
+		prepareGetResponse();
 		this->responseCode = 201;
 	}
 	else
-		prepareGetResponse(request);
+		prepareGetResponse();
 }
 
-void HttpResponse::prepareDeleteResponse(HttpRequest& request)
+void HttpResponse::prepareDeleteResponse(void)
 {
-	if (request.getResourcePath().substr(0, 8) != "/uploads")
+	if (this->path == this->route.uploadDir)
 		setErrorAndThrow(405, "DELETE not allowed for request path");
 	
-	std::string filePath = "www" + request.getResourcePath();
+	std::string filePath = "www" + this->path;
 	if (access(filePath.c_str(), F_OK) == -1)
 	{
 		std::cout << "/failure.html" << "\n";
-		prepareGetResponse(request);
+		prepareGetResponse();
 		return ;
 	}
 	if (remove(filePath.c_str()) != 0)
 		setErrorAndThrow(500, "Failed to delete file");
 	
-	std::cout << "/success.html" << "\n";
-	prepareGetResponse(request);
+	this->path = "www/html/success.html";
+	prepareGetResponse();
 }
 
 // HELPER FUNCTIONS

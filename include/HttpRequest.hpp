@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 16:23:41 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 17:12:08 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,7 +109,7 @@ class HttpRequest
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
 		bool								requestComplete = false;
-		std::string							allowedMethods = "GET, POST, DELETE";
+		std::string							allowedMethods = "HEAD, GET, POST, DELETE";
 
 		void		debugPrint(void);
 		void		setErrorAndThrow(int code, std::string message);

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 16:44:45 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 17:39:57 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -199,7 +199,7 @@ bool HttpRequest::readChunkedContent(int socketFD)
 			setErrorAndThrow(413, "Chunked request body larger than client body limit");
 		if (!readContent(socketFD))
 			return false;
-		if (!readLine(socketFD, line) || !readLine(socketFD, line)) // Reads the empty line then chunk size
+		if (!readLine(socketFD, line) || !readLine(socketFD, line)) // Reads the empty line then chunk size, TODO might cause problem is empty line read but not next chunk size
 			return false; 
 		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
 	}

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 16:29:41 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:33:40 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,44 +35,20 @@ int	exit_error(std::string message)
 }
 
 // VERY SIMPLISTIC IMPLEMENTATION FOR TESTING PURPOSES
-std::string buildPath(std::string requestPath)
+std::string buildPath(std::string requestPath, Route& route)
 {
-	std::string path = "www/";
+	std::string path = route.root + requestPath;
 
-	if (requestPath.substr(0, 8) == "/uploads")
-		return requestPath;
+	if (path.find(".") == std::string::npos && path.back() != '/')
+		path += "/";
 
-	// TODO do we even need any other types than html?
-	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
+	if (path.back() == '/')
 	{
-		// contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
-		path += "images" + requestPath;
-	}
-	else if (requestPath.find(".pdf") != std::string::npos)
-	{
-		// contentType = "application/pdf";
-		path += "docs" + requestPath;
-	}
-	else if (requestPath.find(".html") != std::string::npos)
-	{
-		// contentType = "text/html";
-		path += "html" + requestPath;
-	}
-	else if (requestPath.find(".") == std::string::npos)
-	{
-		// contentType = "text/html";
-		path += "html" + requestPath;
-
-		// if (directoryListingAllowed)
-		// 	return;
-
-		if (path.back() == '/')
+		if (!route.directoryListing)
 			path += "index.html";
-		else if (path.find(".html") == std::string::npos)
-			path += "/index.html";
+		return path;
 	}
-	// else
-	// 	setErrorAndThrow(415, "Unsupported media type in request path");
+
 	return path;
 }
 
@@ -153,15 +129,17 @@ void handle_request(int connectionSocket)
 
 	// Hard coding for testing purposes
 	Route route = Route();
-	route.location = buildPath(request.getResourcePath());
 	route.allowedMethods = ServerConfig::parseRequestMethod("GET");
 	route.redirect = "";
-	route.root = "www/";
-	route.directoryListing = false;
+	route.root = "www";
+	route.directoryListing = true;
 	route.defaultAnswer = ""; // What is this?
 	route.acceptUpload = false;
 	route.CGI = "";
-	route.uploadDir = "uploads/";
+	route.uploadDir = "www/uploads/";
+	route.location = buildPath(request.getResourcePath(), route);
+
+	std::cout << "Route: " << route.location << "\n";
 
 	// Build response into HttpResponse object
 	HttpResponse response = HttpResponse(request, route);

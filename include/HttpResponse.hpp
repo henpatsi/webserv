@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/29 16:32:49 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:06:00 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,8 @@ class HttpResponse
 
 	private:
 		std::string path;
-		Route route;
+		Route& route;
+		HttpRequest& request;
 		std::string contentType;
 		int responseCode = 500;
 		std::string content;
@@ -80,11 +81,11 @@ class HttpResponse
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
 		void buildResponse(void);
-		void buildDirectoryList(HttpRequest& request);
-		void prepareGetResponse(HttpRequest& request);
-		void preparePostResponse(HttpRequest& request);
-		void preparePutResponse(HttpRequest& request);
-		void prepareDeleteResponse(HttpRequest& request);
+		void buildDirectoryList(void);
+		void prepareHeadResponse(void);
+		void prepareGetResponse(void);
+		void preparePostResponse(void);
+		void prepareDeleteResponse(void);
 };
 
 #endif

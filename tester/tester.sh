@@ -8,23 +8,23 @@ TEST_MESSAGE_DIR="sample_messages"
 LONG_TEXT=$(cat $TEST_MESSAGE_DIR/hhgttg.txt)
 
 echo "---Test simple GET---"
-curl http://$SERVER_IP:$SERVER_PORT
+curl http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Test simple POST---"
-curl -d "message=Hello, World!&name=mom" http://$SERVER_IP:$SERVER_PORT
+curl -d "message=Hello, World!&name=mom" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Test simple POST with false line length---"
-curl -H "Content-Length: 100" -d "message=Hello, World!&name=mom" http://$SERVER_IP:$SERVER_PORT
+curl -H "Content-Length: 100" -d "message=Hello, World!&name=mom" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Test chunked transfer---"
-curl -H "Transfer-Encoding: chunked" -d @$TEST_MESSAGE_DIR/hhgttg_short.txt http://$SERVER_IP:$SERVER_PORT
+curl -H "Transfer-Encoding: chunked" -d @$TEST_MESSAGE_DIR/hhgttg_short.txt http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Test chunked transfer empty---"
-curl -H "Transfer-Encoding: chunked" -d "" http://$SERVER_IP:$SERVER_PORT
+curl -H "Transfer-Encoding: chunked" -d "" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Test POST 1 upload---"
