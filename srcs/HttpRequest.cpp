@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 15:49:44 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 16:24:13 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,9 +30,11 @@ HttpRequest::HttpRequest(int socketFD)
 	{
 		std::cerr << "RequestException: " << e.what() << "\n";
 	}
-	catch(...)
+	catch(std::exception& e)
 	{
-		setErrorAndThrow(500, "Unknown request error");
+		std::cerr << "RequestException: " << e.what() << "\n";
+		this->failResponseCode = 500;
+		this->requestComplete = true;
 	}
 }
 
@@ -52,9 +54,11 @@ void HttpRequest::tryReadContent(int socketFD)
 	{
 		std::cerr << "RequestException: " << e.what() << "\n";
 	}
-	catch(...)
+	catch(std::exception& e)
 	{
-		setErrorAndThrow(500, "Unknown request error");
+		std::cerr << "RequestException: " << e.what() << "\n";
+		this->failResponseCode = 500;
+		this->requestComplete = true;
 	}
 }
 
@@ -218,26 +222,38 @@ bool HttpRequest::readChunkedContent(int socketFD)
 
 void HttpRequest::readBody(int socketFD)
 {
-	// Do not read content if it is above client body size limit
-	if (this->headers.find("content-length") != this->headers.end() && std::stoi(this->headers["content-length"]) > clientBodyLimit)
-		setErrorAndThrow(413, "Request body larger than client body limit");
-
+	// Prioritize chunked content over content length
 	if (this->headers.find("transfer-encoding") != this->headers.end())
 	{
 		if (this->headers["transfer-encoding"] == "chunked") // Read chunked content
 			this->requestComplete = readChunkedContent(socketFD);
 		else
 			setErrorAndThrow(415, "Unsupported transfer encoding");
+		return ;
 	}
-	else if (this->headers.find("content-length") != this->headers.end()) // Read content with content length
+
+	if (remainingContentLength == 0) // First pass setup of remaining content length
 	{
-		if (remainingContentLength == 0) // First pass setup of remaining content length
-			remainingContentLength = std::stoi(this->headers["content-length"]);
-		this->requestComplete = readContent(socketFD);
+		try
+		{
+			if (this->headers.find("content-length") != this->headers.end())
+				remainingContentLength = std::stoi(this->headers["content-length"]);
+		}
+		catch (std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid content length");
+		}
 	}
+
+	// Do not read content if it is above client body size limit
+	if (remainingContentLength > clientBodyLimit)
+		setErrorAndThrow(413, "Request body larger than client body limit");
+
+	if (remainingContentLength > 0) // Read content with content length
+		this->requestComplete = readContent(socketFD);
 	else if (this->headers.find("content-type") != this->headers.end())
 		setErrorAndThrow(411, "No content length specified");
-	else // Nothing to read specidied
+	else // Nothing to read specified
 		this->requestComplete = true;
 }
 
@@ -311,13 +327,12 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 			setErrorAndThrow(400, "Header key contains space character");
 
 		std::string value = line.substr(line.find(':') + 1);
-		if (value.find_first_not_of(SPACECHARS) == std::string::npos)
+		size_t valueStart = value.find_first_not_of(SPACECHARS);
+		size_t valueEnd = value.find_last_not_of(SPACECHARS);
+		if (valueStart == std::string::npos)
 			value = "";
 		else
-		{
-			value = value.substr(value.find_first_not_of(SPACECHARS));
-			value.erase(value.length() - 1); // Removes \r from end of value
-		}
+			value = value.substr(valueStart, valueEnd - valueStart + 1);
 
 		this->headers[key] = value;
 	}

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 10:55:29 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 16:13:22 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -155,7 +155,6 @@ void handle_request(int connectionSocket)
 
 int main(int argc, char *argv[])
 {
-
 	try{
 		ServerManager s(argv[1]);
 		//s.runServers();
