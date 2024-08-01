@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 17:12:08 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 09:20:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,11 +33,15 @@
 # endif
 
 # ifndef READ_ERROR_RETRY_MS
-#  define READ_ERROR_RETRY_MS 10
+#  define READ_ERROR_RETRY_MS 1
 # endif
 
 # ifndef HEADER_READ_TIMEOUT_MILLISECONDS
 #  define HEADER_READ_TIMEOUT_MILLISECONDS 100
+# endif
+
+# ifndef SPACECHARS
+#  define SPACECHARS " \f\n\r\t\v"
 # endif
 
 // Temporary hard coded server config values
@@ -67,8 +71,7 @@ class HttpRequest
 		HttpRequest(void);
 		HttpRequest(int socketFD);
 
-		void tryReadContent(int socketFD);
-
+		// Getters
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
@@ -80,11 +83,16 @@ class HttpRequest
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
+
+		// Reading content
+		void								tryReadContent(int socketFD);
 		bool								isComplete(void) { return this->requestComplete; }
 
+		// FOR DEBUG
 		size_t								getRemainingContentLength(void) { return this->remainingContentLength; }
 		size_t								getReadContentLength(void) { return this->readContentLength; }
 
+		// If fail occurs outside request parsing
 		void								setFailResponseCode(int code) { this->failResponseCode = code; }
 
 		class RequestException : public std::exception
@@ -109,7 +117,7 @@ class HttpRequest
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
 		bool								requestComplete = false;
-		std::string							allowedMethods = "HEAD, GET, POST, DELETE";
+		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
 
 		void		debugPrint(void);
 		void		setErrorAndThrow(int code, std::string message);

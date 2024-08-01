@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:54:02 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 10:55:29 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,23 +111,26 @@ void handle_request(int connectionSocket)
 	// Parse request into HttpRequest object
 	HttpRequest request = HttpRequest(connectionSocket);
 
+	std::cout << "--- Request header received ---\n";
+
+	// TEST FOR TRYING TO READ CONTENT UNTIL COMPLETE
 	int failCount = 0;
 	while (!request.isComplete())
 	{
 		request.tryReadContent(connectionSocket);
 		failCount++;
-		if (failCount > 100)
+		if (failCount > 1000)
 		{
 			request.setFailResponseCode(408);
 			break;
 		}
-		std::cout << "Read = " << request.getReadContentLength() << " Remaining = " << request.getRemainingContentLength() << "\n";
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		// std::cout << "Read = " << request.getReadContentLength() << " Remaining = " << request.getRemainingContentLength() << "\n";
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	
-	std::cout << "Request received\n";
+	std::cout << "--- Request content received ---\n\n";
 
-	// Hard coding for testing purposes
+	// HARD CODED ROUTE FOR TESTING PURPOSES
 	Route route = Route();
 	route.allowedMethods = ServerConfig::parseRequestMethod("GET") | ServerConfig::parseRequestMethod("POST") | ServerConfig::parseRequestMethod("DELETE");
 	route.redirect = "";
@@ -139,11 +142,11 @@ void handle_request(int connectionSocket)
 	route.uploadDir = "www/uploads/";
 	route.location = buildPath(request.getResourcePath(), route);
 
-	std::cout << "Route: " << route.location << "\n";
+	std::cout << "Route location: " << route.location << "\n";
 
 	// Build response into HttpResponse object
 	HttpResponse response = HttpResponse(request, route);
-	std::cout << response.getResponse() << "\n";
+	// std::cout << response.getResponse() << "\n";
 
 	// Respond to client
 	if (write(connectionSocket, response.getResponse().c_str(), response.getResponse().size()) == -1)

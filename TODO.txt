@@ -1,12 +1,12 @@
 TODO
 
+Make path before reading content, to not read content for no reason if 404
+Rework chunked read to allow partial reading or give error if chunk not fully given at once
+
 Merge getAnswer and HttpResponse
 Merge connect and HttpRequest
 Actually use ServerManager etc.
-Make HttpRequest first read header (very short timeout), then try read request each loop
 Check HttpRequest is HTTP/1.1 compliant
-
-
 
 See if timeout can be done better
 Fix timeout starting when hovering over link?
