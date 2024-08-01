@@ -173,6 +173,8 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 {
 	// Assumes the first word in the request is the method
 	sstream >> this->method;
+	if (!this->method.compare(0, 2, "\r\n"))
+		this->method = this->method.erase(0, 2);
 	if (this->method.empty())
 		setErrorAndThrow(400, "Request is empty");
 
@@ -204,19 +206,27 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 	// Reads the headers into a map
 	while (std::getline(sstream, line))
 	{
-		if (line == "\r")
-			break ;
-		if (line.back() != '\r'
-			|| line.find(':') == std::string::npos
-			|| line[line.size() - 2] == ':')
+		if (!std::isspace(line[1]))
+		{
+			if (line == "\r")
+				break ;
+			if (line.back() != '\r'
+				|| line.find(':') == std::string::npos
+				|| line[line.size() - 2] == ':')
 			setErrorAndThrow(400, "Invalid header line format");
-		std::string key = line.substr(0, line.find(':'));
-		std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
-		std::string value = line.substr(line.find(':') + 2);
-		value.erase(value.length() - 1);
-		if (key.empty() || value.empty())
-			setErrorAndThrow(400, "Header key or value is empty");
-		this->headers[key] = value;
+			std::string key = line.substr(0, line.find(':'));
+			if (ft_isspace(key.back())
+				setErrorAndThrow(400, "Invalid header line format");
+			std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
+			std::string value = line.substr(line.find(':') + 1);
+			value.erase(value.length() - 1);
+			size_t value_start = line.find_first_not_of(SPACECHARS);
+			size_t value_end = line.find_last_not_of(SPACECHARS);
+			value = value.substr(value_start, value_end - value_start + 1);
+			if (key.empty() || value.empty())
+				setErrorAndThrow(400, "Header key or value is empty");
+			this->headers[key] = value;
+		}
 	}
 }
 

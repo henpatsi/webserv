@@ -1,0 +1,40 @@
+
+RULES
+request-line must start with a method
+
+"Although the line terminator for the start-line and fields is the sequence CRLF, a recipient MAY recognize a single LF as a line terminator and ignore any preceding CR."
+	As far as I can tell, we don't accept 
+
+A recipient of a bare CR MUST consider that element to be invalid or replace each bare CR with SP before processing the element or forwarding the message. 
+	Currently not handled. Not sure where to test. Check that when \r is found, next char is \n in readLine? 
+
+In the interest of robustness, a server that is expecting to receive and parse a request-line SHOULD ignore at least one empty line (CRLF) received prior to the request-line.
+	in parseFirstLine:
+		if (!this->method.compare(0, 2, "\r\n"))
+		this->method = this->method.erase(0, 2);
+
+A recipient that receives whitespace between the start-line and the first header field MUST either reject the message as invalid or consume each whitespace-preceded line without further processing of it (i.e., ignore the entire line, along with any subsequent lines preceded by whitespace, until a properly formed header field is received or the header section is terminated).
+	in parseHeader:	
+		if (!std::isspace(line[0]))
+Should whitespace be allowed at the beginning of a header line if the first header line is correct? Or is it ok to reject any header lines starting with ws?
+
+ERRORS ABOVE: 400 (Bad Request)
+
+max length for URI (>8000 reccommended)
+
+are multiple request lines checked?? What happens if header has a method?
+
+are we handling this? if yes, how?
+	GET /where?q=now HTTP/1.1
+	Host: www.example.org
+
+ If the target URI's path component is empty, the client MUST send "/" as the path within the origin-form of request-target. 
+
+No whitespace is allowed between the field name and colon. 
+	in parseHeader:
+			if (ft_isspace(key.back())
+				setErrorAndThrow(400, "Invalid header line format");
+
+Whitespace before and after value in header line IS OPTIONAL.
+
+
