@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 16:24:13 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 19:22:02 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -336,6 +336,28 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 
 		this->headers[key] = value;
 	}
+
+	// Extract host and port
+	if (this->headers.find("host") == this->headers.end())
+		setErrorAndThrow(400, "Host header missing");
+	this->host = this->headers["host"].substr(0, this->headers["host"].find(':'));
+	if (this->host.empty())
+		setErrorAndThrow(400, "Missing host name");
+	if (this->headers["host"].find(':') != std::string::npos)
+	{
+		if (this->headers["host"].back() == ':')
+			setErrorAndThrow(400, "Missing port number");
+		try
+		{
+			this->port = std::stoi(this->headers["host"].substr(this->headers["host"].find(':') + 1));
+		}
+		catch (std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid port number");
+		}
+	}
+	else
+		this->port = 80;
 }
 
 void HttpRequest::parseBody(void)

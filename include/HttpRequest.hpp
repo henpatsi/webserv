@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 14:55:01 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 19:10:38 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,6 +83,8 @@ class HttpRequest
 		std::string							getURIParameter(std::string key) { return this->URIParameters[key]; }
 		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
+		std::string							getHost(void) { return this->host; }
+		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(void) { return this->rawContent; }
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
@@ -114,6 +116,8 @@ class HttpRequest
 		std::string							httpVersion;
 		std::map<std::string, std::string>	URIParameters = {};
 		std::map<std::string, std::string>	headers = {};
+		std::string 						host;
+		int									port = 0;
 		size_t								remainingContentLength = 0;
 		size_t								readContentLength = 0; // To check that chunked does not go over max size
 		std::vector<char>					rawContent = {};
