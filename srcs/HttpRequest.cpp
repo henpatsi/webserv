@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 11:44:01 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 15:49:44 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,15 +145,20 @@ bool HttpRequest::readLine(int socketFD, std::string& line, int timeoutMilliseco
 
 std::string HttpRequest::readRequestHeader(int socketFD)
 {
+	bool firstLine = true;
 	std::string requestString;
+	size_t requestLineSize = 0;
 	
-	while (requestString.size() < MAX_HEADER_SIZE)
+	while (requestString.size() - requestLineSize < MAX_HEADER_SIZE)
 	{
 		std::string line;
 		readLine(socketFD, line, HEADER_READ_TIMEOUT_MILLISECONDS);
-		if (line == "\r\n")
+		if (line == "\r\n" && !firstLine) // Allow first line to be empty
 			break ;
+		if (requestLineSize == 0 && line != "\r\n") // First real line is the request line, exclude from MAX_HEADER_SIZE
+			requestLineSize = line.size();
 		requestString += line;
+		firstLine = false;
 	}
 
 	std::cout << "\nRequest Message:\n" << requestString << "\n";
@@ -238,16 +243,37 @@ void HttpRequest::readBody(int socketFD)
 
 void HttpRequest::parseFirstLine(std::istringstream& sstream)
 {
-	// Assumes the first word in the request is the method
-	sstream >> this->method;
-	if (this->method.empty())
-		setErrorAndThrow(400, "Request is empty");
+	std::string line;
+
+	getline(sstream, line);
+	if (line.empty() || line == "\r")
+		setErrorAndThrow(400, "Request line is empty");
+	if (line.back() != '\r') // TODO remove if we decide to accept just \n
+		setErrorAndThrow(400, "Request line should end in \\r\\n");
+
+	std::istringstream lineStream(line);
+	std::string URI;
+	lineStream >> this->method;
+	lineStream >> URI;
+	lineStream >> this->httpVersion;
+
+	if (this->method.empty() || this->method == "\r"
+		|| URI.empty() || URI == "\r"
+		|| this->httpVersion.empty())
+		setErrorAndThrow(400, "Request line not complete");
+	if (this->httpVersion == "\r") // If URI is missing, assume root
+	{
+		this->httpVersion = URI;
+		URI = "/";
+	}
+
+	// Check method
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
 		setErrorAndThrow(405, "Method not allowed");
 
-	// Assumes the second word in the request is the URI
-	std::string URI;
-	sstream >> URI;
+	// Check URI
+	if (URI.length() > MAX_URI_LENGTH)
+		setErrorAndThrow(414, "URI too long");
 	// Extracts path from the URI
 	this->resourcePath = URI.substr(0, URI.find('?'));
 	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
@@ -258,8 +284,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
 
-	// Assumes the third word in the request is the http version
-	sstream >> this->httpVersion;
+	// Check HTTP version
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400, "HTTP version is empty");
 	if (this->httpVersion != "HTTP/1.1")
@@ -269,7 +294,6 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 void HttpRequest::parseHeader(std::istringstream& sstream)
 {
 	std::string line;
-	std::getline(sstream, line); // Reads the rest of the first line
 	// Reads the headers into a map
 	while (std::getline(sstream, line))
 	{

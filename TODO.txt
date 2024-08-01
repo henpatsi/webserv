@@ -1,5 +1,8 @@
 TODO
 
+Check request host (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
+Check duplicate headers
+
 Make path before reading content, to not read content for no reason if 404
 Rework chunked read to allow partial reading or give error if chunk not fully given at once
 

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 09:20:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 14:55:01 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,10 @@
 
 # ifndef CONTENT_READ_BUFFER_SIZE
 #  define CONTENT_READ_BUFFER_SIZE 1024
+# endif
+
+# ifndef MAX_URI_LENGTH
+#  define MAX_URI_LENGTH 8192
 # endif
 
 # ifndef MAX_HEADER_SIZE
@@ -117,7 +121,7 @@ class HttpRequest
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
 		bool								requestComplete = false;
-		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
+		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
 		void		debugPrint(void);
 		void		setErrorAndThrow(int code, std::string message);
