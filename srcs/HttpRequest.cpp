@@ -13,6 +13,9 @@
 #include "HttpRequest.hpp"
 
 // CONSTRUCTOR
+#ifndef SPACECHARS
+# define SPACECHARS " \n\r\v\t"
+#endif
 
 HttpRequest::HttpRequest(int socketFD)
 {
@@ -215,7 +218,7 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 				|| line[line.size() - 2] == ':')
 			setErrorAndThrow(400, "Invalid header line format");
 			std::string key = line.substr(0, line.find(':'));
-			if (ft_isspace(key.back())
+			if (std::isspace(key.back()))
 				setErrorAndThrow(400, "Invalid header line format");
 			std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
 			std::string value = line.substr(line.find(':') + 1);
