@@ -4,19 +4,24 @@
 #include <iostream>
 #include <vector>
 
-#include <sys/epoll.h>
-#include <fcntl.h>
-#include <unistd.h>
+static void setFdNonBlocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+        throw std::system_error();
+    flags |= O_NONBLOCK;
+    int res = fcntl(fd, F_SETFL, flags);
+    if (res == -1)
+        throw std::system_error();
+}
 
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
     // keeps track of the stringstreams for each server
-    std::vector<std::stringstream *> configs;
-    int x = 0;
+    std::vector<std::stringstream> configs;
     // utils for locations to have { } and for error handling
     bool is_in_server = false;
     int depth = 0;
-
     // checks if file is openable
     std::ifstream config{ _path };
     if (!config.is_open())
@@ -35,14 +40,12 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             {
                 // check if we are creating a new server
                 // should check if anything between server and {
-                if (line.starts_with("server"))
+                if (line.compare(0, 6, "server") == 0)
                 {
-                    if (is_in_server)
-                        throw ServerInServerException();
+                    //if (is_in_server)
+                      //  throw ServerInServerException();
                     // start this servers config stringstream
-                    std::stringstream* s = new std::stringstream();
-                    configs.push_back(s);
-                    std::cout << "num of servers " << x++ << "\n";
+                    configs.push_back(std::stringstream{""});
                     is_in_server = true;
                 }
                 depth += 1;
@@ -59,7 +62,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
             if (depth == 0)
                 is_in_server = false;
             if (is_in_server) // remove tailing }
-                *configs.back() << line;
+                configs.back() << line << "\n";
         }
     }
     config.close();
@@ -68,28 +71,48 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 
     // Initialises the Serverconfigs with the correct string
     bool success = true;
-    for (std::stringstream* config : configs)
+    for (std::stringstream& configuration : configs)
     {
         try
         {
-            ServerConfig current(*config);
-            servers.push_back(new Server(current));
+            ServerConfig current(configuration);
+            //servers.push_back(new Server(current));
         }
-        catch (const std::exception& e)
+        catch (std::exception const& e)
         {
             success = false;
-            std::cerr << e.what() << "\n";
+            std::cerr << "ServerManager: ServerInitError: "<< e.what() << "\n";
+        }
+        catch (...)
+        {
+            std::cerr << "really stupid" << "\n";
         }
     }
     if  (!success)
     {
+        std::cout << "failed to create\n";
         throw ServerCreationException();
+    }
+    // setup epoll
+    polled = epoll_create(EPOLL_SIZE);
+    if (polled == -1)
+    {
+        std::cerr << "bullshit\n";
+    }
+    events = new epoll_event[EPOLL_SIZE];
+    try{
+        registerServerSockets();
+    }
+    catch(std::exception& e)
+    {
+        std::cerr << "ServerManager: EpollInitError: " << e.what() << "\n";
     }
 }
 
 ServerManager::~ServerManager()
 {
     // deletes all the servers managed by it
+    delete[] events;
 }
 
 std::string ServerManager::GetPath() const
@@ -127,85 +150,113 @@ const char * ServerManager::UnclosedBraceException::what() const noexcept
     return "Manager: ParsingError: Unclosed brace";
 }
 
+ServerManager::ManagerRuntimeException::ManagerRuntimeException(std::string error)
+{
+    this->error = error;
+}
+
+const char *ServerManager::ManagerRuntimeException::what() const noexcept
+{
+    return error.c_str();
+}
+
 void ServerManager::runServers()
 {
-    // arbitrary max epoll size 50
-    int polled = epoll_create1(50);
-    struct epoll_event ev;
-
-    ev.events = EPOLLIN | EPOLLET;
-    for (auto& server : servers)
-    {
-        if (epoll_ctl(polled, EPOLL_CTL_ADD, server->GetServerSocketFD(), &ev) < 0)
-            std::cout << "Error while polling fds\n";
-        else
-            std::cout << "inserted fd\n";
-    }
-    struct epoll_event *events = new epoll_event[50];
-    int currentFds = 1;
-    int numberOfEvents;
-
-    sockaddr_storage client_addr;
-    int addressSize = sizeof(client_addr);
-
-    int incommingFD;
     while (1)
     {
-        numberOfEvents = epoll_wait(polled, events, currentFds, -1);
-        if (numberOfEvents == -1)
+        // waits for at least 1 event to occur
+        WaitForEvents();
+        for (int i = 0; i < eventAmount; i++)
         {
-            std::cout << "epoll issue\n";
-            break;
-        }
-        for (int i = 0; i < numberOfEvents; i++)
-        {
-            for (auto& server : servers)
+            for (Server* server : servers)
             {
-                // if they are trying to connect to us
-                if (events[i].data.fd == server->GetServerSocketFD())
+                // if someone initiates a connection to the registered sockets
+                if (server->IsServerSocketFD(events[i].data.fd))
                 {
-                    // create the incomming filedescriptor
-                    incommingFD = accept(events[i].data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
-                    if (incommingFD == -1)
-                        std::cout << "Error while accepting message\n";
-                    ev.events = EPOLLIN | EPOLLET;
-                    ev.data.fd = incommingFD;
-                    // add it to the polled fds
-                    if (epoll_ctl(polled, EPOLL_CTL_ADD, incommingFD, &ev) < 0)
-                        std::cout << "Error while adding fds to the epoll\n";
-                    // keep track of how many we are managing
-                    currentFds++;
-                    server->SetListeningFD(incommingFD);
-                    // read the incomming request into the servers current httprequest
-                    std::string requestString;
-                    int bufferSize = server->config.getRequestSizeLimit();
-                    char messageBuffer[bufferSize + 1];
-                    messageBuffer[bufferSize] = '\0';
-                    // todo the chunked requests
-                    int readAmount = read(incommingFD, messageBuffer, bufferSize);
-                    if (readAmount == -1)
-                        std::cout << "Error while reading request\n";
-                    requestString += messageBuffer; 
-                    server->currentRequest = new HttpRequest(requestString);
+                    try
+                    {
+                        int incommingFD = acceptConnection(events[i]);
+                        setFdNonBlocking(incommingFD);
+                        AddToEpoll(incommingFD);
+                        server->connect(incommingFD, events[i].data.fd);
+                    }
+                    catch (std::exception& e)
+                    {
+                        std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                    }
+
                 }
                 // if we can send them data and resolve the request
-                else if (events[i].data.fd == server->GetListeningFD())
+                else if (server->IsListeningFD(events[i].data.fd))
                 {
-                    // get the appropriate answer from the server
-                    std::string response = server->GetAnswer();
-                    // send the answer and check for success
-                    if (send(events[i].data.fd, response.c_str(), response.length(), 0) == -1)
-                        std::cout << "Error while sending message\n";
-                    // remove the fd from the polled fds
-                    if (epoll_ctl(polled, EPOLL_CTL_DEL, events[i].data.fd, &ev) < 0)
-                        std::cout << "Error while removing filedescriptor from poll\n";
-                    currentFds--;
-                    // close the fd
-                    close(events[i].data.fd);
+                    try
+                    {
+                        if (server->respond(events[i].data.fd))
+                            DelFromEpoll(events[i].data.fd);
+                    }
+                    catch (std::exception& e)
+                    {
+                        std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                    }
                 }
             }
         }
     }
-    
-
 }
+
+void ServerManager::AddToEpoll(int fd)
+{
+    if (epoll_ctl(polled, EPOLL_CTL_ADD, fd, &temp_event) < 0)
+        std::cout << "Error while polling fds\n";
+    else
+        std::cout << "inserted fd\n";
+    // keeps the tracked fds for epoll_wait
+    trackedFds++;
+}
+
+void ServerManager::DelFromEpoll(int fd)
+{
+    if (epoll_ctl(polled, EPOLL_CTL_DEL, fd, &temp_event) < 0)
+        std::cout << "Error while removing fd\n";
+    else
+        std::cout << "removed fd\n";
+    // keeps the tracked fds for epoll_wait
+    trackedFds--;
+    close(fd);
+}
+
+void ServerManager::registerServerSockets()
+{
+    // incomming connections
+    temp_event.events = EPOLLIN | EPOLLET;
+    for (Server* server : servers)
+    {
+        for (auto& socket : server->GetSocketFDs())
+        {
+            AddToEpoll(socket.first);
+            setFdNonBlocking(socket.first);
+        }
+    }
+}
+
+void ServerManager::WaitForEvents()
+{
+    eventAmount = epoll_wait(polled, events, trackedFds, -1);
+    if (eventAmount == -1)
+    {
+        std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed to exception
+        perror("");
+    }
+}
+
+int ServerManager::acceptConnection(epoll_event event)
+{
+    int incommingFd = accept(event.data.fd, (sockaddr*)&client_addr, (socklen_t*)&addressSize);
+    if (incommingFd == -1)
+        std::cerr << "ServerManager: AcceptException\n"; // should be exception
+    setFdNonBlocking(incommingFd);
+    temp_event.events = EPOLLIN | EPOLLET;
+    temp_event.data.fd = incommingFd;
+    return incommingFd;
+}
+

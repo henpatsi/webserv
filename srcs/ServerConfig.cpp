@@ -1,5 +1,5 @@
 #include "ServerConfig.hpp"
-#include <map>
+#include <vector>
 #include <utility> 
 #include <algorithm>
 #include <functional>
@@ -24,14 +24,37 @@ ServerConfig::ServerConfig(std::stringstream& config)
     // needs its separate check
     /* Main server parse */
     // clean config -> remove server {
+    _ports      = std::vector<u_int16_t>();
+    _addresses  = std::vector<struct sockaddr_in>();
+    _routes     = std::list<Route>();
     std::string _;
-    std::getline(config, _, '{');
-    std::vector<field> fields ({(field){"name:", &ServerConfig::parseName}, (field){"port:", &ServerConfig::parsePort}, (field){"host:", &ServerConfig::parseAddress},(field){"sizeLimit:", &ServerConfig::parseRequestSize}, (field){"location ", &ServerConfig::parseRoute}});
-    for (std::string key_value_pair; std::getline(config, key_value_pair, ',');)
+    std::getline(config, _);
+    std::cout << _ << "\n";
+    std::cout << "full config:<" << config.str() << ">\n";
+    std::vector<field> fields {{
+        (field){"name:", &ServerConfig::parseName},
+        (field){"port:", &ServerConfig::parsePort},
+        (field){"host:", &ServerConfig::parseAddress},
+        (field){"size_limit:", &ServerConfig::parseRequestSize},
+        (field){"location", &ServerConfig::parseRoute}
+    }};
+    for (std::string key_value_pair; std::getline(config, key_value_pair, '\n');)
     {
+        // gets all the location into the same string->keyvaluepair
+        if (key_value_pair.find('{') != std::string::npos)
+        {
+            for (std::string extra; std::getline(config, extra);)
+            {
+                key_value_pair += extra + "\n";
+                if (extra.find("}") != std::string::npos)
+                    break;
+            }
+        }
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
-        //std::cout << key_value_pair << "\n";
-        std::vector<field>::iterator it = std::find_if(fields.begin(), fields.end(), [&](field f){return key_value_pair.starts_with(f.name);});
+        std::vector<field>::iterator it = std::find_if(
+            fields.begin(), fields.end(),
+            [&](field f){return key_value_pair.compare(0, f.name.length(), f.name) == 0;}
+        );
         if (it == fields.end())
             throw InvalidKeyException(key_value_pair);
         try
@@ -40,27 +63,30 @@ ServerConfig::ServerConfig(std::stringstream& config)
         }
         catch (const std::exception& e)
         {
-            throw e;
+            std::cerr << "ServerConfig: ParseException: " << e.what() << "\n" ;
+            throw e; // shouldnt be here at all
         }
     }
-    if (!_isRouteSet)
-        throw MissingLocationException();
-    // default address
-    if (!_isAddressSet)
+
+    // if (!_isRouteSet)
+    //     throw MissingValueException("location");
+    // if (!_isAddressSet)
+    //     throw MissingValueException("Address");
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = _ip;
+    for (auto& port : _ports)
     {
-        _address.sin_family = AF_INET;
-        _address.sin_port = _port;
-        _address.sin_addr.s_addr = ServerConfig::convertIP("127.0.0.1");
+        addr.sin_port = port;
+        _addresses.push_back(addr);
     }
 }
-
-ServerConfig::~ServerConfig(){}
 
 /* ---- Parser Functions ---- */
 void ServerConfig::parseName(std::string pair, std::string key)
 {
-    if (_isNameSet)
-        throw SameKeyRepeatException("name");
+    // if (_isNameSet)
+    //     throw SameKeyRepeatException("name");
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
         throw InvalidValueException("name");
@@ -70,14 +96,11 @@ void ServerConfig::parseName(std::string pair, std::string key)
 
 void ServerConfig::parsePort(std::string pair, std::string key)
 {
-    if (_isPortSet)
-        throw SameKeyRepeatException("port");
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
         throw InvalidValueException("port");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    _port = htons(std::atol(s.c_str()));
-    _address.sin_port = _port;
+    _ports.push_back(htons(std::atol(s.c_str())));
     _isPortSet = true;
 }
 
@@ -89,10 +112,7 @@ void ServerConfig::parseAddress(std::string pair, std::string key)
     if (index == std::string::npos)
         throw InvalidValueException("address");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    _address.sin_family = AF_INET;
-    _address.sin_port = _port;
-    _address.sin_addr.s_addr = ServerConfig::convertIP(s.c_str());
-    _isAddressSet = true;
+    _ip = convertIP(s);
 }
 
 void ServerConfig::parseRequestSize(std::string pair, std::string key)
@@ -111,23 +131,28 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     size_t closeIndex = s.find('}');
     if (openIndex == std::string::npos || closeIndex == std::string::npos || openIndex >= closeIndex)
         throw InvalidValueException("Route");
-    std::string route = s.substr(0, openIndex);
-    std::stringstream routeContent(s.substr(openIndex, closeIndex - openIndex));
+    std::string route = s.substr(8, openIndex);
+    std::stringstream routeContent(s.substr(openIndex + 1, closeIndex - openIndex - 2));
     Route res;
     res.location = route;
-    std::vector<routeField> parsers = {
-        (routeField){"allowedMethods", &ServerConfig::parseAllowedMethods},
-        (routeField){"redirect", &ServerConfig::parseRedirect},
-        (routeField){"root", &ServerConfig::parseRoot},
-        (routeField){"dirListing", &ServerConfig::parseDirListing},
-        (routeField){"defaultAnswer", &ServerConfig::parseDefaultAnswer},
-        (routeField){"CGI", &ServerConfig::parseCGI},
-        (routeField){"acceptUpload", &ServerConfig::parseAcceptUpload},
-        (routeField){"uploadDir", &ServerConfig::parseUploadDir}
-    };
-    for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair, ',');)
+    _isRouteSet = true;
+    std::vector<routeField> parsers {{
+        (routeField){"allowedMethods:", &ServerConfig::parseAllowedMethods},
+        (routeField){"redirect:", &ServerConfig::parseRedirect},
+        (routeField){"root:", &ServerConfig::parseRoot},
+        (routeField){"dirListing:", &ServerConfig::parseDirListing},
+        (routeField){"index:", &ServerConfig::parseDefaultAnswer},
+        (routeField){"CGI:", &ServerConfig::parseCGI},
+        (routeField){"acceptUpload:", &ServerConfig::parseAcceptUpload},
+        (routeField){"uploadDir:", &ServerConfig::parseUploadDir}
+    }};
+    for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair);)
     {
-        std::vector<routeField>::iterator it = std::find_if(parsers.begin(), parsers.end(), [&](routeField f){return keyvaluepair.starts_with(f.name);});
+        keyvaluepair.erase(0, keyvaluepair.find_first_not_of(SPACECHARS));
+        std::vector<routeField>::iterator it = std::find_if(
+            parsers.begin(), parsers.end(),
+            [&](routeField f){return keyvaluepair.compare(0, f.name.length(), f.name) == 0;}
+        );
         if (it == parsers.end())
             throw InvalidKeyException(keyvaluepair);
         try
@@ -136,7 +161,8 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
         }
         catch (const std::exception& e)
         {
-            throw e;
+            std::cerr << "ServerConfig: ParseException: RouteException: " << e.what() << "\n" ;
+            throw e; // shouldnt be here at all
         }
     }
     _routes.push_back(res);
@@ -175,8 +201,6 @@ void ServerConfig::parseRoot(std::string pair, std::string key, Route& res)
     if (index == std::string::npos)
         throw InvalidValueException("webroot");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // validation missing
-    // check if location/directory exists
     res.root = s;
 }
 
@@ -238,58 +262,6 @@ void ServerConfig::parseUploadDir(std::string pair, std::string key, Route& res)
     res.uploadDir = s;
 }
 
-/* ---- Getters ----*/
-std::string ServerConfig::getName()
-{
-    return _name;
-}
-
-u_int16_t ServerConfig::getPort()
-{
-    return _port;
-}
-
-struct sockaddr_in ServerConfig::getAddress()
-{
-    return _address;
-}
-
-long ServerConfig::getRequestSizeLimit()
-{
-    return _clientBodyLimit;
-}
-
-std::list<struct Route> ServerConfig::getRoutes()
-{
-    return _routes;
-}
-
-/* ---- Exceptions ----*/
-ServerConfig::SameKeyRepeatException::SameKeyRepeatException(std::string key) : _key(key){}
-
-const char *ServerConfig::SameKeyRepeatException::what() const noexcept
-{
-    return _key.c_str();
-}
-
-ServerConfig::InvalidKeyException::InvalidKeyException(std::string key) : _key(key){}
-
-const char *ServerConfig::InvalidKeyException::what() const noexcept
-{
-    return _key.c_str();
-}
-
-const char *ServerConfig::MissingLocationException::what() const noexcept
-{
-    return "No location specified";
-}
-
-ServerConfig::InvalidValueException::InvalidValueException(std::string key) : _key(key){}
-
-const char *ServerConfig::InvalidValueException::what() const noexcept
-{
-    return "invalid key";
-}
 
 unsigned int ServerConfig::convertIP(std::string ip)
 {
@@ -313,4 +285,15 @@ unsigned int ServerConfig::convertIP(std::string ip)
     // std::cout << ip_long << "\n";
     // std::cout << inet_addr(ip.c_str()) << "\n";
     return ip_long;
+}
+
+uint8_t ServerConfig::parseRequestMethod(std::string s)
+{
+    if (s == "GET")
+        return 1 << 1;
+    if (s == "POST")
+        return 1 << 2;
+    if (s == "DELETE")
+        return 1 << 3;
+    return 0;
 }

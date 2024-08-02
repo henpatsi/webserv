@@ -28,7 +28,7 @@ SRCDIR		=	srcs/
 OBJDIR		=	obj/
 INCLUDEDIR	=	include/
 
-FLAGS	=	-Wall -Wextra -Werror -std=c++20 \
+FLAGS	=	-Wall -Wextra -Werror -std=c++17 \
 			-I$(INCLUDEDIR) -g
 
 SRC	=	$(wildcard $(SRCDIR)*.cpp)
@@ -43,6 +43,10 @@ all: $(NAME)
 $(NAME): $(OBJDIR) $(OBJ) $(INC)
 	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)compiling executable: $(OUTCOLOR)$(NAME)$(RESET)"
 	@c++ $(FLAGS) $(OBJ) -o $(NAME)
+
+$(OBJDIR)%.o: $(SRCDIR)%.cpp $(INCLUDEDIR)%.hpp
+	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)$< => $(OUTCOLOR)$@ $(RESET)"
+	@c++ $(FLAGS) -c $< -o $@
 
 $(OBJDIR)%.o: $(SRCDIR)%.cpp
 	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)$< => $(OUTCOLOR)$@ $(RESET)"

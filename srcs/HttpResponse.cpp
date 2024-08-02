@@ -11,7 +11,7 @@
 /* ************************************************************************** */
 
 #include "HttpResponse.hpp"
-
+#include <filesystem>
 // CONSTRUCTOR
 
 HttpResponse::HttpResponse(HttpRequest& request)
@@ -116,7 +116,7 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 		for (auto file : std::filesystem::directory_iterator(this->path))
 			files.push_back(file.path().filename().string());
 	}
-	catch(const std::filesystem::filesystem_error& e)
+	catch(const std::exception& e)
 	{
 		setErrorAndThrow(404, "Directory for listing not found or not accessible");
 	}

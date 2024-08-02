@@ -35,6 +35,7 @@ int	exit_error(std::string message)
 
 int create_server()
 {
+
 	uint16_t port = 8080;
 	std::string ip_address = "127.0.0.1";
 
@@ -102,6 +103,17 @@ void handle_request(int connectionSocket)
 
 int main(int argc, char *argv[])
 {
+{
+	try{
+		ServerManager s(argv[1]);
+		s.runServers();
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
+}
+
 	(void) argc;
 	(void) argv;
 
@@ -129,6 +141,5 @@ int main(int argc, char *argv[])
 			close(connectionSocket);
 		}
 	}
-
 	close(serverSocket);
 }
