@@ -10,8 +10,9 @@
 
 Server::Server(ServerConfig _config) : config(_config)
 {
-    std::vector<struct sockaddr_in> serverAddress = config.getAddress();
-    std::cout << "Server listening at addr " << inet_ntoa(serverAddress[0].sin_addr) << "on port(s):\n";
+    std::vector<sockaddr_in> serverAddress = config.getAddress();
+    std::cout << "Server listening at addr " << inet_ntoa(serverAddress[0].sin_addr) << " on port(s):\n";
+    serverSocketFDS = std::list<std::pair<int, bool>>();
     for (auto& address : serverAddress)
     {
         serverSocketFDS.push_back(std::pair<int, bool>(socket(AF_INET, SOCK_STREAM, 0), false));
@@ -20,8 +21,7 @@ Server::Server(ServerConfig _config) : config(_config)
         int yes = 1;
         if (setsockopt(serverSocketFDS.back().first, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
             throw SocketOptionException();
-        
-        if (bind(serverSocketFDS.back().first, (sockaddr*) &serverAddress, sizeof(serverAddress)) == -1)
+        if (bind(serverSocketFDS.back().first, (sockaddr*) &address, sizeof(serverAddress)) == -1)
             throw BindException();
         if (listen(serverSocketFDS.back().first, 5) == -1)
             throw ListenException();

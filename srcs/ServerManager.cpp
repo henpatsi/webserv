@@ -76,7 +76,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
         try
         {
             ServerConfig current(configuration);
-            //servers.push_back(new Server(current));
+            servers.push_back(new Server(current));
         }
         catch (std::exception const& e)
         {
@@ -99,7 +99,8 @@ ServerManager::ServerManager(const std::string path) : _path(path)
     {
         std::cerr << "bullshit\n";
     }
-    events = new epoll_event[EPOLL_SIZE];
+    events = new epoll_event[EPOLL_SIZE * 2];
+    trackedFds = 0;
     try{
         registerServerSockets();
     }
@@ -173,6 +174,7 @@ void ServerManager::runServers()
                 // if someone initiates a connection to the registered sockets
                 if (server->IsServerSocketFD(events[i].data.fd))
                 {
+                    std::cout << "connect\n"; 
                     try
                     {
                         int incommingFD = acceptConnection(events[i]);
@@ -233,6 +235,7 @@ void ServerManager::registerServerSockets()
     {
         for (auto& socket : server->GetSocketFDs())
         {
+            std::cout << "socket added\n";
             AddToEpoll(socket.first);
             setFdNonBlocking(socket.first);
         }
@@ -241,7 +244,7 @@ void ServerManager::registerServerSockets()
 
 void ServerManager::WaitForEvents()
 {
-    eventAmount = epoll_wait(polled, events, trackedFds, -1);
+    eventAmount = epoll_wait(polled, events, 50, -1);
     if (eventAmount == -1)
     {
         std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed to exception

@@ -268,7 +268,7 @@ unsigned int ServerConfig::convertIP(std::string ip)
     std::stringstream s(ip);
     std::string val;
     unsigned int ip_long = 0;
-    for (int i = 4; i >= 1 && std::getline(s, val, '.'); i--)
+    for (int i = 3; i >= 0 && std::getline(s, val, '.'); i--)
     {
         //std::cout << "<" << val << ">\n";
         try
@@ -282,8 +282,8 @@ unsigned int ServerConfig::convertIP(std::string ip)
             return (0);
         }
     }
-    // std::cout << ip_long << "\n";
-    // std::cout << inet_addr(ip.c_str()) << "\n";
+    std::cout << ip_long << "\n";
+    std::cout << inet_addr(ip.c_str()) << "\n";
     return ip_long;
 }
 
