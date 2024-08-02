@@ -31,19 +31,18 @@ ServerConfig::ServerConfig(std::stringstream& config)
     std::getline(config, _);
     std::cout << _ << "\n";
     std::cout << "full config:<" << config.str() << ">\n";
-    std::vector<field> fields ({
+    std::vector<field> fields {{
         (field){"name:", &ServerConfig::parseName},
         (field){"port:", &ServerConfig::parsePort},
         (field){"host:", &ServerConfig::parseAddress},
-        (field){"sizeLimit:", &ServerConfig::parseRequestSize},
+        (field){"size_limit:", &ServerConfig::parseRequestSize},
         (field){"location", &ServerConfig::parseRoute}
-    });
+    }};
     for (std::string key_value_pair; std::getline(config, key_value_pair, '\n');)
     {
         // gets all the location into the same string->keyvaluepair
         if (key_value_pair.find('{') != std::string::npos)
         {
-            key_value_pair += "\n";
             for (std::string extra; std::getline(config, extra);)
             {
                 key_value_pair += extra + "\n";
@@ -51,11 +50,10 @@ ServerConfig::ServerConfig(std::stringstream& config)
                     break;
             }
         }
-        std::cout << "kvpair<" << key_value_pair << ">" << "\n";
         key_value_pair.erase(0, key_value_pair.find_first_not_of(SPACECHARS));
         std::vector<field>::iterator it = std::find_if(
             fields.begin(), fields.end(),
-            [&](field f){return key_value_pair.compare(0, f.name.length(), f.name);}
+            [&](field f){return key_value_pair.compare(0, f.name.length(), f.name) == 0;}
         );
         if (it == fields.end())
             throw InvalidKeyException(key_value_pair);
@@ -129,18 +127,17 @@ void ServerConfig::parseRequestSize(std::string pair, std::string key)
 
 void ServerConfig::parseRoute(std::string pair, std::string key)
 {
-    std::cerr << "deep in route\n";
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     size_t openIndex = s.find('{');
     size_t closeIndex = s.find('}');
     if (openIndex == std::string::npos || closeIndex == std::string::npos || openIndex >= closeIndex)
         throw InvalidValueException("Route");
     std::string route = s.substr(8, openIndex);
-    std::stringstream routeContent(s.substr(openIndex, closeIndex - openIndex));
+    std::stringstream routeContent(s.substr(openIndex + 1, closeIndex - openIndex - 2));
     Route res;
     res.location = route;
     _isRouteSet = true;
-    std::vector<routeField> parsers = {
+    std::vector<routeField> parsers {{
         (routeField){"allowedMethods:", &ServerConfig::parseAllowedMethods},
         (routeField){"redirect:", &ServerConfig::parseRedirect},
         (routeField){"root:", &ServerConfig::parseRoot},
@@ -149,10 +146,14 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
         (routeField){"CGI:", &ServerConfig::parseCGI},
         (routeField){"acceptUpload:", &ServerConfig::parseAcceptUpload},
         (routeField){"uploadDir:", &ServerConfig::parseUploadDir}
-    };
+    }};
     for (std::string keyvaluepair; std::getline(routeContent, keyvaluepair);)
     {
-        std::vector<routeField>::iterator it = std::find_if(parsers.begin(), parsers.end(), [&](routeField f){return keyvaluepair.compare(0, f.name.length(), f.name);});
+        keyvaluepair.erase(0, keyvaluepair.find_first_not_of(SPACECHARS));
+        std::vector<routeField>::iterator it = std::find_if(
+            parsers.begin(), parsers.end(),
+            [&](routeField f){return keyvaluepair.compare(0, f.name.length(), f.name) == 0;}
+        );
         if (it == parsers.end())
             throw InvalidKeyException(keyvaluepair);
         try

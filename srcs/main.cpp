@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 {
 	try{
 		ServerManager s(argv[1]);
-		//s.runServers();
+		s.runServers();
 	}
 	catch(const std::exception& e)
 	{
