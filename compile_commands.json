@@ -1,0 +1,110 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/HttpRequest.o",
+      "srcs/HttpRequest.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/HttpRequest.cpp",
+    "output": "/home/taavi/webserv/obj/HttpRequest.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/HttpResponse.o",
+      "srcs/HttpResponse.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/HttpResponse.cpp",
+    "output": "/home/taavi/webserv/obj/HttpResponse.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/main.o",
+      "srcs/main.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/main.cpp",
+    "output": "/home/taavi/webserv/obj/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/ServerConfig.o",
+      "srcs/ServerConfig.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/ServerConfig.cpp",
+    "output": "/home/taavi/webserv/obj/ServerConfig.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/Server.o",
+      "srcs/Server.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/Server.cpp",
+    "output": "/home/taavi/webserv/obj/Server.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/c++",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++17",
+      "-Iinclude/",
+      "-g",
+      "-c",
+      "-o",
+      "obj/ServerManager.o",
+      "srcs/ServerManager.cpp"
+    ],
+    "directory": "/home/taavi/webserv",
+    "file": "/home/taavi/webserv/srcs/ServerManager.cpp",
+    "output": "/home/taavi/webserv/obj/ServerManager.o"
+  }
+]
