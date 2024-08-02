@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 19:22:02 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/02 08:59:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,7 +156,7 @@ std::string HttpRequest::readRequestHeader(int socketFD)
 	while (requestString.size() - requestLineSize < MAX_HEADER_SIZE)
 	{
 		std::string line;
-		readLine(socketFD, line, HEADER_READ_TIMEOUT_MILLISECONDS);
+		readLine(socketFD, line, HEADER_READ_TIMEOUT_MILLISECONDS); // TODO check that any read line is not too long
 		if (line == "\r\n" && !firstLine) // Allow first line to be empty
 			break ;
 		if (requestLineSize == 0 && line != "\r\n") // First real line is the request line, exclude from MAX_HEADER_SIZE
@@ -264,7 +264,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	getline(sstream, line);
 	if (line.empty() || line == "\r")
 		setErrorAndThrow(400, "Request line is empty");
-	if (line.back() != '\r') // TODO remove if we decide to accept just \n
+	if (line.back() != '\r') // TODO remove these checks if we decide to accept just \n
 		setErrorAndThrow(400, "Request line should end in \\r\\n");
 
 	std::istringstream lineStream(line);
@@ -273,19 +273,15 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	lineStream >> URI;
 	lineStream >> this->httpVersion;
 
+	// Check that all present
 	if (this->method.empty() || this->method == "\r"
 		|| URI.empty() || URI == "\r"
-		|| this->httpVersion.empty())
+		|| this->httpVersion.empty() || this->httpVersion == "\r")
 		setErrorAndThrow(400, "Request line not complete");
-	if (this->httpVersion == "\r") // If URI is missing, assume root
-	{
-		this->httpVersion = URI;
-		URI = "/";
-	}
 
 	// Check method
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
-		setErrorAndThrow(405, "Method not allowed");
+		setErrorAndThrow(501, "Method not implemented");
 
 	// Check URI
 	if (URI.length() > MAX_URI_LENGTH)
