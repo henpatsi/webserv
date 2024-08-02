@@ -72,7 +72,6 @@ ServerConfig::ServerConfig(std::stringstream& config)
     //     throw MissingValueException("location");
     // if (!_isAddressSet)
     //     throw MissingValueException("Address");
-    std::cout << _routes.back().defaultAnswer << "\n";
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = _ip;

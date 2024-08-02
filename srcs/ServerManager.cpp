@@ -94,7 +94,11 @@ ServerManager::ServerManager(const std::string path) : _path(path)
         throw ServerCreationException();
     }
     // setup epoll
-    polled = epoll_create1(EPOLL_SIZE);
+    polled = epoll_create(EPOLL_SIZE);
+    if (polled == -1)
+    {
+        std::cerr << "bullshit\n";
+    }
     events = new epoll_event[EPOLL_SIZE];
     try{
         registerServerSockets();
@@ -239,7 +243,10 @@ void ServerManager::WaitForEvents()
 {
     eventAmount = epoll_wait(polled, events, trackedFds, -1);
     if (eventAmount == -1)
-        std::cerr << "epoll issue\n"; // should be changed to exception
+    {
+        std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed to exception
+        perror("");
+    }
 }
 
 int ServerManager::acceptConnection(epoll_event event)
