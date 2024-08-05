@@ -85,6 +85,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
         }
         catch (...)
         {
+			success = false;
             std::cerr << "really stupid" << "\n";
         }
     }
@@ -235,7 +236,8 @@ void ServerManager::registerServerSockets()
     {
         for (auto& socket : server->GetSocketFDs())
         {
-            std::cout << "socket added\n";
+			std::cout << "socket added\n";
+			temp_event.data.fd = socket.first;
             AddToEpoll(socket.first);
             setFdNonBlocking(socket.first);
         }

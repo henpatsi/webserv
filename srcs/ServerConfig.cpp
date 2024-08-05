@@ -284,7 +284,8 @@ unsigned int ServerConfig::convertIP(std::string ip)
     }
     std::cout << ip_long << "\n";
     std::cout << inet_addr(ip.c_str()) << "\n";
-    return ip_long;
+    //return ip_long;
+	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order
 }
 
 uint8_t ServerConfig::parseRequestMethod(std::string s)
