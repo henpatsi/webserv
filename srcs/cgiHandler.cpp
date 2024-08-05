@@ -13,6 +13,7 @@ std::string	ntoa(sockaddr_in &address)
 	s.insert(0, ".");
 	a /= 256;
 	s.insert(0, std::to_string(a % 256));
+	return (s);
 }
 
 void	cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &config, sockaddr_in &client_address)
