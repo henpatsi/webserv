@@ -76,7 +76,6 @@ class HttpRequest
 		std::vector<char>					getRawContent(void) { return this->rawContent; }
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
-		std::string	getCGI(void) { return this->cgi; }
 		std::string	getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
 
@@ -93,7 +92,6 @@ class HttpRequest
 		std::string							method;
 		std::string							resourcePath;
 		std::string							httpVersion;
-		std::string	cgi;
 		std::string	queryString;
 		std::map<std::string, std::string>	URIParameters = {};
 		std::map<std::string, std::string>	headers = {};

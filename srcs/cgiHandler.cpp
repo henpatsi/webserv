@@ -48,6 +48,7 @@ int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &
 {
 	char* envs[11];
 	char* args[2];
+	std::string cgi;
 	int	toCGI[2];
 	int	fromCGI[2];
 	int	pid;
@@ -64,7 +65,7 @@ int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &
 			throw DupException();
 		if (close(toCGI[1]) == -1 || close(fromCGI[0] == -1)) 
 			throw CloseException();
-		execve(request.getCGI().c_str(), (char **)args, (char **)envs);
+		execve(cgi.c_str(), (char **)args, (char **)envs);
 	}
 	write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
 	if (close(toCGI[1] == -1 || close(fromCGI[1] == -1) || close(toCGI[0]) == -1))
