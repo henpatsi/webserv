@@ -3,6 +3,10 @@
 #include "HttpRequest.hpp"
 #include <string>
 #include <unistd.h>
+#include <sys/socket.h>
+#include "ServerConfig.hpp"
+
+std::string	ntoa(sockaddr_in &address);
 
 class	cgiHandler
 {
@@ -16,9 +20,12 @@ class	cgiHandler
 		std::string	server_protocol;
 		std::stringstream	content_length;
 		std::string	content_type;
+		std::string	port;
+		std::string	hostname;
+		std::string	remote_address;
 	public:
-		int	runCGI(HttpRequest &resquest);	
-		void	create_envs(const char ** envs, HttpRequest &request);
+		int	runCGI(HttpRequest &resquest, ServerConfig &config, sockaddr_in &client_address);	
+		void	create_envs(char **envs, HttpRequest &request, ServerConfig &config, sockaddr_in &client_address);
     
 	class PipeException : std::exception {
         const char * what() const noexcept { return ("Pipe failed"); }
