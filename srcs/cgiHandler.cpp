@@ -53,10 +53,3 @@ int	cgiHandler::runCGI(HttpRequest &request)
 	delete[] envs;
 	return (fromCGI[0]);
 }
-		
-	//set_envs
-	//prepare pipes
-	//fork
-	//write message body into write end
-	//execve
-	//output cgi output fd
