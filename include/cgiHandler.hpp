@@ -2,6 +2,7 @@
 #define CGIHANDLER_HPP
 #include "HttpRequest.hpp"
 #include <string>
+#include <unistd.h>
 
 class	cgiHandler
 {
@@ -20,11 +21,14 @@ class	cgiHandler
 	public:
 		cgiHandler(HttpRequest &request);
 		int	runCGI();	
-		void	create_envs(char *envs[16]);
+		void	create_envs(const char ** envs);
 		std::string	prepare_query_string(std::string);
     
 	class PipeException : std::exception {
         const char * what() const noexcept { return ("Pipe failed"); }
+    };
+	class DupException : std::exception {
+        const char * what() const noexcept { return ("Dup failed"); }
     };
 	class CloseException : std::exception {
         const char * what() const noexcept { return ("Close failed"); }
