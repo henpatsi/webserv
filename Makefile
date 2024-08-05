@@ -44,6 +44,10 @@ $(NAME): $(OBJDIR) $(OBJ) $(INC)
 	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)compiling executable: $(OUTCOLOR)$(NAME)$(RESET)"
 	@c++ $(FLAGS) $(OBJ) -o $(NAME)
 
+$(OBJDIR)%.o: $(SRCDIR)%.cpp $(INCLUDEDIR)%.hpp
+	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)$< => $(OUTCOLOR)$@ $(RESET)"
+	@c++ $(FLAGS) -c $< -o $@
+
 $(OBJDIR)%.o: $(SRCDIR)%.cpp
 	@echo "$(NAMECOLOR)$(NAME) $(PIPECOLOR)| $(FILECOLOR)$< => $(OUTCOLOR)$@ $(RESET)"
 	@c++ $(FLAGS) -c $< -o $@

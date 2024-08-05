@@ -52,7 +52,7 @@ class ServerConfig {
 			private:
 				std::string _key;
 			public:
-				SameKeyRepeatException(std::string key) : _key(key) {};
+				SameKeyRepeatException(std::string key) : _key("SameKeyRepeatException " + key) {};
 				const char *what() const noexcept { return _key.c_str(); };
 		};
 		class InvalidKeyException : public std::exception
@@ -60,7 +60,7 @@ class ServerConfig {
 			private:
 				std::string _key;
 			public:
-				InvalidKeyException(std::string key) : _key(key) {};
+				InvalidKeyException(std::string key) : _key("InvalidKeyException " + key) {};
 				const char *what() const noexcept { return _key.c_str(); };
 		};
 		class InvalidValueException : public std::exception
@@ -68,7 +68,7 @@ class ServerConfig {
 			private:
 				std::string _key;
 			public:
-				InvalidValueException(std::string key) : _key(key) {};
+				InvalidValueException(std::string key) : _key("InvalidValueException " + key) {};
 				const char *what() const noexcept { return _key.c_str(); };
 		};
 		class MissingValueException : public std::exception 
@@ -76,7 +76,7 @@ class ServerConfig {
 			private:
 				std::string _key;
 			public:
-				MissingValueException(std::string key) : _key(key) {};
+				MissingValueException(std::string key) : _key("MissingValueException " + key) {};
 				const char *what() const noexcept { return _key.c_str(); };
 		};
 		
