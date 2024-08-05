@@ -8,7 +8,6 @@ class	cgiHandler
 {
 	private:
 		std::string	_cgiHeader;
-		HttpRequest	&_request;
 		std::stringstream	gateway;
 		std::string	path_info;
 		std::string	query_string;
@@ -17,12 +16,9 @@ class	cgiHandler
 		std::string	server_protocol;
 		std::stringstream	content_length;
 		std::string	content_type;
-		std::string	CGIcommand;
 	public:
-		cgiHandler(HttpRequest &request);
-		int	runCGI();	
-		void	create_envs(const char ** envs);
-		std::string	prepare_query_string(std::string);
+		int	runCGI(HttpRequest &resquest);	
+		void	create_envs(const char ** envs, HttpRequest &request);
     
 	class PipeException : std::exception {
         const char * what() const noexcept { return ("Pipe failed"); }

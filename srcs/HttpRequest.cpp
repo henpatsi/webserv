@@ -185,9 +185,15 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
+	std::string cgi_filetype(this->resourcePath.find_last_of(".") + 1, this->resourcePath.find_last_of("?") - 1);
+	if (cgi_filetype == "py")
+		cgi = "python3";
+	if (cgi_filetype == "php")
+		cgi = "php";
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
+	queryString = URI.find('?') + 1;
 
 	// Assumes the third word in the request is the http version
 	sstream >> this->httpVersion;
