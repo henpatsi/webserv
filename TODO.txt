@@ -1,5 +1,19 @@
 TODO
 
+
+
+
+URI pre part
+Route location parsing
+
+
+
+
+
+
+
+
+
 Check request host (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
 Check duplicate headers
 

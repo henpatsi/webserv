@@ -42,17 +42,20 @@ public:
     // gets called when server can respond 
     bool respond(int fd);
 
-    class SocketOpenException : std::exception {
+    class SocketOpenException : public std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }
     };
-    class SocketOptionException : std::exception {
+    class SocketOptionException : public std::exception {
         const char * what() const noexcept { return ("Failed to set socket option"); }
     };
-    class BindException : std::exception {
+    class BindException : public std::exception {
         const char * what() const noexcept { return ("Failed to bind"); }
     };
-    class ListenException : std::exception {
+    class ListenException : public std::exception {
         const char * what() const noexcept { return ("Failed to listen"); }
+    };
+    class RouteException : public std::exception {
+        const char * what() const noexcept { return ("Failed to find route"); }
     };
 };
 
