@@ -99,7 +99,7 @@ class HttpRequest
 		size_t								getReadContentLength(void) { return this->readContentLength; }
 
 		// If fail occurs outside request parsing
-		void								setFailResponseCode(int code) { this->failResponseCode = code; }
+		void								setFailResponseCode(int code) { this->failResponseCode = code; this->requestComplete = true; }
 
 		class RequestException : public std::exception
 		{

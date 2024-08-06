@@ -8,16 +8,22 @@
 #include <list>
 #include <algorithm>
 
+struct Connection
+{
+    int fd;
+    Route route;
+    HttpRequest request;
+    bool headerRead = false;
+};
+
 class Server {
 private:
     // sockets filedescriptor used for connecting to us
     std::list<std::pair<int, bool>> serverSocketFDS;
     // fd created on accepting a connection
-    std::list<std::pair<int, HttpRequest>> listeningFDS;
+    std::list<Connection> listeningFDS;
     // contains all info and routes about the server
     ServerConfig config;
-    // TODO used to store chuncked request and build one as soon as its done
-    HttpRequest currentRequest;
 
     // private function to construce answer for public method respond
     std::string GetAnswer();
@@ -28,7 +34,7 @@ public:
 
     /* ---- Getters ---- */
     int     IsServerSocketFD(int fd)    { return std::any_of(serverSocketFDS.begin(), serverSocketFDS.end(), [&](std::pair<int, bool> x){return x.first == fd && !x.second; }); }
-    bool    IsListeningFD(int fd)       { return std::any_of(listeningFDS.begin(), listeningFDS.end(), [&](std::pair<int, HttpRequest> x){return x.first == fd; });}
+    bool    IsListeningFD(int fd)       { return std::any_of(listeningFDS.begin(), listeningFDS.end(), [&](Connection x){return x.fd == fd; });}
     std::list<std::pair<int, bool>> GetSocketFDs() { return serverSocketFDS; }; 
     // method called on incomming request 
     void connect(int incommingFD, int socketFD);
