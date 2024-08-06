@@ -11,6 +11,7 @@
 struct Connection
 {
     int fd;
+    int socketFD;
     Route route;
     HttpRequest request;
     bool headerRead = false;
@@ -39,6 +40,7 @@ public:
     // method called on incomming request 
     void connect(int incommingFD, int socketFD);
     // TODO method called when request is done
+    void disconnect(std::list<Connection>::iterator connection);
     // gets called when server can respond 
     bool respond(int fd);
 

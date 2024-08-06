@@ -38,17 +38,12 @@ Route Server::findCorrectRoute(HttpRequest request)
     // just checks if resourcePath has the start of the location of the route
     for (Route route : config.getRoutes())
     {
-        // std::cout << "Checking Route\n";
-        // std::cout << "root: '" << route.root << "'\n";
-        // std::cout << "location: '" << route.location << "'\n";
-        // std::cout << "path: '" << requestPath << "'\n";
         if (requestPath.compare(0, route.location.length(), route.location) != 0)
             continue;
         // set the current one as matching or replace if the current route matches "more"
         if (!isFound || fitting.location.length() < route.location.length())
             fitting = route;
         isFound = true;
-        break;
     }
     if (isFound)
     {
@@ -67,11 +62,28 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     Connection connection;
     connection.fd = incommingFD;
 
-    listeningFDS.push_back(connection);
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
         if (it->first == socketFD)
+        {
+            connection.socketFD = socketFD;
             it->second = true;
+        }
+    }
+
+    listeningFDS.push_back(connection);
+}
+
+void Server::disconnect(std::list<Connection>::iterator connectionIT)
+{
+    listeningFDS.erase(connectionIT);
+
+    for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
+    {
+        if (it->first == connectionIT->socketFD)
+        {
+            it->second = false;
+        }
     }
 }
 
@@ -116,12 +128,12 @@ bool Server::respond(int fd)
         HttpResponse response(it->request, it->route);
         if (send(fd, response.getResponse().c_str(), response.getResponse().length(), 0) == -1)
             throw ServerManager::ManagerRuntimeException("failed to send");
+        disconnect(it);
         return (true);
     }
     else
     {
         std::cout << "content left to read: " << it->request.getRemainingContentLength() << "\n";
         return (false);
-        // read more stuff from request and modify it->second
     }
 }
