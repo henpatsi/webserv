@@ -205,7 +205,7 @@ void HttpResponse::preparePostResponse(void)
 	{
 		if (access(this->path.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		int ret = writeMultipartData(request.getMultipartData(), this->path);
+		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
