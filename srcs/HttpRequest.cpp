@@ -295,6 +295,7 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
+	queryString = URI.find('?') + 1;
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
