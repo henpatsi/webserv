@@ -21,7 +21,8 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 		if (this->request.getFailResponseCode() != 0)
 			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
 		
-		this->path = this->route.location;
+		this->path = this->route.root + request.getResourcePath();
+		std::cout << "Path: " << this->path << "\n";
 
 		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
 			setErrorAndThrow(405, "Method not allowed");

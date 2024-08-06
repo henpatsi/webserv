@@ -129,9 +129,9 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     size_t openIndex = s.find('{');
     size_t closeIndex = s.find('}');
-    if (openIndex == std::string::npos || closeIndex == std::string::npos || openIndex >= closeIndex)
+    if (openIndex == std::string::npos || openIndex == 0 || closeIndex == std::string::npos || openIndex >= closeIndex)
         throw InvalidValueException("Route");
-    std::string route = s.substr(8, openIndex);
+    std::string route = s.substr(0, openIndex - 1);
     std::stringstream routeContent(s.substr(openIndex + 1, closeIndex - openIndex - 2));
     Route res;
     res.location = route;

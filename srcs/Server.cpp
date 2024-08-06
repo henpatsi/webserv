@@ -1,4 +1,3 @@
-#include "Server.hpp"
 #include <iostream>
 #include <arpa/inet.h> 
 #include <sys/socket.h>
@@ -6,6 +5,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <iterator>
+
+#include "Server.hpp"
 #include "ServerManager.hpp"
 
 Server::Server(ServerConfig _config) : config(_config)
@@ -37,9 +38,10 @@ Route Server::findCorrectRoute(HttpRequest request)
     // just checks if resourcePath has the start of the location of the route
     for (Route route : config.getRoutes())
     {
-        std::cout << "Checking Route\n";
-        std::cout << "root: " << fitting.root << "\n";
-        std::cout << "location: " << fitting.location << "\n";
+        // std::cout << "Checking Route\n";
+        // std::cout << "root: '" << route.root << "'\n";
+        // std::cout << "location: '" << route.location << "'\n";
+        // std::cout << "path: '" << requestPath << "'\n";
         if (requestPath.compare(0, route.location.length(), route.location) != 0)
             continue;
         // set the current one as matching or replace if the current route matches "more"
