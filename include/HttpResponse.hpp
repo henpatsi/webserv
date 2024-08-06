@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 17:41:51 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:06:00 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define HTTPRESPONSE_HPP
 
 # include "HttpRequest.hpp"
+# include "ServerConfig.hpp"
 
 # include <string>
 # include <iostream>
@@ -26,22 +27,13 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 
-// TODO get this from config file
-# ifndef SITE_ROOT
-#  define SITE_ROOT "www/"
-# endif
-
-// TODO get this from config file
-# ifndef UPLOAD_DIR	
-#  define UPLOAD_DIR "uploads/"
-# endif
-
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
 
 class HttpResponse
 {
 	public:
-		HttpResponse(HttpRequest& request);
+		HttpResponse(void);
+		HttpResponse(HttpRequest& request, Route& route);
 
 		std::string getPath(void) { return this->path; }
 		std::string getContentType(void) { return this->contentType; };
@@ -60,6 +52,8 @@ class HttpResponse
 
 	private:
 		std::string path;
+		Route& route;
+		HttpRequest& request;
 		std::string contentType;
 		int responseCode = 500;
 		std::string content;
@@ -87,12 +81,11 @@ class HttpResponse
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
 		void buildResponse(void);
-		void buildPath(std::string requestPath);
-		void buildDirectoryList(HttpRequest& request);
-		void prepareGetResponse(HttpRequest& request);
-		void preparePostResponse(HttpRequest& request);
-		void preparePutResponse(HttpRequest& request);
-		void prepareDeleteResponse(HttpRequest& request);
+		void buildDirectoryList(void);
+		void prepareHeadResponse(void);
+		void prepareGetResponse(void);
+		void preparePostResponse(void);
+		void prepareDeleteResponse(void);
 };
 
 #endif

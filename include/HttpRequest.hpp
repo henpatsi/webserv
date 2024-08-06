@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 17:06:41 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/01 19:10:38 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,22 +28,30 @@
 #  define CONTENT_READ_BUFFER_SIZE 1024
 # endif
 
+# ifndef MAX_URI_LENGTH
+#  define MAX_URI_LENGTH 8192
+# endif
+
 # ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
 # endif
 
 # ifndef READ_ERROR_RETRY_MS
-#  define READ_ERROR_RETRY_MS 10
+#  define READ_ERROR_RETRY_MS 1
 # endif
 
-# ifndef TIMEOUT_SECONDS
-#  define TIMEOUT_SECONDS 2
+# ifndef HEADER_READ_TIMEOUT_MILLISECONDS
+#  define HEADER_READ_TIMEOUT_MILLISECONDS 100
+# endif
+
+# ifndef SPACECHARS
+#  define SPACECHARS " \f\n\r\t\v"
 # endif
 
 // Temporary hard coded server config values
 
-# ifndef _clientBodyLimit
-#  define _clientBodyLimit 300000
+# ifndef clientBodyLimit
+#  define clientBodyLimit 300000
 # endif
 
 
@@ -64,8 +72,10 @@ int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::
 class HttpRequest
 {
 	public:
+		HttpRequest(void);
 		HttpRequest(int socketFD);
 
+		// Getters
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
@@ -73,11 +83,24 @@ class HttpRequest
 		std::string							getURIParameter(std::string key) { return this->URIParameters[key]; }
 		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
+		std::string							getHost(void) { return this->host; }
+		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(void) { return this->rawContent; }
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
 		std::string	getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
+
+		// Reading content
+		void								tryReadContent(int socketFD);
+		bool								isComplete(void) { return this->requestComplete; }
+
+		// FOR DEBUG
+		size_t								getRemainingContentLength(void) { return this->remainingContentLength; }
+		size_t								getReadContentLength(void) { return this->readContentLength; }
+
+		// If fail occurs outside request parsing
+		void								setFailResponseCode(int code) { this->failResponseCode = code; this->requestComplete = true; }
 
 		class RequestException : public std::exception
 		{
@@ -95,20 +118,27 @@ class HttpRequest
 		std::string	queryString;
 		std::map<std::string, std::string>	URIParameters = {};
 		std::map<std::string, std::string>	headers = {};
+		std::string 						host;
+		int									port = 0;
+		size_t								remainingContentLength = 0;
+		size_t								readContentLength = 0; // To check that chunked does not go over max size
 		std::vector<char>					rawContent = {};
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
+		bool								requestComplete = false;
+		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
 		void		debugPrint(void);
 		void		setErrorAndThrow(int code, std::string message);
-		std::string	readLine(int socketFD);
+		bool		readLine(int socketFD, std::string& line, int timeoutMilliseconds = 0);
 		std::string	readRequestHeader(int socketFD);
-		void		readContent(int socketFD, int contentLength);
-		void		readChunkedContent(int socketFD);
+		bool		readContent(int socketFD);
+		bool		readChunkedContent(int socketFD);
+		void		readBody(int socketFD);
 		void		parseFirstLine(std::istringstream& sstream);
 		void		parseHeader(std::istringstream& sstream);
-		void		parseBody(int socketFD);
+		void		parseBody(void);
 };
 
 #endif

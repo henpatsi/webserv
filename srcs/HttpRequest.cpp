@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 17:56:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/02 08:59:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,26 +14,51 @@
 
 // CONSTRUCTOR
 
+HttpRequest::HttpRequest(){};
+
 HttpRequest::HttpRequest(int socketFD)
 {
 	try
 	{
-		std::string requestMessageString = readRequestHeader(socketFD);
-		std::istringstream sstream(requestMessageString);
+		std::string requestHeader = readRequestHeader(socketFD);
+		std::istringstream sstream(requestHeader);
 
 		parseFirstLine(sstream);
 		parseHeader(sstream);
-		parseBody(socketFD);
-
-		debugPrint();
 	}
 	catch (RequestException& e)
 	{
 		std::cerr << "RequestException: " << e.what() << "\n";
 	}
-	catch(...)
+	catch(std::exception& e)
 	{
-		setErrorAndThrow(500, "Unknown request error");
+		std::cerr << "RequestException: " << e.what() << "\n";
+		this->failResponseCode = 500;
+		this->requestComplete = true;
+	}
+}
+
+void HttpRequest::tryReadContent(int socketFD)
+{
+	try
+	{
+		readBody(socketFD);
+
+		if (this->requestComplete)
+		{
+			parseBody();
+			debugPrint();
+		}
+	}
+	catch (RequestException& e)
+	{
+		std::cerr << "RequestException: " << e.what() << "\n";
+	}
+	catch(std::exception& e)
+	{
+		std::cerr << "RequestException: " << e.what() << "\n";
+		this->failResponseCode = 500;
+		this->requestComplete = true;
 	}
 }
 
@@ -42,6 +67,7 @@ HttpRequest::HttpRequest(int socketFD)
 void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
 {
 	this->failResponseCode = responseCode;
+	this->requestComplete = true;
 	throw RequestException(message);
 }
 
@@ -67,6 +93,16 @@ void HttpRequest::debugPrint()
 			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
 			// std::string dataString(data.data.begin(), data.data.end());
 			// std::cout << "\n  Data: '" << dataString << "'\n";
+			// if (data.filename == "")
+			// {
+			// 	std::cout << "\n  Nested multipart data:";
+			// 	for (multipartData nestedData : data.multipartDataVector)
+			// 	{
+			// 		std::cout << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
+			// 		// std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
+			// 		// std::cout << "\n    Data: '" << nestedDataString << "'\n";
+			// 	}
+			// }
 		}
 	}
 	else if (this->urlEncodedData.size() > 0)
@@ -79,106 +115,177 @@ void HttpRequest::debugPrint()
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
 }
 
-std::string HttpRequest::readLine(int socketFD)
+bool HttpRequest::readLine(int socketFD, std::string& line, int timeoutMilliseconds)
 {
 	// Reads 1 byte at a time until it reaches end of line to not read too much
 	char readBuffer[2] = {0};
 	int bytesRead = 0;
 	int failedReads = 0;
-	std::string line;
-	int failReadMax = (TIMEOUT_SECONDS * 1000) / READ_ERROR_RETRY_MS;
+	int failReadMax = timeoutMilliseconds / READ_ERROR_RETRY_MS;
+	line = "";
 
 	while (1)
 	{
 		bytesRead = read(socketFD, readBuffer, 1);
-		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
+		if (bytesRead == -1) // Nothing to read
 		{
+			if (timeoutMilliseconds == 0) // If no timeout, fail immediately
+				return false;
 			failedReads += 1;
-			if (failedReads > failReadMax) // After TIMEOUT_SECONDS, break
+			if (failedReads > failReadMax) // After timeoutMilliseconds, throw error
 				setErrorAndThrow(408, "Reading line timed out");
 			std::this_thread::sleep_for(std::chrono::milliseconds(READ_ERROR_RETRY_MS));
 			continue ;
 		}
-		failedReads = 0; // Reset timeout
+		failedReads = 0; // Reset timeout if read succeeds
 		if (bytesRead == 0)
 			setErrorAndThrow(400, "Reached end of file while reading line");
 		line += readBuffer[0];
 		if (readBuffer[0] == '\n')
 			break ;
 	}
-	return (line);
+	return true;
 }
 
 std::string HttpRequest::readRequestHeader(int socketFD)
 {
+	bool firstLine = true;
 	std::string requestString;
+	size_t requestLineSize = 0;
 	
-	while (requestString.size() < MAX_HEADER_SIZE)
+	while (requestString.size() - requestLineSize < MAX_HEADER_SIZE)
 	{
-		std::string line = readLine(socketFD);
-		if (line == "\r\n")
+		std::string line;
+		readLine(socketFD, line, HEADER_READ_TIMEOUT_MILLISECONDS); // TODO check that any read line is not too long
+		if (line == "\r\n" && !firstLine) // Allow first line to be empty
 			break ;
+		if (requestLineSize == 0 && line != "\r\n") // First real line is the request line, exclude from MAX_HEADER_SIZE
+			requestLineSize = line.size();
 		requestString += line;
+		firstLine = false;
 	}
 
 	std::cout << "\nRequest Message:\n" << requestString << "\n";
 	return requestString;
 }
 
-void HttpRequest::readContent(int socketFD, int contentLength)
+bool HttpRequest::readContent(int socketFD)
 {
 	char contentBuffer[CONTENT_READ_BUFFER_SIZE + 1] = {0};
 	int contentReadSize;
 	int bytesRead = 0;
-	int failedReads = 0;
-	int failReadMax = (TIMEOUT_SECONDS * 1000) / READ_ERROR_RETRY_MS;
 
-	while (contentLength > 0)
+	while (this->remainingContentLength > 0)
 	{
-		contentReadSize = contentLength > CONTENT_READ_BUFFER_SIZE ? CONTENT_READ_BUFFER_SIZE : contentLength;
+		contentReadSize = this->remainingContentLength > CONTENT_READ_BUFFER_SIZE ? CONTENT_READ_BUFFER_SIZE : this->remainingContentLength;
 		bytesRead = read(socketFD, contentBuffer, contentReadSize);
-		if (bytesRead == -1) // If nothing to read, wait 1 second and try again
+		if (bytesRead == -1)
 		{
-			failedReads += 1;
-			if (failedReads > failReadMax) // After TIMEOUT_SECONDS, break
-				setErrorAndThrow(408, "Reading content timed out");
-			std::this_thread::sleep_for(std::chrono::milliseconds(READ_ERROR_RETRY_MS));
-			continue ;
+			// std::cout << "Failed to read content\n";
+			return false;
 		}
-		failedReads = 0; // Reset timeout
 		contentBuffer[bytesRead] = '\0';
 		this->rawContent.insert(this->rawContent.end(), contentBuffer, contentBuffer + bytesRead);
-		contentLength -= bytesRead;
+		this->remainingContentLength -= bytesRead;
 	}
+	std::cout << "Content fully read\n";
+	return true;
 }
 
-void HttpRequest::readChunkedContent(int socketFD)
+bool HttpRequest::readChunkedContent(int socketFD)
 {
-	std::string line = readLine(socketFD);
-	int chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
-	int contentLength = 0;
-	while (chunkSize > 0)
+	std::string line;
+
+	if (this->remainingContentLength == 0) // Read chunk size on each pass through
 	{
-		contentLength += chunkSize;
-		if (contentLength > _clientBodyLimit)
-			setErrorAndThrow(413, "Chunked request body larger than client body limit");
-		readContent(socketFD, chunkSize);
-		line = readLine(socketFD); // Reads the empty line
-		line = readLine(socketFD);
-		chunkSize = std::stoi(line.substr(0, line.find("\r")), 0, 16);
+		if (!readLine(socketFD, line)) // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
+			return false;
+		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
 	}
+
+	while (this->remainingContentLength > 0)
+	{
+		readContentLength += this->remainingContentLength;
+		if (readContentLength > clientBodyLimit)
+			setErrorAndThrow(413, "Chunked request body larger than client body limit");
+		if (!readContent(socketFD))
+			return false;
+		if (!readLine(socketFD, line)) // Reads the empty line  // TODO might cause issues if not / partially read (but might be 400 if chunk not fully written when read?)
+			return false;
+		if (!readLine(socketFD, line)) // Read next chunk size if ready  // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
+			return false; 
+		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
+	}
+	std::cout << "Chunked content fully read\n";
+	return true;
+}
+
+void HttpRequest::readBody(int socketFD)
+{
+	// Prioritize chunked content over content length
+	if (this->headers.find("transfer-encoding") != this->headers.end())
+	{
+		if (this->headers["transfer-encoding"] == "chunked") // Read chunked content
+			this->requestComplete = readChunkedContent(socketFD);
+		else
+			setErrorAndThrow(415, "Unsupported transfer encoding");
+		return ;
+	}
+
+	if (remainingContentLength == 0) // First pass setup of remaining content length
+	{
+		try
+		{
+			if (this->headers.find("content-length") != this->headers.end())
+				remainingContentLength = std::stoi(this->headers["content-length"]);
+		}
+		catch (std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid content length");
+		}
+	}
+
+	// Do not read content if it is above client body size limit
+	if (remainingContentLength > clientBodyLimit)
+		setErrorAndThrow(413, "Request body larger than client body limit");
+
+	if (remainingContentLength > 0) // Read content with content length
+		this->requestComplete = readContent(socketFD);
+	else if (this->headers.find("content-type") != this->headers.end())
+		setErrorAndThrow(411, "No content length specified");
+	else // Nothing to read specified
+		this->requestComplete = true;
 }
 
 void HttpRequest::parseFirstLine(std::istringstream& sstream)
 {
-	// Assumes the first word in the request is the method
-	sstream >> this->method;
-	if (this->method.empty())
-		setErrorAndThrow(400, "Request is empty");
+	std::string line;
 
-	// Assumes the second word in the request is the URI
+	getline(sstream, line);
+	if (line.empty() || line == "\r")
+		setErrorAndThrow(400, "Request line is empty");
+	if (line.back() != '\r') // TODO remove these checks if we decide to accept just \n
+		setErrorAndThrow(400, "Request line should end in \\r\\n");
+
+	std::istringstream lineStream(line);
 	std::string URI;
-	sstream >> URI;
+	lineStream >> this->method;
+	lineStream >> URI;
+	lineStream >> this->httpVersion;
+
+	// Check that all present
+	if (this->method.empty() || this->method == "\r"
+		|| URI.empty() || URI == "\r"
+		|| this->httpVersion.empty() || this->httpVersion == "\r")
+		setErrorAndThrow(400, "Request line not complete");
+
+	// Check method
+	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
+		setErrorAndThrow(501, "Method not implemented");
+
+	// Check URI
+	if (URI.length() > MAX_URI_LENGTH)
+		setErrorAndThrow(414, "URI too long");
 	// Extracts path from the URI
 	this->resourcePath = URI.substr(0, URI.find('?'));
 	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
@@ -190,57 +297,70 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
 	queryString = URI.find('?') + 1;
 
-	// Assumes the third word in the request is the http version
-	sstream >> this->httpVersion;
+	// Check HTTP version
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400, "HTTP version is empty");
 	if (this->httpVersion != "HTTP/1.1")
-		setErrorAndThrow(505, "HTTP version not supported");
+		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 }
 
 void HttpRequest::parseHeader(std::istringstream& sstream)
 {
 	std::string line;
-	std::getline(sstream, line); // Reads the rest of the first line
 	// Reads the headers into a map
 	while (std::getline(sstream, line))
 	{
 		if (line == "\r")
 			break ;
-		if (line.back() != '\r'
-			|| line.find(':') == std::string::npos
-			|| line[line.size() - 2] == ':')
+		if (line.back() != '\r' // Line must end in \r\n
+			|| line.find(':') == std::string::npos) // Line must contain a colon
 			setErrorAndThrow(400, "Invalid header line format");
+
 		std::string key = line.substr(0, line.find(':'));
 		std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
-		std::string value = line.substr(line.find(':') + 2);
-		value.erase(value.length() - 1);
-		if (key.empty() || value.empty())
-			setErrorAndThrow(400, "Header key or value is empty");
+		if (key.empty())
+			setErrorAndThrow(400, "Header key is empty");
+		if (key.find_first_of(SPACECHARS) != std::string::npos)
+			setErrorAndThrow(400, "Header key contains space character");
+
+		std::string value = line.substr(line.find(':') + 1);
+		size_t valueStart = value.find_first_not_of(SPACECHARS);
+		size_t valueEnd = value.find_last_not_of(SPACECHARS);
+		if (valueStart == std::string::npos)
+			value = "";
+		else
+			value = value.substr(valueStart, valueEnd - valueStart + 1);
+
 		this->headers[key] = value;
 	}
+
+	// Extract host and port
+	if (this->headers.find("host") == this->headers.end())
+		setErrorAndThrow(400, "Host header missing");
+	this->host = this->headers["host"].substr(0, this->headers["host"].find(':'));
+	if (this->host.empty())
+		setErrorAndThrow(400, "Missing host name");
+	if (this->headers["host"].find(':') != std::string::npos)
+	{
+		if (this->headers["host"].back() == ':')
+			setErrorAndThrow(400, "Missing port number");
+		try
+		{
+			this->port = std::stoi(this->headers["host"].substr(this->headers["host"].find(':') + 1));
+		}
+		catch (std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid port number");
+		}
+	}
+	else
+		this->port = 80;
 }
 
-void HttpRequest::parseBody(int socketFD)
+void HttpRequest::parseBody(void)
 {
-	// Do not read content if it is above client body size limit
-	if (this->headers.find("content-length") != this->headers.end() && std::stoi(this->headers["content-length"]) > _clientBodyLimit)
-		setErrorAndThrow(413, "Request body larger than client body limit");
-
-	// Reads the body content if content length specified or chunked encoded
-	if (this->headers.find("transfer-encoding") != this->headers.end())
-	{
-		if (this->headers["transfer-encoding"] == "chunked")
-			readChunkedContent(socketFD);
-		else
-			setErrorAndThrow(415, "Unsupported transfer encoding");
-	}
-	else if (this->headers.find("content-length") != this->headers.end())
-		readContent(socketFD, std::stoi(this->headers["content-length"]));
-	else if (this->headers.find("content-type") != this->headers.end())
-		setErrorAndThrow(411, "No content length specified");
-	else
-		return ; // Nothing to read but no error?
+	if (this->rawContent.empty())
+		return ;
 
 	// Extracts the data from the body content from known content types
 	if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)

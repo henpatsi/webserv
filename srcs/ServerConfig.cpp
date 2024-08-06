@@ -129,9 +129,9 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     size_t openIndex = s.find('{');
     size_t closeIndex = s.find('}');
-    if (openIndex == std::string::npos || closeIndex == std::string::npos || openIndex >= closeIndex)
+    if (openIndex == std::string::npos || openIndex == 0 || closeIndex == std::string::npos || openIndex >= closeIndex)
         throw InvalidValueException("Route");
-    std::string route = s.substr(8, openIndex);
+    std::string route = s.substr(0, openIndex - 1);
     std::stringstream routeContent(s.substr(openIndex + 1, closeIndex - openIndex - 2));
     Route res;
     res.location = route;
@@ -284,7 +284,8 @@ unsigned int ServerConfig::convertIP(std::string ip)
     }
     std::cout << ip_long << "\n";
     std::cout << inet_addr(ip.c_str()) << "\n";
-    return ip_long;
+    //return ip_long;
+	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order
 }
 
 uint8_t ServerConfig::parseRequestMethod(std::string s)
@@ -295,5 +296,7 @@ uint8_t ServerConfig::parseRequestMethod(std::string s)
         return 1 << 2;
     if (s == "DELETE")
         return 1 << 3;
+    if (s == "HEAD")
+        return 1 << 4;
     return 0;
 }

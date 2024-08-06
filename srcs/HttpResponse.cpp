@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/25 16:33:58 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/07/31 18:58:22 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,21 +14,27 @@
 #include <filesystem>
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), request(request)
 {
 	try
 	{
-		if (request.getFailResponseCode() != 0)
-			setErrorAndThrow(request.getFailResponseCode(), "Reuest failed");
+		if (this->request.getFailResponseCode() != 0)
+			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
 		
-		buildPath(request.getResourcePath());
+		this->path = this->route.root + request.getResourcePath();
+		std::cout << "Path: " << this->path << "\n";
 
-		if (request.getMethod() == "GET")
-			prepareGetResponse(request);
-		else if (request.getMethod() == "POST")
-			preparePostResponse(request);
-		else if (request.getMethod() == "DELETE")
-			prepareDeleteResponse(request);
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
+			setErrorAndThrow(405, "Method not allowed");
+
+		if (this->request.getMethod() == "HEAD")
+			prepareHeadResponse();
+		else if (this->request.getMethod() == "GET")
+			prepareGetResponse();
+		else if (this->request.getMethod() == "POST")
+			preparePostResponse();
+		else if (this->request.getMethod() == "DELETE")
+			prepareDeleteResponse();
 		else
 			setErrorAndThrow(501, "Request method not implemented");
 	}
@@ -62,7 +68,7 @@ void HttpResponse::setError(int code)
 
 	if (this->customErrorPages[code] != "")
 	{
-		std::ifstream file(SITE_ROOT + this->customErrorPages[code]);
+		std::ifstream file(this->route.root + this->customErrorPages[code]);
 		if (!file.good())
 		{
 			buildDefaultErrorContent(code);
@@ -104,10 +110,12 @@ void HttpResponse::buildResponse()
 	this->response += "Content-Type: " + this->contentType + "\r\n";
 	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
 	this->response += "\r\n";
-	this->response += this->content;
+
+	if (this->request.getMethod() != "HEAD")
+		this->response += this->content;
 }
 
-void HttpResponse::buildDirectoryList(HttpRequest& request)
+void HttpResponse::buildDirectoryList(void)
 {
 	std::vector<std::string> files;
 
@@ -125,15 +133,15 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 		setErrorAndThrow(500, "Unknown error while listing directory");
 	}
 
+	this->contentType = "text/html";
+
 	this->content = "<html><body>";
 	this->content += "<h1>Directory listing for " + this->path + "</h1>";
 	this->content += "<ul>";
 	for (std::string file : files)
 	{
-		std::string path = request.getResourcePath();
-		if (path.back() != '/')
-			path += "/";
-		this->content += "<li><a href=\"" + path + file + "\">" + file + "</a></li>";
+		std::string noRootPath = this->path.substr(this->route.root.length());
+		this->content += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
 	}
 	this->content += "</ul>";
 	this->content += "</body></html>";
@@ -141,54 +149,30 @@ void HttpResponse::buildDirectoryList(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-// VERY SIMPLISTIC IMPLEMENTATION FOR TESTING PURPOSES
-void HttpResponse::buildPath(std::string requestPath)
+void HttpResponse::prepareHeadResponse(void)
 {
-	this->path = SITE_ROOT;
+	prepareGetResponse();
 
-	if (requestPath.substr(0, 8) == "/uploads")
-		return ;
-
-	// TODO do we even need any other types than html?
-	if (requestPath.find(".png") != std::string::npos || requestPath.find(".jpg") != std::string::npos)
-	{
-		this->contentType = "image/" + requestPath.substr(requestPath.find(".") + 1);
-		this->path += "images" + requestPath;
-	}
-	else if (requestPath.find(".pdf") != std::string::npos)
-	{
-		this->contentType = "application/pdf";
-		this->path += "docs" + requestPath;
-	}
-	else if (requestPath.find(".html") != std::string::npos)
-	{
-		this->contentType = "text/html";
-		this->path += "html" + requestPath;
-	}
-	else if (requestPath.find(".") == std::string::npos)
-	{
-		this->contentType = "text/html";
-		this->path += "html" + requestPath;
-
-		if (this->directoryListingAllowed)
-			return;
-
-		if (this->path.back() == '/')
-			this->path += "index.html";
-		else if (this->path.find(".html") == std::string::npos)
-			this->path += "/index.html";
-	}
-	else
-		setErrorAndThrow(415, "Unsupported media type in request path");
+	// if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
+	// 	setErrorAndThrow(405, "HEAD not allowed for request path");
 }
 
-void HttpResponse::prepareGetResponse(HttpRequest& request)
+void HttpResponse::prepareGetResponse(void)
 {
-	if (this->directoryListingAllowed && request.getResourcePath() != "/uploads" && (this->path.find(".") == std::string::npos))
+	if (this->directoryListingAllowed && (this->path.find(".") == std::string::npos))
 	{
-		buildDirectoryList(request);
+		buildDirectoryList();
 		return ;
 	}
+
+	if (this->path.find(".html") != std::string::npos)
+		this->contentType = "text/html";
+	else if (this->path.find(".png") != std::string::npos)
+		this->contentType = "image/png";
+	else if (this->path.find(".jpg") != std::string::npos)
+		this->contentType = "image/jpg";
+	else if (this->path.find(".pdf") != std::string::npos)
+		this->contentType = "application/pdf";
 
 	std::ifstream file;
 
@@ -210,63 +194,62 @@ void HttpResponse::prepareGetResponse(HttpRequest& request)
 	this->responseCode = 200;
 }
 
-void HttpResponse::preparePostResponse(HttpRequest& request)
+void HttpResponse::preparePostResponse(void)
 {
 	// Example of POST where not allowed
 	// TODO handle properly based on config
-	if (request.getResourcePath() == "/")
+	if (this->path == "/")
 		setErrorAndThrow(405, "POST not allowed for request path");
 
-	if (request.getResourcePath() == "/uploads")
+	if (this->path == this->route.uploadDir)
 	{
-		std::string directoryPath = SITE_ROOT;
-		directoryPath += UPLOAD_DIR;
-		if (access(directoryPath.c_str(), F_OK) == -1)
+		if (access(this->path.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		int ret = writeMultipartData(request.getMultipartData(), directoryPath);
+		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		buildPath("/success.html");
-		prepareGetResponse(request);
+		this->path = "www/html/success.html";
+		prepareGetResponse();
 		this->responseCode = 201;
 	}
 	else
-		prepareGetResponse(request);
+		prepareGetResponse();
 }
 
-void HttpResponse::prepareDeleteResponse(HttpRequest& request)
+void HttpResponse::prepareDeleteResponse(void)
 {
-	if (request.getResourcePath().substr(0, 8) != "/uploads")
+	if (this->path == this->route.uploadDir)
 		setErrorAndThrow(405, "DELETE not allowed for request path");
 	
-	std::string filePath = "www" + request.getResourcePath();
-	if (access(filePath.c_str(), F_OK) == -1)
+	if (access(this->path.c_str(), F_OK) == -1)
 	{
-		buildPath("/failure.html");
-		prepareGetResponse(request);
+		this->path = "www/html/failure.html";
+		prepareGetResponse();
 		return ;
 	}
-	if (remove(filePath.c_str()) != 0)
+	if (remove(this->path.c_str()) != 0)
 		setErrorAndThrow(500, "Failed to delete file");
 	
-	buildPath("/success.html");
-	prepareGetResponse(request);
+	this->path = "www/html/success.html";
+	prepareGetResponse();
 }
 
 // HELPER FUNCTIONS
 
+// Returns 0 for success, error code for failure
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
 {
 	bool containsFiles = false;
 
 	for (multipartData data : dataVector)
 	{
-		if (data.boundary != "")
+		if (data.boundary != "") // Write nested multipart data
 		{
 			int ret = writeMultipartData(data.multipartDataVector, directory);
-			if (ret != 0)
+			if (ret == 0)
 				return ret;
+			containsFiles = true; // If no error, must have written a file
 			continue ;
 		}
 		else if (data.filename == "")
@@ -277,7 +260,7 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
 
-		if (!file.good())
+		if (!file.good()) // TODO Can one file fail and another succeed?
 			return (500);
 
 		file.write(data.data.data(), data.data.size()); // TODO check write success

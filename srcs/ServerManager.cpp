@@ -85,6 +85,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
         }
         catch (...)
         {
+			success = false;
             std::cerr << "really stupid" << "\n";
         }
     }
@@ -166,9 +167,11 @@ void ServerManager::runServers()
     while (1)
     {
         // waits for at least 1 event to occur
+        std::cout << "\n--- WAITING FOR EVENTS ---\n";
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
+            std::cout << "Event on fd " << events[i].data.fd << "\n";
             for (Server* server : servers)
             {
                 // if someone initiates a connection to the registered sockets
@@ -235,7 +238,8 @@ void ServerManager::registerServerSockets()
     {
         for (auto& socket : server->GetSocketFDs())
         {
-            std::cout << "socket added\n";
+			std::cout << "socket added\n";
+			temp_event.data.fd = socket.first;
             AddToEpoll(socket.first);
             setFdNonBlocking(socket.first);
         }
