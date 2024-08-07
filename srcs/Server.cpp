@@ -126,7 +126,7 @@ bool Server::respond(int fd)
     {
         std::cout << "\n--- Responding to client ---\n";
         HttpResponse response(it->request, it->route);
-        if (send(fd, response.getResponse().c_str(), response.getResponse().length(), 0) == -1)
+        if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
             throw ServerManager::ManagerRuntimeException("failed to send");
         disconnect(it);
         return (true);

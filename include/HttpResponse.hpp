@@ -27,6 +27,10 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 
+# ifndef FILE_READ_SIZE
+#  define FILE_READ_SIZE 1024
+# endif
+
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
 
 class HttpResponse
@@ -38,8 +42,8 @@ class HttpResponse
 		std::string getPath(void) { return this->path; }
 		std::string getContentType(void) { return this->contentType; };
 		int getResponseCode(void) { return this->responseCode; }
-		std::string getContent(void) { return this->content; }
-		std::string getResponse(void) { return this->response; }
+		std::vector<char> getContent(void) { return this->content; }
+		std::vector<char> getResponse(void) { return this->response; }
 
 		class ResponseException : public std::exception
 		{
@@ -56,8 +60,8 @@ class HttpResponse
 		HttpRequest& request;
 		std::string contentType;
 		int responseCode = 500;
-		std::string content;
-		std::string response;
+		std::vector<char> content;
+		std::vector<char> response;
 		bool directoryListingAllowed = true; // TODO get this from config file
 		std::map<int, std::string> defaultErrorMessages = {
 			{ 400, "Bad Request" },

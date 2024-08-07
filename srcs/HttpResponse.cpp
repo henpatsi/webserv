@@ -22,6 +22,8 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
 		
 		this->path = this->route.root + request.getResourcePath();
+		if (this->path.find(".") == std::string::npos && this->path.back() != '/')
+			this->path += "/"; // Add to end of dir if not yet
 		std::cout << "Path: " << this->path << "\n";
 
 		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
@@ -57,8 +59,12 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 // Create error page with default message if none provided or other error
 void HttpResponse::buildDefaultErrorContent(int code)
 {
-	this->content = "<html><body><h1>" + std::to_string(code) + " ";
-	this->content += this->defaultErrorMessages[code] + "</h1></body></html>";
+	std::string contentString;
+
+	contentString = "<html><body><h1>" + std::to_string(code) + " ";
+	contentString += this->defaultErrorMessages[code] + "</h1></body></html>";
+
+	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
 }
 
 void HttpResponse::setError(int code)
@@ -68,23 +74,27 @@ void HttpResponse::setError(int code)
 
 	if (this->customErrorPages[code] != "")
 	{
-		std::ifstream file(this->route.root + this->customErrorPages[code]);
+		std::ifstream file;
+		char contentBuffer[FILE_READ_SIZE] = {0};
+
+		// Try open file
+		file.open(this->route.root + this->customErrorPages[code]);
 		if (!file.good())
 		{
 			buildDefaultErrorContent(code);
 			return ;
 		}
 
+		// Read file content into content
 		while (file.good())
 		{
-			std::string line;
-			std::getline(file, line);
+			file.read(contentBuffer, FILE_READ_SIZE);
 			if ((file.rdstate() & std::ios_base::badbit) != 0)
 			{
 				buildDefaultErrorContent(code);
 				return ;
 			}
-			this->content += line + "\n";
+			this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
 		}
 	}
 	else
@@ -99,25 +109,29 @@ void HttpResponse::setErrorAndThrow(int code, std::string message)
 
 void HttpResponse::buildResponse()
 {
+	std::string responseString;
+
 	time_t timestamp = time(nullptr);
 	struct tm *timedata = std::gmtime(&timestamp);
 	char buffer[100] = {0};
 	if (std::strftime(buffer, 99, "%a, %d %b %Y %T GMT", timedata) == 0)
 		setError(500);
 
-	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
-	this->response += "Date: " + std::string(buffer) + "\r\n";
-	this->response += "Content-Type: " + this->contentType + "\r\n";
-	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
-	this->response += "\r\n";
+	responseString = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	responseString += "Date: " + std::string(buffer) + "\r\n";
+	responseString += "Content-Type: " + this->contentType + "\r\n";
+	responseString += "Content-Length: " + std::to_string(this->content.size()) + "\r\n";
+	responseString += "\r\n";
 
+	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 	if (this->request.getMethod() != "HEAD")
-		this->response += this->content;
+		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
 }
 
 void HttpResponse::buildDirectoryList(void)
 {
 	std::vector<std::string> files;
+	std::string contentString;
 
 	try
 	{
@@ -135,16 +149,18 @@ void HttpResponse::buildDirectoryList(void)
 
 	this->contentType = "text/html";
 
-	this->content = "<html><body>";
-	this->content += "<h1>Directory listing for " + this->path + "</h1>";
-	this->content += "<ul>";
+	contentString = "<html><body>";
+	contentString += "<h1>Directory listing for " + this->path + "</h1>";
+	contentString += "<ul>";
 	for (std::string file : files)
 	{
 		std::string noRootPath = this->path.substr(this->route.root.length());
-		this->content += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
+		contentString += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
 	}
-	this->content += "</ul>";
-	this->content += "</body></html>";
+	contentString += "</ul>";
+	contentString += "</body></html>";
+
+	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
 
 	this->responseCode = 200;
 }
@@ -175,6 +191,7 @@ void HttpResponse::prepareGetResponse(void)
 		this->contentType = "application/pdf";
 
 	std::ifstream file;
+	char contentBuffer[FILE_READ_SIZE] = {0};
 
 	// Try open file
 	file.open(this->path);
@@ -184,11 +201,10 @@ void HttpResponse::prepareGetResponse(void)
 	// Read file content into content
 	while (file.good())
 	{
-		std::string line;
-		std::getline(file, line);
+		file.read(contentBuffer, FILE_READ_SIZE);
 		if ((file.rdstate() & std::ios_base::badbit) != 0)
 			setErrorAndThrow(500, "Failed to read file in GET");
-		this->content += line + "\n";
+		this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
 	}
 
 	this->responseCode = 200;
@@ -196,16 +212,13 @@ void HttpResponse::prepareGetResponse(void)
 
 void HttpResponse::preparePostResponse(void)
 {
-	// Example of POST where not allowed
-	// TODO handle properly based on config
-	if (this->path == "/")
-		setErrorAndThrow(405, "POST not allowed for request path");
-
+	if (this->route.uploadDir.back() != '/')
+		this->route.uploadDir += "/";
 	if (this->path == this->route.uploadDir)
 	{
 		if (access(this->path.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir + "/");
+		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
