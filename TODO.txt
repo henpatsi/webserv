@@ -1,8 +1,5 @@
 TODO
 
-HttpRequest read only 1 time per loop
-HttpResponse content use char vector instead of string
-
 Default values for a route?
 
 URI remove pre part

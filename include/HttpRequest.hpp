@@ -24,24 +24,20 @@
 
 #include <unistd.h>
 
-# ifndef CONTENT_READ_BUFFER_SIZE
-#  define CONTENT_READ_BUFFER_SIZE 1024
+# ifndef READ_BUFFER_SIZE
+#  define READ_BUFFER_SIZE 1024
 # endif
 
 # ifndef MAX_URI_LENGTH
 #  define MAX_URI_LENGTH 8192
 # endif
 
+# ifndef MAX_REQUEST_LINE_LENGTH
+#  define MAX_REQUEST_LINE_LENGTH 16384 // TODO make this a more reasonable length
+# endif
+
 # ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
-# endif
-
-# ifndef READ_ERROR_RETRY_MS
-#  define READ_ERROR_RETRY_MS 1
-# endif
-
-# ifndef HEADER_READ_TIMEOUT_MILLISECONDS
-#  define HEADER_READ_TIMEOUT_MILLISECONDS 100
 # endif
 
 # ifndef SPACECHARS
@@ -73,7 +69,7 @@ class HttpRequest
 {
 	public:
 		HttpRequest(void);
-		HttpRequest(int socketFD);
+		HttpRequest(int connectionFD);
 
 		// Getters
 		std::string							getMethod(void) { return this->method; }
@@ -85,14 +81,19 @@ class HttpRequest
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
-		std::vector<char>					getRawContent(void) { return this->rawContent; }
+		std::vector<char>					getRawContent(void)
+											{	
+												std::vector<char> rawContent = {this->rawRequest.begin() + this->requestLineLength + this->headerLength, this->rawRequest.end()};
+												return rawContent;
+											}
+
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; }
 		std::string	getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
 
 		// Reading content
-		void								tryReadContent(int socketFD);
+		void								readRequest();
 		bool								isComplete(void) { return this->requestComplete; }
 
 		// FOR DEBUG
@@ -112,6 +113,8 @@ class HttpRequest
 		};
 	
 	private:
+		
+
 		std::string							method;
 		std::string							resourcePath;
 		std::string							httpVersion;
@@ -122,23 +125,33 @@ class HttpRequest
 		int									port = 0;
 		size_t								remainingContentLength = 0;
 		size_t								readContentLength = 0; // To check that chunked does not go over max size
-		std::vector<char>					rawContent = {};
+		// std::vector<char>					rawContent = {};
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
 		bool								requestComplete = false;
 		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS"};
 
-		void		debugPrint(void);
-		void		setErrorAndThrow(int code, std::string message);
-		bool		readLine(int socketFD, std::string& line, int timeoutMilliseconds = 0);
-		std::string	readRequestHeader(int socketFD);
-		bool		readContent(int socketFD);
-		bool		readChunkedContent(int socketFD);
-		void		readBody(int socketFD);
-		void		parseFirstLine(std::istringstream& sstream);
-		void		parseHeader(std::istringstream& sstream);
-		void		parseBody(void);
+
+		
+
+
+		int									requestFD;
+		std::vector<char>					rawRequest = {};
+
+		size_t								requestLineLength = 0;
+		size_t								headerLength = 0;
+		size_t								contentLength = 0;
+		unsigned int						totalRead;
+
+
+		void		readFD(void);
+		void	tryParseRequestLine(void);
+		void	tryParseHeader(void);
+		void	tryParseContent(void);
+
+		void	setErrorAndThrow(int code, std::string message);
+		void	debugPrint(void);
 };
 
 #endif

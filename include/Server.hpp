@@ -14,7 +14,6 @@ struct Connection
     int socketFD;
     Route route;
     HttpRequest request;
-    bool headerRead = false;
 };
 
 class Server {

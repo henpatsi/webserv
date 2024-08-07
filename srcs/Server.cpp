@@ -61,6 +61,7 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     // Create connection, get header from request
     Connection connection;
     connection.fd = incommingFD;
+    connection.request = HttpRequest(incommingFD);
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
@@ -97,43 +98,38 @@ bool Server::respond(int fd)
             break;
     }
 
-    if (!it->headerRead) // Only ran once for each connection
-    {
-        it->headerRead = true;
-
-        std::cout << "\n--- Reading header ---\n";
-        it->request = HttpRequest(it->fd);
-    
-        std::cout << "\n--- Finding route ---\n";
-        try
-        {
-            it->route = findCorrectRoute(it->request);
-        }
-        catch(const std::exception& e)
-        {
-            std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
-            it->request.setFailResponseCode(404);
-        }
-    }
-
     if (!it->request.isComplete())
     {
-        std::cout << "\n--- Trying to read content ---\n";
-        it->request.tryReadContent(it->fd); // Ran until response finished or timeout for each connection
+        std::cout << "\n--- Reading request ---\n";
+        it->request.readRequest();
     }
 
     if (it->request.isComplete())
     {
+        if (it->request.getFailResponseCode() == 0) // Only find route if no previous error occured
+        {
+            std::cout << "\n--- Finding route ---\n";
+            try
+            {
+                it->route = findCorrectRoute(it->request);
+            }
+            catch(const std::exception& e)
+            {
+                std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
+                it->request.setFailResponseCode(404);
+            }
+        }
+
         std::cout << "\n--- Responding to client ---\n";
         HttpResponse response(it->request, it->route);
         if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-            throw ServerManager::ManagerRuntimeException("failed to send");
+            throw ServerManager::ManagerRuntimeException("Failed to send response");
         disconnect(it);
         return (true);
     }
     else
     {
-        std::cout << "content left to read: " << it->request.getRemainingContentLength() << "\n";
+        std::cout << "Request not yet fully read";
         return (false);
     }
 }
