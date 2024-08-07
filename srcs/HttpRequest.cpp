@@ -119,8 +119,9 @@ void HttpRequest::tryParseRequestLine()
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
 	this->requestLineLength = requestLineString.length();
-	std::cout << "Request line = '" << requestLineString << "'\n";
-	std::cout << "Request line length = " << this->requestLineLength << "\n";
+
+	// std::cout << "Request line = '" << requestLineString << "'\n";
+	// std::cout << "Request line length = " << this->requestLineLength << "\n";
 }
 
 void HttpRequest::tryParseHeader()
@@ -202,8 +203,9 @@ void HttpRequest::tryParseHeader()
 		this->requestComplete = true;
 
 	this->headerLength = headerString.length();
-	std::cout << "Header line = '" << headerString << "'\n";
-	std::cout << "Header length = " << this->headerLength << "\n";
+
+	// std::cout << "Header line = '" << headerString << "'\n";
+	// std::cout << "Header length = " << this->headerLength << "\n";
 }
 
 void HttpRequest::tryParseContent()
@@ -213,7 +215,9 @@ void HttpRequest::tryParseContent()
 	if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content not fully read
 		return ;
 
-	this->requestComplete = true;
+	
+
+	
 
 	// // Extracts the data from the body content from known content types
 	// if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
@@ -229,6 +233,13 @@ void HttpRequest::tryParseContent()
 	// 	std::string rawContentString(this->rawContent.begin(), this->rawContent.end());
 	// 	extractURIParameters(this->urlEncodedData, rawContentString);
 	// }
+
+	// std::vector<char> rawContent = getRawContent();
+	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
+	// std::cout << "Raw content = '" << rawContentString << "'\n";
+	// std::cout << "Raw content length = " << rawContentString.length() << "\n";
+
+	this->requestComplete = true;
 }
 
 void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
@@ -251,7 +262,8 @@ void HttpRequest::debugPrint()
 	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 
-	// std::cout << "Raw content:\n  " << std::string(this->rawContent.begin(), this->rawContent.end()) << "\n";
+	std::vector<char> rawContent = getRawContent();
+	std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
 		std::cout << "Multipart data:";
@@ -281,71 +293,6 @@ void HttpRequest::debugPrint()
 
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
 }
-
-// bool HttpRequest::readChunkedContent(int socketFD)
-// {
-// 	std::string line;
-
-// 	if (this->remainingContentLength == 0) // Read chunk size on each pass through
-// 	{
-// 		if (!readLine(socketFD, line)) // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
-// 			return false;
-// 		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
-// 	}
-
-// 	while (this->remainingContentLength > 0)
-// 	{
-// 		readContentLength += this->remainingContentLength;
-// 		if (readContentLength > clientBodyLimit)
-// 			setErrorAndThrow(413, "Chunked request body larger than client body limit");
-// 		if (!readContent(socketFD))
-// 			return false;
-// 		if (!readLine(socketFD, line)) // Reads the empty line  // TODO might cause issues if not / partially read (but might be 400 if chunk not fully written when read?)
-// 			return false;
-// 		if (!readLine(socketFD, line)) // Read next chunk size if ready  // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
-// 			return false; 
-// 		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
-// 	}
-// 	std::cout << "Chunked content fully read\n";
-// 	return true;
-// }
-
-// void HttpRequest::readBody(int socketFD)
-// {
-// 	// Prioritize chunked content over content length
-// 	if (this->headers.find("transfer-encoding") != this->headers.end())
-// 	{
-// 		if (this->headers["transfer-encoding"] == "chunked") // Read chunked content
-// 			this->requestComplete = readChunkedContent(socketFD);
-// 		else
-// 			setErrorAndThrow(415, "Unsupported transfer encoding");
-// 		return ;
-// 	}
-
-// 	if (remainingContentLength == 0) // First pass setup of remaining content length
-// 	{
-// 		try
-// 		{
-// 			if (this->headers.find("content-length") != this->headers.end())
-// 				remainingContentLength = std::stoi(this->headers["content-length"]);
-// 		}
-// 		catch (std::exception& e)
-// 		{
-// 			setErrorAndThrow(400, "Invalid content length");
-// 		}
-// 	}
-
-// 	// Do not read content if it is above client body size limit
-// 	if (remainingContentLength > clientBodyLimit)
-// 		setErrorAndThrow(413, "Request body larger than client body limit");
-
-// 	if (remainingContentLength > 0) // Read content with content length
-// 		this->requestComplete = readContent(socketFD);
-// 	else if (this->headers.find("content-type") != this->headers.end())
-// 		setErrorAndThrow(411, "No content length specified");
-// 	else // Nothing to read specified
-// 		this->requestComplete = true;
-// }
 
 // HELPER FUNCTIONS
 

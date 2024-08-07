@@ -83,7 +83,7 @@ class HttpRequest
 		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(void)
 											{	
-												std::vector<char> rawContent = {this->rawRequest.begin() + this->requestLineLength + this->headerLength, this->rawRequest.end()};
+												std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
 												return rawContent;
 											}
 
