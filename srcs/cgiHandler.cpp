@@ -62,6 +62,7 @@ int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &
 	pid = fork();
 	if (pid == 0)
 	{
+		chdir(request.getResourcePath().substr(0, request.getResourcePath().find_last_of('/')).c_str());
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)
 			throw DupException();
 		if (close(toCGI[1]) == -1 || close(fromCGI[0] == -1)) 
