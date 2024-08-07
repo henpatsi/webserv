@@ -205,7 +205,7 @@ void HttpResponse::preparePostResponse(void)
 	{
 		if (access(this->path.c_str(), F_OK) == -1)
 			setErrorAndThrow(404, "Upload directory not found");
-		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
+		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir + "/");
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
@@ -259,6 +259,8 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
+
+		std::cout << "path = " << path << "\n";
 
 		if (!file.good()) // TODO Can one file fail and another succeed?
 			return (500);
