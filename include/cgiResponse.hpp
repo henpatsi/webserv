@@ -27,14 +27,15 @@ class	cgiResponse
 	char		_buffer[1024];
 	std::vector<unsigned char>	_message;
 	std::string	_messageString;
+	std::string	_headerStr;
 	void	parseBuffer();
 	void	setHeader(std::string line);
 	size_t	findBodyStart();
-	void	checkRequiredHeaders();
 	void	setBodyBegin(std::string &temp);
 	void	checkMessageLength();
 	void	setContent();
 	void	setFields();
+	void	checkHeaderStr();
 	void	setErrorAndThrow(int responseCode, std::string message);
 	public:
 	cgiResponse(void);
