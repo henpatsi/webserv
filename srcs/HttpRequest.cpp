@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/02 08:59:34 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/08 17:29:05 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -185,8 +185,13 @@ void HttpRequest::tryParseHeader()
 	else
 		this->port = 80;
 
-	// Extract content-length
-	if (this->headers.find("content-length") != this->headers.end())
+	// Extract content info
+	if (this->headers.find("transfer-encoding") != this->headers.end())
+	{
+		if (this->headers["transfer-encoding"] != "chunked")
+			setErrorAndThrow(501, "Specified encoding not implemented");
+	}
+	else if (this->headers.find("content-length") != this->headers.end())
 	{
 		try
 		{
@@ -210,29 +215,29 @@ void HttpRequest::tryParseHeader()
 
 void HttpRequest::tryParseContent()
 {
-	// TODO handle chunked content
-
-	if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content not fully read
+	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
+	{
+		std::vector<char> rawContent = getRawContent();
+		// TODO fix potential problem of a chunk containing 0\r\n\r\n, needs a loop to check for all chunks
+		std::vector<char>::iterator it = std::search(rawContent.begin(), rawContent.end(), "0\r\n\r\n");
+		if (it == rawContent.end()) // Chunked content not fully read
+			return ;
+		unchunkContent(rawContent);
+		it = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+		this->rawRequest.erase(it, this->rawRequest.end());
+		this->rawRequest.insert(this->rawRequest.end(), rawContent.begin(), rawContent.end());
+	}
+	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
 		return ;
-
-	
-
-	
-
-	// // Extracts the data from the body content from known content types
-	// if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
-	// {
-	// 	std::string boundary = this->getHeader("content-type");
-	// 	boundary = boundary.substr(boundary.find("boundary=") + 9);
-	// 	int extractRet = extractMultipartData(this->multipartDataVector, this->rawContent, boundary);
-	// 	if (extractRet != 0)
-	// 		setErrorAndThrow(extractRet, "Failed to extract multipart data");
-	// }
-	// else if (this->getHeader("content-type").find("application/x-www-form-urlencoded") != std::string::npos)
-	// {
-	// 	std::string rawContentString(this->rawContent.begin(), this->rawContent.end());
-	// 	extractURIParameters(this->urlEncodedData, rawContentString);
-	// }
+	else if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
+	{
+		std::string boundary = this->getHeader("content-type");
+		boundary = boundary.substr(boundary.find("boundary=") + 9);
+		std::vector<char> rawContent = getRawContent();
+		int extractRet = extractMultipartData(this->multipartDataVector, rawContent, boundary);
+		if (extractRet != 0)
+			setErrorAndThrow(extractRet, "Failed to extract multipart data");
+	}
 
 	// std::vector<char> rawContent = getRawContent();
 	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
@@ -240,6 +245,53 @@ void HttpRequest::tryParseContent()
 	// std::cout << "Raw content length = " << rawContentString.length() << "\n";
 
 	this->requestComplete = true;
+}
+
+void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
+{
+	std::vector<char> unchunkedVector;
+	std::vector<char>::iterator start;
+	std::vector<char>::iterator end;
+	std::string eol = "\r\n";
+	size_t chunkSize;
+
+	start = chunkedVector.begin();
+
+	while (true)
+	{
+		end = std::search(start, chunkedVector.end(), eol.begin(), eol.end());
+		if (end == chunkedVector.end())
+			setErrorAndThrow(400, "Invalid chunk format");
+		if (end == chunkedVector.begin())
+			setErrorAndThrow(400, "Missing chunk size");
+
+		try
+		{
+			chunkSize = std::stoi(std::string(chunkedVector.begin(), std::prev(end, 1)));
+		}
+		catch(const std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid chunk size");
+		}
+		
+		if (chunkSize == 0)
+			break ;
+		
+		start = std::next(end, 2);
+		end = std::next(start, chunkSize);
+		if (end == chunkedVector.end())
+			setErrorAndThrow(400, "Chunk size larger than remaining content");
+
+		unchunkedVector.insert(unchunkedVector.end(), start, end);
+
+		start = end;
+		end = std::next(start, 2);
+		if (std::search(start, end, eol.begin(), eol.end()) != start)
+			setErrorAndThrow(400, "Chunk missing EOL");
+		start = end;
+	}
+
+	chunkedVector = unchunkedVector;
 }
 
 void HttpRequest::setErrorAndThrow(int responseCode, std::string message)

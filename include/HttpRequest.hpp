@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/01 19:10:38 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/08 17:15:12 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,11 +145,12 @@ class HttpRequest
 		unsigned int						totalRead;
 
 
-		void		readFD(void);
+		void	readFD(void);
 		void	tryParseRequestLine(void);
 		void	tryParseHeader(void);
 		void	tryParseContent(void);
 
+		void 	unchunkContent(std::vector<char>& chunkedVector);
 		void	setErrorAndThrow(int code, std::string message);
 		void	debugPrint(void);
 };
