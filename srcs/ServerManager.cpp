@@ -166,8 +166,6 @@ void ServerManager::runServers()
 {
     while (1)
     {
-        // waits for at least 1 event to occur
-        std::cout << "\n--- WAITING FOR EVENTS ---\n";
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
@@ -206,6 +204,7 @@ void ServerManager::runServers()
                 }
             }
         }
+        checkTimeouts();
     }
 }
 
@@ -248,11 +247,21 @@ void ServerManager::registerServerSockets()
 
 void ServerManager::WaitForEvents()
 {
-    eventAmount = epoll_wait(polled, events, 50, -1);
+    eventAmount = epoll_wait(polled, events, 50, 1000); // Block for max 1 second to allow timeouts
     if (eventAmount == -1)
     {
         std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed to exception
         perror("");
+    }
+}
+
+void ServerManager::checkTimeouts()
+{
+    for (Server* server : servers)
+    {
+        std::vector<int> timedOutFDs = server->checkTimeouts();
+        for (int fd : timedOutFDs)
+            DelFromEpoll(fd);
     }
 }
 

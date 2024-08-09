@@ -6,7 +6,7 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/07/16 09:41:29 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/08/09 08:48:52 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -71,7 +71,7 @@ re: fclean all
 
 test:
 	make
-	./webserv confs/1.conf
+	./webserv confs/local.conf
 
 
 ########    MISC.    ########

@@ -8,6 +8,10 @@
 #include <list>
 #include <algorithm>
 
+#ifndef TIMEOUT_SEC
+# define TIMEOUT_SEC 5
+#endif
+
 struct Connection
 {
     int fd;
@@ -24,6 +28,8 @@ private:
     std::list<Connection> listeningFDS;
     // contains all info and routes about the server
     ServerConfig config;
+
+    std::time_t connectTime;
 
     // private function to construce answer for public method respond
     std::string GetAnswer();
@@ -42,6 +48,8 @@ public:
     void disconnect(std::list<Connection>::iterator connection);
     // gets called when server can respond 
     bool respond(int fd);
+    // checks if the connection is still alive
+    std::vector<int> checkTimeouts();
 
     class SocketOpenException : public std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }

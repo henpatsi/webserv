@@ -73,6 +73,7 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     }
 
     listeningFDS.push_back(connection);
+    connectTime = std::time(nullptr);
 }
 
 void Server::disconnect(std::list<Connection>::iterator connectionIT)
@@ -129,7 +130,26 @@ bool Server::respond(int fd)
     }
     else
     {
-        std::cout << "Request not yet fully read";
+        std::cout << "Request not yet fully read\n";
         return (false);
     }
+}
+
+std::vector<int> Server::checkTimeouts()
+{
+    std::vector<int> timedOutFDs;
+
+    std::time_t currentTime = std::time(nullptr);
+    for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    {
+        if (currentTime - connectTime > TIMEOUT_SEC)
+        {
+            std::cout << "Connection timed out on fd " << it->fd << "\n";
+            it->request.setFailResponseCode(408);
+            respond(it->fd);
+            it = listeningFDS.begin();
+        }
+    }
+
+    return timedOutFDs;
 }

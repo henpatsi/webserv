@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/08 17:29:05 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/09 08:39:28 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -219,7 +219,8 @@ void HttpRequest::tryParseContent()
 	{
 		std::vector<char> rawContent = getRawContent();
 		// TODO fix potential problem of a chunk containing 0\r\n\r\n, needs a loop to check for all chunks
-		std::vector<char>::iterator it = std::search(rawContent.begin(), rawContent.end(), "0\r\n\r\n");
+		std::string eoc = "0\r\n\r\n";
+		std::vector<char>::iterator it = std::search(rawContent.begin(), rawContent.end(), eoc.begin(), eoc.end());
 		if (it == rawContent.end()) // Chunked content not fully read
 			return ;
 		unchunkContent(rawContent);
