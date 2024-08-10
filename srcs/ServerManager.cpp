@@ -10,6 +10,7 @@ static void setFdNonBlocking(int fd)
     if (flags == -1)
         throw std::system_error();
     flags |= O_NONBLOCK;
+    flags |= O_CLOEXEC;
     int res = fcntl(fd, F_SETFL, flags);
     if (res == -1)
         throw std::system_error();
