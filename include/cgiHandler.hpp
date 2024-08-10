@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include "ServerConfig.hpp"
+#include <fcntl.h>
 
 std::string	ntoa(sockaddr_in &address);
 
