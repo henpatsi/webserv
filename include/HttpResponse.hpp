@@ -55,8 +55,6 @@ class HttpResponse
 	private:
 		std::string path;
 		Route& route;
-		HttpRequest& request;
-		cgiResponse& cgiresponse;
 		std::string contentType;
 		int responseCode = 500;
 		std::string content;
@@ -83,11 +81,11 @@ class HttpResponse
 		void buildDefaultErrorContent(int code);
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
-		void buildResponse(void);
+		void buildResponse(HttpRequest &request);
 		void buildDirectoryList(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);
-		void preparePostResponse(void);
+		void preparePostResponse(HttpRequest &request);
 		void prepareDeleteResponse(void);
 };
 

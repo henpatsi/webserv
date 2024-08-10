@@ -14,26 +14,26 @@
 #include <filesystem>
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), request(request)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 {
 	try
 	{
-		if (this->request.getFailResponseCode() != 0)
-			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
+		if (request.getFailResponseCode() != 0)
+			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
 		
 		this->path = this->route.root + request.getResourcePath();
 		std::cout << "Path: " << this->path << "\n";
 
-		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(request.getMethod())))
 			setErrorAndThrow(405, "Method not allowed");
 
-		if (this->request.getMethod() == "HEAD")
+		if (request.getMethod() == "HEAD")
 			prepareHeadResponse();
-		else if (this->request.getMethod() == "GET")
+		else if (request.getMethod() == "GET")
 			prepareGetResponse();
-		else if (this->request.getMethod() == "POST")
-			preparePostResponse();
-		else if (this->request.getMethod() == "DELETE")
+		else if (request.getMethod() == "POST")
+			preparePostResponse(request);
+		else if (request.getMethod() == "DELETE")
 			prepareDeleteResponse();
 		else
 			setErrorAndThrow(501, "Request method not implemented");
@@ -47,7 +47,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 		setError(500);
 	}
 
-	buildResponse();
+	buildResponse(request);
 
 	std::cout << "Response code: " << this->responseCode << "\n";
 }
@@ -98,7 +98,7 @@ void HttpResponse::setErrorAndThrow(int code, std::string message)
 	throw ResponseException(message);
 }
 
-void HttpResponse::buildResponse()
+void HttpResponse::buildResponse(HttpRequest &request)
 {
 	time_t timestamp = time(nullptr);
 	struct tm *timedata = std::gmtime(&timestamp);
@@ -112,7 +112,7 @@ void HttpResponse::buildResponse()
 	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
 	this->response += "\r\n";
 
-	if (this->request.getMethod() != "HEAD")
+	if (request.getMethod() != "HEAD")
 		this->response += this->content;
 }
 
@@ -195,7 +195,7 @@ void HttpResponse::prepareGetResponse(void)
 	this->responseCode = 200;
 }
 
-void HttpResponse::preparePostResponse(void)
+void HttpResponse::preparePostResponse(HttpRequest &request)
 {
 	// Example of POST where not allowed
 	// TODO handle properly based on config
