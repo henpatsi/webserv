@@ -36,7 +36,7 @@ void	cgiResponse::setContent()
 	{
 		_content.reserve(_contentLength);
 		for (size_t i = 0; i < _contentLength && i + _bodyBegin < _message.size(); i++)
-		_content[i] = _message[i + _bodyBegin];
+		_content.push_back(_message[i + _bodyBegin]);
 	}
 	else if (_contentLengthSet == 0 && _bodyBegin != 0)
 	{
@@ -74,6 +74,8 @@ void	cgiResponse::setFields()
 	if (_headers.find("content-length:") != _headers.end())
 	{
 		_contentLength = std::atoi(_headers.find("content-length:")->second.c_str());
+		if (_contentLength > MAX_CONTENT_LENGTH)
+			setErrorAndThrow(500, "Content-length too large");
 		_contentLengthSet = 1;
 	}
 	if (_headers.find("status:") != _headers.end())

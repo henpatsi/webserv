@@ -9,6 +9,9 @@
 # ifndef SPACECHARS
 #  define SPACECHARS " \f\n\r\t\v"
 # endif
+#ifndef MAX_CONTENT_LENGTH
+# define MAX_CONTENT_LENGTH 300000
+#endif
 
 class	cgiResponse
 {
