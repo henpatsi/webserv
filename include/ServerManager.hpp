@@ -43,6 +43,8 @@ class ServerManager
 
         // sets eventAmount and throws error on epoll_wait error
         void WaitForEvents();
+        // checks if any connection has timed out
+        void checkTimeouts();
     public:
         ServerManager(std::string path);
         ~ServerManager();
