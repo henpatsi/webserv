@@ -24,9 +24,9 @@ class	cgiResponse
 	std::map<std::string, std::string>	_headers = {};
 	bool		_contentLengthSet;
 	bool		_done;
-	std::vector<unsigned char>	_content;
+	std::vector<char>	_content;
 	char		_buffer[1024];
-	std::vector<unsigned char>	_message;
+	std::vector<char>	_message;
 	std::string	_messageString;
 	std::string	_headerStr;
 	void	parseBuffer();
@@ -44,7 +44,7 @@ class	cgiResponse
 	int	getFailResponseCode();
 	std::string	getMethod();
 	std::string	getHeaders();
-	std::string	getContent();
+	std::vector<char>	getContent();
 	class RequestException : public std::exception
 		{
 			public:

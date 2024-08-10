@@ -136,3 +136,30 @@ bool	cgiResponse::readCgiResponse(void)
 	}
 	return (0);
 }
+
+int	cgiResponse::getFailResponseCode()
+{
+	return (_failResponseCode);
+}
+
+std::string	cgiResponse::getMethod()
+{
+	return(_method);
+}
+
+std::string	cgiResponse::getHeaders()
+{
+	std::string	headerString;
+	for(const auto& header : _headers)
+	{
+		headerString += header.first;
+		headerString += header.second;
+		headerString += "\r\n";
+	}
+}
+	
+std::vector<char>	cgiResponse::getContent()
+{
+	return _content;
+}
+
