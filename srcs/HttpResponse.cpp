@@ -137,18 +137,18 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	time_t timestamp = time(nullptr);
 	struct tm *timedata = std::gmtime(&timestamp);
 	char buffer[100] = {0};
+	std::string responseString;
 	if (std::strftime(buffer, 99, "%a, %d %b %Y %T GMT", timedata) == 0)
 		setError(500);
 
-	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
-	this->response += "Date: " + std::string(buffer) + "\r\n";
-	this->response += "Content-Type: " + this->contentType + "\r\n";
-	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
-	this->response += response.getHeaders();
-	this->response += "\r\n";
+	responseString = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	responseString += "Date: " + std::string(buffer) + "\r\n";
+	responseString += response.getHeaders();
+	responseString += "\r\n";
 
-	if (request.getMethod() != "HEAD")
-		this->response += this->content;
+	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
+	if (response.getMethod() != "HEAD")
+		this->response.insert(this->response.end(), response.getContent().begin(), response.getContent().end());
 }
 
 void HttpResponse::buildResponse(HttpRequest &request)
