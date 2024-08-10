@@ -16,6 +16,7 @@ class	cgiResponse
 	std::string	_status;
 	std::string	_method;
 	std::string	_contentType;
+	int		_fd;
 	int		_reponseCode;
 	int		_failResponseCode;
 	size_t		_contentLength;
@@ -38,8 +39,12 @@ class	cgiResponse
 	void	checkHeaderStr();
 	void	setErrorAndThrow(int responseCode, std::string message);
 	public:
-	cgiResponse(void);
-	bool	readCgiResponse(int fd);
+	cgiResponse(int fd);
+	bool	readCgiResponse(void);
+	int	getFailResponseCode();
+	std::string	getMethod();
+	std::string	getHeaders();
+	std::string	getContent();
 	class RequestException : public std::exception
 		{
 			public:

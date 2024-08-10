@@ -82,6 +82,7 @@ class HttpResponse
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
 		void buildResponse(HttpRequest &request);
+		void buildResponse(cgiResponse& response);
 		void buildDirectoryList(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);

@@ -52,6 +52,30 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 	std::cout << "Response code: " << this->responseCode << "\n";
 }
 
+HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
+{
+	try
+	{
+		if (response.getFailResponseCode() != 0)
+			setErrorAndThrow(response.getFailResponseCode(), "Request failed");
+		
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(response.getMethod())))
+			setErrorAndThrow(405, "Method not allowed");
+
+	}
+	catch(ResponseException& e) // Known error, response ready to build
+	{
+		std::cerr << "ResponseException: " << e.what() << "\n";
+	}
+	catch(...) // Something that was not considered went wrong
+	{
+		setError(500);
+	}
+
+	buildResponse(response);
+
+	std::cout << "Response code: " << this->responseCode << "\n";
+}
 
 // MEMBER FUNCTIONS
 
@@ -96,6 +120,25 @@ void HttpResponse::setErrorAndThrow(int code, std::string message)
 {
 	setError(code);
 	throw ResponseException(message);
+}
+
+void HttpResponse::buildResponse(cgiResponse& response)
+{
+	time_t timestamp = time(nullptr);
+	struct tm *timedata = std::gmtime(&timestamp);
+	char buffer[100] = {0};
+	if (std::strftime(buffer, 99, "%a, %d %b %Y %T GMT", timedata) == 0)
+		setError(500);
+
+	this->response = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	this->response += "Date: " + std::string(buffer) + "\r\n";
+	this->response += "Content-Type: " + this->contentType + "\r\n";
+	this->response += "Content-Length: " + std::to_string(this->content.length()) + "\r\n";
+	this->response += response.getHeaders();
+	this->response += "\r\n";
+
+	if (request.getMethod() != "HEAD")
+		this->response += this->content;
 }
 
 void HttpResponse::buildResponse(HttpRequest &request)

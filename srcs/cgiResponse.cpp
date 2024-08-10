@@ -7,7 +7,7 @@ void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
 	throw RequestException(message);
 }
 
-cgiResponse::cgiResponse(void) {};
+cgiResponse::cgiResponse(int fd) : _fd(fd) {};
 
 void	cgiResponse::setBodyBegin(std::string &temp)
 {
@@ -115,11 +115,11 @@ void	cgiResponse::parseBuffer()
 	checkHeaderStr();
 }
 
-bool	cgiResponse::readCgiResponse(int fd)
+bool	cgiResponse::readCgiResponse(void)
 {
 	int	bytesRead;
 
-	bytesRead = read(fd, _buffer, 1024);
+	bytesRead = read(_fd, _buffer, 1024);
 	if (bytesRead == -1)
 		throw ReadException();
 	else if (bytesRead == 0)
