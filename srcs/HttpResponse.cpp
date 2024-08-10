@@ -52,6 +52,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 	std::cout << "Response code: " << this->responseCode << "\n";
 }
 
+
 // MEMBER FUNCTIONS
 
 // Create error page with default message if none provided or other error

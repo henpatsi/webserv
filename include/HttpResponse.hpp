@@ -15,6 +15,7 @@
 
 # include "HttpRequest.hpp"
 # include "ServerConfig.hpp"
+# include "cgiResponse.hpp"
 
 # include <string>
 # include <iostream>
@@ -34,6 +35,7 @@ class HttpResponse
 	public:
 		HttpResponse(void);
 		HttpResponse(HttpRequest& request, Route& route);
+		HttpResponse(cgiResponse& cgiresponse, Route& route);
 
 		std::string getPath(void) { return this->path; }
 		std::string getContentType(void) { return this->contentType; };
@@ -54,6 +56,7 @@ class HttpResponse
 		std::string path;
 		Route& route;
 		HttpRequest& request;
+		cgiResponse& cgiresponse;
 		std::string contentType;
 		int responseCode = 500;
 		std::string content;
