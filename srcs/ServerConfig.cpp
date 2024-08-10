@@ -80,6 +80,8 @@ ServerConfig::ServerConfig(std::stringstream& config)
         addr.sin_port = port;
         _addresses.push_back(addr);
     }
+    if (_addresses.empty())
+        throw MissingValueException("Address");
 }
 
 /* ---- Parser Functions ---- */
