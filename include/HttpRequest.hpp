@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/08 17:15:12 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 11:24:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ class HttpRequest
 		std::map<std::string, std::string>	urlEncodedData = {};
 		int									failResponseCode = 0;
 		bool								requestComplete = false;
-		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS"};
+		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
 
 
 		
@@ -142,7 +142,7 @@ class HttpRequest
 		size_t								requestLineLength = 0;
 		size_t								headerLength = 0;
 		size_t								contentLength = 0;
-		unsigned int						totalRead;
+		unsigned int						totalRead = 0;
 
 
 		void	readFD(void);

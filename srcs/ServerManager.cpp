@@ -166,6 +166,7 @@ void ServerManager::runServers()
 {
     while (1)
     {
+        std::cout << "waiting...\n";
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
@@ -231,7 +232,7 @@ void ServerManager::DelFromEpoll(int fd)
 void ServerManager::registerServerSockets()
 {
     // incomming connections
-    temp_event.events = EPOLLIN;
+    temp_event.events = EPOLLIN | EPOLLET;
     for (Server* server : servers)
     {
         for (auto& socket : server->GetSocketFDs())
@@ -270,7 +271,7 @@ int ServerManager::acceptConnection(epoll_event event)
     if (incommingFd == -1)
         std::cerr << "ServerManager: AcceptException\n"; // should be exception
     setFdNonBlocking(incommingFd);
-    temp_event.events = EPOLLIN | EPOLLET;
+    temp_event.events = EPOLLIN;
     temp_event.data.fd = incommingFd;
     return incommingFd;
 }

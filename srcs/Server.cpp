@@ -96,7 +96,6 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
 
 bool Server::respond(int fd)
 {
-    std::cout << "Responding\n";
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
