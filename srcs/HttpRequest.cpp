@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 13:18:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 14:07:47 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -326,8 +326,8 @@ void HttpRequest::debugPrint()
 	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 
-	std::vector<char> rawContent = getRawContent();
-	std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	// std::vector<char> rawContent = getRawContent();
+	// std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
 		std::cout << "Multipart data:";

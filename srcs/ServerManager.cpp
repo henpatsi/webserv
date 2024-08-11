@@ -271,7 +271,7 @@ int ServerManager::acceptConnection(epoll_event event)
     if (incommingFd == -1)
         std::cerr << "ServerManager: AcceptException\n"; // should be exception
     setFdNonBlocking(incommingFd);
-    temp_event.events = EPOLLIN;
+    temp_event.events = EPOLLIN | EPOLLOUT;
     temp_event.data.fd = incommingFd;
     return incommingFd;
 }
