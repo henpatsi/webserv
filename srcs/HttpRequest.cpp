@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 16:01:30 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 16:36:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,7 +112,7 @@ void HttpRequest::tryParseRequestLine()
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	queryString = URI.find('?') + 1;
+	this->queryString = URI.find('?') + 1;
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
@@ -185,8 +185,6 @@ void HttpRequest::tryParseHeader()
 			setErrorAndThrow(400, "Invalid port number");
 		}
 	}
-	else
-		this->port = 80;
 
 	// Extract content info
 	if (this->headers.find("transfer-encoding") != this->headers.end())
@@ -358,6 +356,12 @@ void HttpRequest::debugPrint()
 	}
 
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
+}
+
+std::vector<char>	HttpRequest::getRawContent(void)
+{
+	std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
+	return rawContent;
 }
 
 // HELPER FUNCTIONS
