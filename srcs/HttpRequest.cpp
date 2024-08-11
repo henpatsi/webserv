@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 10:52:25 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 13:18:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -279,7 +279,7 @@ void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 
 		try
 		{
-			chunkSize = std::stoi(std::string(chunkedVector.begin(), std::prev(end, 1)));
+			chunkSize = std::stoi(std::string(start, end), 0, 16);
 		}
 		catch(const std::exception& e)
 		{
