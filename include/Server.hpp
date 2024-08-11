@@ -16,6 +16,7 @@ struct Connection
 {
     int fd;
     int socketFD;
+    std::time_t connectTime;
     Route route;
     HttpRequest request;
 };
@@ -28,8 +29,6 @@ private:
     std::list<Connection> listeningFDS;
     // contains all info and routes about the server
     ServerConfig config;
-
-    std::time_t connectTime;
 
     // private function to construce answer for public method respond
     std::string GetAnswer();

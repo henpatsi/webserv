@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/09 08:39:28 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 10:52:25 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ void HttpRequest::readFD()
 	if (bytesRead == 0)
 		setErrorAndThrow(400, "Nothing to read");
 
-	totalRead = bytesRead;
+	this->totalRead += bytesRead;
 	this->rawRequest.insert(this->rawRequest.end(), contentBuffer, contentBuffer + bytesRead);
 }
 
@@ -120,6 +120,7 @@ void HttpRequest::tryParseRequestLine()
 
 	this->requestLineLength = requestLineString.length();
 
+	std::cout << "- Request line parsed -\n";
 	// std::cout << "Request line = '" << requestLineString << "'\n";
 	// std::cout << "Request line length = " << this->requestLineLength << "\n";
 }
@@ -204,17 +205,26 @@ void HttpRequest::tryParseHeader()
 		if (this->contentLength > clientBodyLimit)
 			setErrorAndThrow(413, "Request body larger than client body limit");
 	}
+	else if (this->headers.find("content-type") != this->headers.end())
+	{
+		setErrorAndThrow(411, "Content length required");
+	}
 	else
 		this->requestComplete = true;
 
 	this->headerLength = headerString.length();
 
+	std::cout << "- Header parsed -\n";
 	// std::cout << "Header line = '" << headerString << "'\n";
 	// std::cout << "Header length = " << this->headerLength << "\n";
 }
 
 void HttpRequest::tryParseContent()
 {
+	std::cout << "Content length = " << this->contentLength << "\n";
+	std::cout << "Total read = " << this->totalRead << "\n";
+	std::cout << "Content read = " << this->totalRead - this->requestLineLength - this->headerLength << "\n";
+
 	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
@@ -240,6 +250,7 @@ void HttpRequest::tryParseContent()
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
 
+	std::cout << "- Content parsed -\n";
 	// std::vector<char> rawContent = getRawContent();
 	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
 	// std::cout << "Raw content = '" << rawContentString << "'\n";

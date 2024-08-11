@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:58:22 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/09 14:30:30 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,29 +72,31 @@ void HttpResponse::setError(int code)
 	this->responseCode = code;
 	this->contentType = "text/html";
 
-	if (this->customErrorPages[code] != "")
+	if (this->customErrorPages.find(code) != this->customErrorPages.end())
 	{
-		std::ifstream file;
-		char contentBuffer[FILE_READ_SIZE] = {0};
-
-		// Try open file
-		file.open(this->route.root + this->customErrorPages[code]);
+		// Open file as binary file
+		std::ifstream file(this->route.root + this->customErrorPages[code], std::ifstream::binary);
 		if (!file.good())
 		{
 			buildDefaultErrorContent(code);
 			return ;
 		}
-
-		// Read file content into content
-		while (file.good())
+		try
 		{
-			file.read(contentBuffer, FILE_READ_SIZE);
-			if ((file.rdstate() & std::ios_base::badbit) != 0)
-			{
-				buildDefaultErrorContent(code);
-				return ;
-			}
-			this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
+			file.unsetf(std::ios::skipws); // Prevents skipping spaces
+			// Get size of file
+			file.seekg(0, std::ios::end);
+			std::streampos fileSize = file.tellg();
+			file.seekg(0, std::ios::beg);
+			// Set content size to filesize
+			this->content.reserve(fileSize);
+			// Read file content into content
+			this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+		}
+		catch(const std::exception& e)
+		{
+			buildDefaultErrorContent(code);
+			return ;
 		}
 	}
 	else
@@ -168,9 +170,6 @@ void HttpResponse::buildDirectoryList(void)
 void HttpResponse::prepareHeadResponse(void)
 {
 	prepareGetResponse();
-
-	// if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
-	// 	setErrorAndThrow(405, "HEAD not allowed for request path");
 }
 
 void HttpResponse::prepareGetResponse(void)
@@ -190,22 +189,19 @@ void HttpResponse::prepareGetResponse(void)
 	else if (this->path.find(".pdf") != std::string::npos)
 		this->contentType = "application/pdf";
 
-	std::ifstream file;
-	char contentBuffer[FILE_READ_SIZE] = {0};
-
-	// Try open file
-	file.open(this->path);
+	// Open file as binary file
+	std::ifstream file(this->path, std::ifstream::binary);
 	if (!file.good())
 		setErrorAndThrow(404, "Failed to open file in GET");
-
+	file.unsetf(std::ios::skipws); // Prevents skipping spaces
+	// Get size of file
+	file.seekg(0, std::ios::end);
+	std::streampos fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+	// Set content size to filesize
+	this->content.reserve(fileSize);
 	// Read file content into content
-	while (file.good())
-	{
-		file.read(contentBuffer, FILE_READ_SIZE);
-		if ((file.rdstate() & std::ios_base::badbit) != 0)
-			setErrorAndThrow(500, "Failed to read file in GET");
-		this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
-	}
+	this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
 
 	this->responseCode = 200;
 }

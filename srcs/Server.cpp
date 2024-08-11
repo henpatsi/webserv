@@ -61,6 +61,7 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     // Create connection, get header from request
     Connection connection;
     connection.fd = incommingFD;
+    connection.connectTime = std::time(nullptr);
     connection.request = HttpRequest(incommingFD);
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
@@ -73,11 +74,15 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     }
 
     listeningFDS.push_back(connection);
-    connectTime = std::time(nullptr);
+    
+
+    std::cout << "Connected " << connection.fd << " to server\n";
 }
 
 void Server::disconnect(std::list<Connection>::iterator connectionIT)
 {
+    std::cout << "Disconnecting " << connectionIT->fd << " from server\n";
+
     listeningFDS.erase(connectionIT);
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
@@ -142,9 +147,10 @@ std::vector<int> Server::checkTimeouts()
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        if (currentTime - connectTime > TIMEOUT_SEC)
+        if (currentTime - it->connectTime > TIMEOUT_SEC)
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
+            timedOutFDs.push_back(it->fd);
             it->request.setFailResponseCode(408);
             respond(it->fd);
             it = listeningFDS.begin();

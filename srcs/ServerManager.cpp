@@ -169,13 +169,12 @@ void ServerManager::runServers()
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
-            std::cout << "Event on fd " << events[i].data.fd << "\n";
+            std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
             for (Server* server : servers)
             {
                 // if someone initiates a connection to the registered sockets
                 if (server->IsServerSocketFD(events[i].data.fd))
                 {
-                    std::cout << "connect\n"; 
                     try
                     {
                         int incommingFD = acceptConnection(events[i]);
@@ -213,7 +212,7 @@ void ServerManager::AddToEpoll(int fd)
     if (epoll_ctl(polled, EPOLL_CTL_ADD, fd, &temp_event) < 0)
         std::cout << "Error while polling fds\n";
     else
-        std::cout << "inserted fd\n";
+        std::cout << "Added fd " << fd << " to epoll\n";
     // keeps the tracked fds for epoll_wait
     trackedFds++;
 }
@@ -223,7 +222,7 @@ void ServerManager::DelFromEpoll(int fd)
     if (epoll_ctl(polled, EPOLL_CTL_DEL, fd, &temp_event) < 0)
         std::cout << "Error while removing fd\n";
     else
-        std::cout << "removed fd\n";
+        std::cout << "Removed fd " << fd << " from epoll\n";
     // keeps the tracked fds for epoll_wait
     trackedFds--;
     close(fd);
@@ -232,12 +231,12 @@ void ServerManager::DelFromEpoll(int fd)
 void ServerManager::registerServerSockets()
 {
     // incomming connections
-    temp_event.events = EPOLLIN | EPOLLET;
+    temp_event.events = EPOLLIN;
     for (Server* server : servers)
     {
         for (auto& socket : server->GetSocketFDs())
         {
-			std::cout << "socket added\n";
+			std::cout << "Adding server socket\n";
 			temp_event.data.fd = socket.first;
             AddToEpoll(socket.first);
             setFdNonBlocking(socket.first);
