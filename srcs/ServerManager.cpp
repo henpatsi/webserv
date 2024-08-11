@@ -192,14 +192,29 @@ void ServerManager::runServers()
                 // if we can send them data and resolve the request
                 else if (server->IsListeningFD(events[i].data.fd))
                 {
-                    try
+                    if (events[i].events & EPOLLIN)
                     {
-                        if (server->respond(events[i].data.fd))
-                            DelFromEpoll(events[i].data.fd);
+                        try
+                        {
+                            server->getRequest(events[i].data.fd);
+                        }
+                        catch (std::exception& e)
+                        {
+                            std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        }
                     }
-                    catch (std::exception& e)
+                    
+                    if (events[i].events & EPOLLOUT)
                     {
-                        std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        try
+                        {
+                            if (server->respond(events[i].data.fd))
+                                DelFromEpoll(events[i].data.fd);
+                        }
+                        catch (std::exception& e)
+                        {
+                            std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        }
                     }
                 }
             }

@@ -94,7 +94,7 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
     }
 }
 
-bool Server::respond(int fd)
+void Server::getRequest(int fd)
 {
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
@@ -107,6 +107,16 @@ bool Server::respond(int fd)
     {
         std::cout << "\n--- Reading request ---\n";
         it->request.readRequest();
+    }
+}
+
+bool Server::respond(int fd)
+{
+    std::list<Connection>::iterator it;
+    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    {
+        if (it->fd == fd)
+            break;
     }
 
     if (it->request.isComplete())
@@ -132,11 +142,8 @@ bool Server::respond(int fd)
         disconnect(it);
         return (true);
     }
-    else
-    {
-        std::cout << "Request not yet fully read\n";
-        return (false);
-    }
+
+    return (false);
 }
 
 std::vector<int> Server::checkTimeouts()

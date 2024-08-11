@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/09 14:30:30 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 14:45:57 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,22 +208,26 @@ void HttpResponse::prepareGetResponse(void)
 
 void HttpResponse::preparePostResponse(void)
 {
+	prepareGetResponse();
+
 	if (this->route.uploadDir.back() != '/')
 		this->route.uploadDir += "/";
-	if (this->path == this->route.uploadDir)
+
+	if (multipartDataContainsFile(this->request.getMultipartData())) // Check if there are any files
 	{
-		if (access(this->path.c_str(), F_OK) == -1)
-			setErrorAndThrow(404, "Upload directory not found");
+		if (this->route.acceptUpload == false)
+			setErrorAndThrow(403, "Uploading not allowed for request path");
+		if (this->route.uploadDir == "")
+			setErrorAndThrow(403, "Upload directory not set for request path");
+		if (access(this->route.uploadDir.c_str(), F_OK) == -1)
+			setErrorAndThrow(403, "Upload directory not accessible");
+
 		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		this->path = "www/html/success.html";
-		prepareGetResponse();
 		this->responseCode = 201;
 	}
-	else
-		prepareGetResponse();
 }
 
 void HttpResponse::prepareDeleteResponse(void)
@@ -249,22 +253,17 @@ void HttpResponse::prepareDeleteResponse(void)
 // Returns 0 for success, error code for failure
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
 {
-	bool containsFiles = false;
-
 	for (multipartData data : dataVector)
 	{
 		if (data.boundary != "") // Write nested multipart data
 		{
 			int ret = writeMultipartData(data.multipartDataVector, directory);
-			if (ret == 0)
+			if (ret != 0)
 				return ret;
-			containsFiles = true; // If no error, must have written a file
 			continue ;
 		}
 		else if (data.filename == "")
 			continue ;
-
-		containsFiles = true;
 
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
@@ -278,9 +277,25 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		file.close();
 	}
 
-	if (!containsFiles)
-		return (400);
 	return (0);
+}
+
+bool multipartDataContainsFile(std::vector<multipartData> dataVector)
+{
+	if (dataVector.empty())
+		return false;
+
+	for (multipartData data : dataVector)
+	{
+		if (data.filename != "")
+			return true;
+		if (data.boundary != "") // Check nested multipart data
+		{
+			if (multipartDataContainsFile(data.multipartDataVector))
+				return true;
+		}
+	}
+	return false;
 }
 
 // EXCEPTIONS
