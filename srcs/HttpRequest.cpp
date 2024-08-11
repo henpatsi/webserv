@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 14:07:47 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 16:01:30 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,6 +107,8 @@ void HttpRequest::tryParseRequestLine()
 		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
+
+	// TODO maybe not needed
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));

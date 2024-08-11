@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 14:45:57 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 15:50:52 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -210,7 +210,7 @@ void HttpResponse::preparePostResponse(void)
 {
 	prepareGetResponse();
 
-	if (this->route.uploadDir.back() != '/')
+	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
 
 	if (multipartDataContainsFile(this->request.getMultipartData())) // Check if there are any files
