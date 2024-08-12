@@ -9,7 +9,7 @@
 /*   Updated: 2024/08/11 14:34:47 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+#pragma once
 #ifndef HTTPRESPONSE_HPP
 # define HTTPRESPONSE_HPP
 

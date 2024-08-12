@@ -1,11 +1,12 @@
+#pragma once
 #ifndef CGIRESPONSE_HPP
 # define CGIRESPONSE_HPP
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <map>
 #include <sstream>
 #include <unistd.h>
-#include <HttpResponse.hpp>
 # ifndef SPACECHARS
 #  define SPACECHARS " \f\n\r\t\v"
 # endif
@@ -48,10 +49,10 @@ class	cgiResponse
 	std::string	getMethod();
 	std::string	getHeaders();
 	std::vector<char>	getContent();
-	class RequestException : public std::exception
+	class CgiRequestException : public std::exception
 		{
 			public:
-				RequestException(std::string message) : message(message) {};
+				CgiRequestException(std::string message) : message(message) {};
 				virtual const char* what() const throw();
 			private:
 				std::string message;

@@ -1,10 +1,15 @@
 #include "cgiResponse.hpp"
 
+const char* cgiResponse::CgiRequestException::what() const throw()
+{
+	return this->message.c_str();
+}
+
 void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
 {
 	_failResponseCode = responseCode;
 	_done = true;
-	throw RequestException(message);
+	throw CgiRequestException(message);
 }
 
 cgiResponse::cgiResponse(int fd) : _fd(fd) {};
@@ -158,6 +163,7 @@ std::string	cgiResponse::getHeaders()
 		headerString += header.second;
 		headerString += "\r\n";
 	}
+	return (headerString);
 }
 	
 std::vector<char>	cgiResponse::getContent()

@@ -257,7 +257,7 @@ void HttpResponse::preparePostResponse(HttpRequest &request)
 	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
 
-	if (multipartDataContainsFile(this->request.getMultipartData())) // Check if there are any files
+	if (multipartDataContainsFile(request.getMultipartData())) // Check if there are any files
 	{
 		if (this->route.acceptUpload == false)
 			setErrorAndThrow(403, "Uploading not allowed for request path");
