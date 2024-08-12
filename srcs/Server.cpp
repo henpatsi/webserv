@@ -61,6 +61,8 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     // Create connection, get header from request
     Connection connection;
     connection.fd = incommingFD;
+    connection.connectTime = std::time(nullptr);
+    connection.request = HttpRequest(incommingFD);
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
@@ -72,10 +74,15 @@ void Server::connect(int incommingFD, int socketFD) // Sets up the fd
     }
 
     listeningFDS.push_back(connection);
+    
+
+    std::cout << "Connected " << connection.fd << " to server\n";
 }
 
 void Server::disconnect(std::list<Connection>::iterator connectionIT)
 {
+    std::cout << "Disconnecting " << connectionIT->fd << " from server\n";
+
     listeningFDS.erase(connectionIT);
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
@@ -87,9 +94,8 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
     }
 }
 
-bool Server::respond(int fd)
+void Server::getRequest(int fd)
 {
-    std::cout << "Responding\n";
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
@@ -97,43 +103,65 @@ bool Server::respond(int fd)
             break;
     }
 
-    if (!it->headerRead) // Only ran once for each connection
-    {
-        it->headerRead = true;
-
-        std::cout << "\n--- Reading header ---\n";
-        it->request = HttpRequest(it->fd);
-    
-        std::cout << "\n--- Finding route ---\n";
-        try
-        {
-            it->route = findCorrectRoute(it->request);
-        }
-        catch(const std::exception& e)
-        {
-            std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
-            it->request.setFailResponseCode(404);
-        }
-    }
-
     if (!it->request.isComplete())
     {
-        std::cout << "\n--- Trying to read content ---\n";
-        it->request.tryReadContent(it->fd); // Ran until response finished or timeout for each connection
+        std::cout << "\n--- Reading request ---\n";
+        it->request.readRequest();
+    }
+}
+
+bool Server::respond(int fd)
+{
+    std::list<Connection>::iterator it;
+    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    {
+        if (it->fd == fd)
+            break;
     }
 
     if (it->request.isComplete())
     {
+        if (it->request.getFailResponseCode() == 0) // Only find route if no previous error occured
+        {
+            std::cout << "\n--- Finding route ---\n";
+            try
+            {
+                it->route = findCorrectRoute(it->request);
+            }
+            catch(const std::exception& e)
+            {
+                std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
+                it->request.setFailResponseCode(404);
+            }
+        }
+
         std::cout << "\n--- Responding to client ---\n";
         HttpResponse response(it->request, it->route);
-        if (send(fd, response.getResponse().c_str(), response.getResponse().length(), 0) == -1)
-            throw ServerManager::ManagerRuntimeException("failed to send");
+        if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
+            throw ServerManager::ManagerRuntimeException("Failed to send response");
         disconnect(it);
         return (true);
     }
-    else
+
+    return (false);
+}
+
+std::vector<int> Server::checkTimeouts()
+{
+    std::vector<int> timedOutFDs;
+
+    std::time_t currentTime = std::time(nullptr);
+    for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        std::cout << "content left to read: " << it->request.getRemainingContentLength() << "\n";
-        return (false);
+        if (currentTime - it->connectTime > TIMEOUT_SEC)
+        {
+            std::cout << "Connection timed out on fd " << it->fd << "\n";
+            timedOutFDs.push_back(it->fd);
+            it->request.setFailResponseCode(408);
+            respond(it->fd);
+            it = listeningFDS.begin();
+        }
     }
+
+    return timedOutFDs;
 }

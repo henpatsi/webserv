@@ -8,12 +8,4 @@ Check that URI pre part matches host header?
 Check request host (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
 Check duplicate headers
 
-Rework chunked read to allow partial reading or give error if chunk not fully given at once
-    currently problematic if only part of a chunk is read on one passthrough
-
 Check HttpRequest is HTTP/1.1 compliant
-
-Timeout in Server.cpp for reading content (e.g. if time since connecting over 2s, disconnect)
-
-See if timeout can be done better
-Check the chunked request no newlines thing

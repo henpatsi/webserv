@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/02 08:59:34 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 16:36:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,258 +16,73 @@
 
 HttpRequest::HttpRequest(){};
 
-HttpRequest::HttpRequest(int socketFD)
+HttpRequest::HttpRequest(int connectionFD)
 {
-	try
-	{
-		std::string requestHeader = readRequestHeader(socketFD);
-		std::istringstream sstream(requestHeader);
-
-		parseFirstLine(sstream);
-		parseHeader(sstream);
-	}
-	catch (RequestException& e)
-	{
-		std::cerr << "RequestException: " << e.what() << "\n";
-	}
-	catch(std::exception& e)
-	{
-		std::cerr << "RequestException: " << e.what() << "\n";
-		this->failResponseCode = 500;
-		this->requestComplete = true;
-	}
+	this->requestFD = connectionFD;
 }
 
-void HttpRequest::tryReadContent(int socketFD)
+void HttpRequest::readFD()
 {
-	try
-	{
-		readBody(socketFD);
+	char contentBuffer[READ_BUFFER_SIZE + 1] = {0};
+	int bytesRead = 0;
 
-		if (this->requestComplete)
-		{
-			parseBody();
-			debugPrint();
-		}
-	}
-	catch (RequestException& e)
-	{
-		std::cerr << "RequestException: " << e.what() << "\n";
-	}
-	catch(std::exception& e)
-	{
-		std::cerr << "RequestException: " << e.what() << "\n";
-		this->failResponseCode = 500;
-		this->requestComplete = true;
-	}
+	bytesRead = read(this->requestFD, contentBuffer, READ_BUFFER_SIZE);
+
+	if (bytesRead == -1)
+		setErrorAndThrow(500, "Read returned error");
+	if (bytesRead == 0)
+		setErrorAndThrow(400, "Nothing to read");
+
+	this->totalRead += bytesRead;
+	this->rawRequest.insert(this->rawRequest.end(), contentBuffer, contentBuffer + bytesRead);
 }
 
 // MEMBER FUNCTIONS
 
-void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
+void HttpRequest::readRequest()
 {
-	this->failResponseCode = responseCode;
-	this->requestComplete = true;
-	throw RequestException(message);
+	try
+	{
+		readFD();
+
+		if (this->requestLineLength == 0)
+			tryParseRequestLine();
+		if (this->requestLineLength > 0 && this->headerLength == 0)
+			tryParseHeader();
+		if (!this->requestComplete)
+			tryParseContent();
+		
+		if (this->requestComplete)
+			debugPrint();
+	}
+	catch (RequestException& e)
+	{
+		std::cerr << "RequestException: " << e.what() << "\n";
+	}
+	catch(std::exception& e)
+	{
+		std::cerr << "RequestException: " << e.what() << "\n";
+		this->failResponseCode = 500;
+		this->requestComplete = true;
+	}
 }
 
-void HttpRequest::debugPrint()
+void HttpRequest::tryParseRequestLine()
 {
-	/* DEBUG PRINT */
-	std::cout << "\nMethod: " << this->method << "\n";
-	std::cout << "Resource path: " << this->resourcePath << "\n";
-	std::cout << "HTTP version: " << this->httpVersion << "\n";
-	std::cout << "URI parameters:\n";
-	for (auto param : this->URIParameters)
-		std::cout << "  " << param.first << " = " << param.second << "\n";
-	std::cout << "Headers:\n";
-	for (auto param : this->headers)
-		std::cout << "  " << param.first << " = " << param.second << "\n";
-
-	// std::cout << "Raw content:\n  " << std::string(this->rawContent.begin(), this->rawContent.end()) << "\n";
-	if (this->multipartDataVector.size() > 0)
+	std::string eol = "\r\n";
+	std::vector<char>::iterator it = std::search(this->rawRequest.begin(), this->rawRequest.end(), eol.begin(), eol.end());
+	if (it == this->rawRequest.end()) // First line not yet read
 	{
-		std::cout << "Multipart data:";
-		for (multipartData data : this->multipartDataVector)
-		{
-			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
-			// std::string dataString(data.data.begin(), data.data.end());
-			// std::cout << "\n  Data: '" << dataString << "'\n";
-			// if (data.filename == "")
-			// {
-			// 	std::cout << "\n  Nested multipart data:";
-			// 	for (multipartData nestedData : data.multipartDataVector)
-			// 	{
-			// 		std::cout << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
-			// 		// std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
-			// 		// std::cout << "\n    Data: '" << nestedDataString << "'\n";
-			// 	}
-			// }
-		}
-	}
-	else if (this->urlEncodedData.size() > 0)
-	{
-		std::cout << "Url encoded data:\n";
-		for (auto param : this->urlEncodedData)
-			std::cout << "  " << param.first << " = " << param.second << "\n";
-	}
-
-	std::cout << "\nREQUEST INFO FINISHED\n\n";
-}
-
-bool HttpRequest::readLine(int socketFD, std::string& line, int timeoutMilliseconds)
-{
-	// Reads 1 byte at a time until it reaches end of line to not read too much
-	char readBuffer[2] = {0};
-	int bytesRead = 0;
-	int failedReads = 0;
-	int failReadMax = timeoutMilliseconds / READ_ERROR_RETRY_MS;
-	line = "";
-
-	while (1)
-	{
-		bytesRead = read(socketFD, readBuffer, 1);
-		if (bytesRead == -1) // Nothing to read
-		{
-			if (timeoutMilliseconds == 0) // If no timeout, fail immediately
-				return false;
-			failedReads += 1;
-			if (failedReads > failReadMax) // After timeoutMilliseconds, throw error
-				setErrorAndThrow(408, "Reading line timed out");
-			std::this_thread::sleep_for(std::chrono::milliseconds(READ_ERROR_RETRY_MS));
-			continue ;
-		}
-		failedReads = 0; // Reset timeout if read succeeds
-		if (bytesRead == 0)
-			setErrorAndThrow(400, "Reached end of file while reading line");
-		line += readBuffer[0];
-		if (readBuffer[0] == '\n')
-			break ;
-	}
-	return true;
-}
-
-std::string HttpRequest::readRequestHeader(int socketFD)
-{
-	bool firstLine = true;
-	std::string requestString;
-	size_t requestLineSize = 0;
-	
-	while (requestString.size() - requestLineSize < MAX_HEADER_SIZE)
-	{
-		std::string line;
-		readLine(socketFD, line, HEADER_READ_TIMEOUT_MILLISECONDS); // TODO check that any read line is not too long
-		if (line == "\r\n" && !firstLine) // Allow first line to be empty
-			break ;
-		if (requestLineSize == 0 && line != "\r\n") // First real line is the request line, exclude from MAX_HEADER_SIZE
-			requestLineSize = line.size();
-		requestString += line;
-		firstLine = false;
-	}
-
-	std::cout << "\nRequest Message:\n" << requestString << "\n";
-	return requestString;
-}
-
-bool HttpRequest::readContent(int socketFD)
-{
-	char contentBuffer[CONTENT_READ_BUFFER_SIZE + 1] = {0};
-	int contentReadSize;
-	int bytesRead = 0;
-
-	while (this->remainingContentLength > 0)
-	{
-		contentReadSize = this->remainingContentLength > CONTENT_READ_BUFFER_SIZE ? CONTENT_READ_BUFFER_SIZE : this->remainingContentLength;
-		bytesRead = read(socketFD, contentBuffer, contentReadSize);
-		if (bytesRead == -1)
-		{
-			// std::cout << "Failed to read content\n";
-			return false;
-		}
-		contentBuffer[bytesRead] = '\0';
-		this->rawContent.insert(this->rawContent.end(), contentBuffer, contentBuffer + bytesRead);
-		this->remainingContentLength -= bytesRead;
-	}
-	std::cout << "Content fully read\n";
-	return true;
-}
-
-bool HttpRequest::readChunkedContent(int socketFD)
-{
-	std::string line;
-
-	if (this->remainingContentLength == 0) // Read chunk size on each pass through
-	{
-		if (!readLine(socketFD, line)) // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
-			return false;
-		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
-	}
-
-	while (this->remainingContentLength > 0)
-	{
-		readContentLength += this->remainingContentLength;
-		if (readContentLength > clientBodyLimit)
-			setErrorAndThrow(413, "Chunked request body larger than client body limit");
-		if (!readContent(socketFD))
-			return false;
-		if (!readLine(socketFD, line)) // Reads the empty line  // TODO might cause issues if not / partially read (but might be 400 if chunk not fully written when read?)
-			return false;
-		if (!readLine(socketFD, line)) // Read next chunk size if ready  // TODO might cause issues if partially read (but might be 400 if chunk not fully written when read?)
-			return false; 
-		this->remainingContentLength = std::stoi(line.substr(0, line.find("\r")), 0, 16);
-	}
-	std::cout << "Chunked content fully read\n";
-	return true;
-}
-
-void HttpRequest::readBody(int socketFD)
-{
-	// Prioritize chunked content over content length
-	if (this->headers.find("transfer-encoding") != this->headers.end())
-	{
-		if (this->headers["transfer-encoding"] == "chunked") // Read chunked content
-			this->requestComplete = readChunkedContent(socketFD);
-		else
-			setErrorAndThrow(415, "Unsupported transfer encoding");
+		if (this->totalRead > MAX_REQUEST_LINE_LENGTH)
+			setErrorAndThrow(400, "Request line too long");
 		return ;
 	}
-
-	if (remainingContentLength == 0) // First pass setup of remaining content length
-	{
-		try
-		{
-			if (this->headers.find("content-length") != this->headers.end())
-				remainingContentLength = std::stoi(this->headers["content-length"]);
-		}
-		catch (std::exception& e)
-		{
-			setErrorAndThrow(400, "Invalid content length");
-		}
-	}
-
-	// Do not read content if it is above client body size limit
-	if (remainingContentLength > clientBodyLimit)
-		setErrorAndThrow(413, "Request body larger than client body limit");
-
-	if (remainingContentLength > 0) // Read content with content length
-		this->requestComplete = readContent(socketFD);
-	else if (this->headers.find("content-type") != this->headers.end())
-		setErrorAndThrow(411, "No content length specified");
-	else // Nothing to read specified
-		this->requestComplete = true;
-}
-
-void HttpRequest::parseFirstLine(std::istringstream& sstream)
-{
-	std::string line;
-
-	getline(sstream, line);
-	if (line.empty() || line == "\r")
+	if (it == this->rawRequest.begin())
 		setErrorAndThrow(400, "Request line is empty");
-	if (line.back() != '\r') // TODO remove these checks if we decide to accept just \n
-		setErrorAndThrow(400, "Request line should end in \\r\\n");
 
-	std::istringstream lineStream(line);
+	std::string requestLineString(this->rawRequest.begin(), std::next(it,2)); // Get line including \n
+
+	std::istringstream lineStream(requestLineString);
 	std::string URI;
 	lineStream >> this->method;
 	lineStream >> URI;
@@ -292,22 +107,39 @@ void HttpRequest::parseFirstLine(std::istringstream& sstream)
 		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
+
+	// TODO maybe not needed
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	queryString = URI.find('?') + 1;
+	this->queryString = URI.find('?') + 1;
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400, "HTTP version is empty");
 	if (this->httpVersion != "HTTP/1.1")
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
+
+	this->requestLineLength = requestLineString.length();
+
+	std::cout << "- Request line parsed -\n";
+	// std::cout << "Request line = '" << requestLineString << "'\n";
+	// std::cout << "Request line length = " << this->requestLineLength << "\n";
 }
 
-void HttpRequest::parseHeader(std::istringstream& sstream)
+void HttpRequest::tryParseHeader()
 {
+	std::string eoh = "\r\n\r\n";
+	std::vector<char>::iterator headerStart = this->rawRequest.begin() + requestLineLength;
+	std::vector<char>::iterator it = std::search(headerStart, this->rawRequest.end(), eoh.begin(), eoh.end());
+	if (it == this->rawRequest.end()) // Header not yet fully read
+		return ;
+
+	std::string headerString(headerStart, std::next(it,4)); // Get string including end of header \r\n
+	std::istringstream sstream(headerString);
 	std::string line;
-	// Reads the headers into a map
+
+	// Transfers the headers into a map
 	while (std::getline(sstream, line))
 	{
 		if (line == "\r")
@@ -353,29 +185,183 @@ void HttpRequest::parseHeader(std::istringstream& sstream)
 			setErrorAndThrow(400, "Invalid port number");
 		}
 	}
+
+	// Extract content info
+	if (this->headers.find("transfer-encoding") != this->headers.end())
+	{
+		if (this->headers["transfer-encoding"] != "chunked")
+			setErrorAndThrow(501, "Specified encoding not implemented");
+	}
+	else if (this->headers.find("content-length") != this->headers.end())
+	{
+		try
+		{
+			this->contentLength = std::stoi(this->headers["content-length"]);
+		}
+		catch (std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid content length");
+		}
+		if (this->contentLength > clientBodyLimit)
+			setErrorAndThrow(413, "Request body larger than client body limit");
+	}
+	else if (this->headers.find("content-type") != this->headers.end())
+	{
+		setErrorAndThrow(411, "Content length required");
+	}
 	else
-		this->port = 80;
+		this->requestComplete = true;
+
+	this->headerLength = headerString.length();
+
+	std::cout << "- Header parsed -\n";
+	// std::cout << "Header line = '" << headerString << "'\n";
+	// std::cout << "Header length = " << this->headerLength << "\n";
 }
 
-void HttpRequest::parseBody(void)
+void HttpRequest::tryParseContent()
 {
-	if (this->rawContent.empty())
-		return ;
+	std::cout << "Content length = " << this->contentLength << "\n";
+	std::cout << "Total read = " << this->totalRead << "\n";
+	std::cout << "Content read = " << this->totalRead - this->requestLineLength - this->headerLength << "\n";
 
-	// Extracts the data from the body content from known content types
-	if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
+	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
+	{
+		std::vector<char> rawContent = getRawContent();
+		// TODO fix potential problem of a chunk containing 0\r\n\r\n, needs a loop to check for all chunks
+		std::string eoc = "0\r\n\r\n";
+		std::vector<char>::iterator it = std::search(rawContent.begin(), rawContent.end(), eoc.begin(), eoc.end());
+		if (it == rawContent.end()) // Chunked content not fully read
+			return ;
+		unchunkContent(rawContent);
+		it = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+		this->rawRequest.erase(it, this->rawRequest.end());
+		this->rawRequest.insert(this->rawRequest.end(), rawContent.begin(), rawContent.end());
+	}
+	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
+		return ;
+	else if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
-		int extractRet = extractMultipartData(this->multipartDataVector, this->rawContent, boundary);
+		std::vector<char> rawContent = getRawContent();
+		int extractRet = extractMultipartData(this->multipartDataVector, rawContent, boundary);
 		if (extractRet != 0)
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
-	else if (this->getHeader("content-type").find("application/x-www-form-urlencoded") != std::string::npos)
+
+	std::cout << "- Content parsed -\n";
+	// std::vector<char> rawContent = getRawContent();
+	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
+	// std::cout << "Raw content = '" << rawContentString << "'\n";
+	// std::cout << "Raw content length = " << rawContentString.length() << "\n";
+
+	this->requestComplete = true;
+}
+
+void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
+{
+	std::vector<char> unchunkedVector;
+	std::vector<char>::iterator start;
+	std::vector<char>::iterator end;
+	std::string eol = "\r\n";
+	size_t chunkSize;
+
+	start = chunkedVector.begin();
+
+	while (true)
 	{
-		std::string rawContentString(this->rawContent.begin(), this->rawContent.end());
-		extractURIParameters(this->urlEncodedData, rawContentString);
+		end = std::search(start, chunkedVector.end(), eol.begin(), eol.end());
+		if (end == chunkedVector.end())
+			setErrorAndThrow(400, "Invalid chunk format");
+		if (end == chunkedVector.begin())
+			setErrorAndThrow(400, "Missing chunk size");
+
+		try
+		{
+			chunkSize = std::stoi(std::string(start, end), 0, 16);
+		}
+		catch(const std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid chunk size");
+		}
+		
+		if (chunkSize == 0)
+			break ;
+		
+		start = std::next(end, 2);
+		end = std::next(start, chunkSize);
+		if (end == chunkedVector.end())
+			setErrorAndThrow(400, "Chunk size larger than remaining content");
+
+		unchunkedVector.insert(unchunkedVector.end(), start, end);
+
+		start = end;
+		end = std::next(start, 2);
+		if (std::search(start, end, eol.begin(), eol.end()) != start)
+			setErrorAndThrow(400, "Chunk missing EOL");
+		start = end;
 	}
+
+	chunkedVector = unchunkedVector;
+}
+
+void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
+{
+	this->failResponseCode = responseCode;
+	this->requestComplete = true;
+	throw RequestException(message);
+}
+
+void HttpRequest::debugPrint()
+{
+	/* DEBUG PRINT */
+	std::cout << "\nMethod: " << this->method << "\n";
+	std::cout << "Resource path: " << this->resourcePath << "\n";
+	std::cout << "HTTP version: " << this->httpVersion << "\n";
+	std::cout << "URI parameters:\n";
+	for (auto param : this->URIParameters)
+		std::cout << "  " << param.first << " = " << param.second << "\n";
+	std::cout << "Headers:\n";
+	for (auto param : this->headers)
+		std::cout << "  " << param.first << " = " << param.second << "\n";
+
+	// std::vector<char> rawContent = getRawContent();
+	// std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	if (this->multipartDataVector.size() > 0)
+	{
+		std::cout << "Multipart data:";
+		for (multipartData data : this->multipartDataVector)
+		{
+			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
+			// std::string dataString(data.data.begin(), data.data.end());
+			// std::cout << "\n  Data: '" << dataString << "'\n";
+			// if (data.filename == "")
+			// {
+			// 	std::cout << "\n  Nested multipart data:";
+			// 	for (multipartData nestedData : data.multipartDataVector)
+			// 	{
+			// 		std::cout << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
+			// 		// std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
+			// 		// std::cout << "\n    Data: '" << nestedDataString << "'\n";
+			// 	}
+			// }
+		}
+	}
+	else if (this->urlEncodedData.size() > 0)
+	{
+		std::cout << "Url encoded data:\n";
+		for (auto param : this->urlEncodedData)
+			std::cout << "  " << param.first << " = " << param.second << "\n";
+	}
+
+	std::cout << "\nREQUEST INFO FINISHED\n\n";
+}
+
+std::vector<char>	HttpRequest::getRawContent(void)
+{
+	std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
+	return rawContent;
 }
 
 // HELPER FUNCTIONS

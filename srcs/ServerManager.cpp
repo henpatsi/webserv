@@ -166,18 +166,16 @@ void ServerManager::runServers()
 {
     while (1)
     {
-        // waits for at least 1 event to occur
-        std::cout << "\n--- WAITING FOR EVENTS ---\n";
+        std::cout << "waiting...\n";
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
-            std::cout << "Event on fd " << events[i].data.fd << "\n";
+            std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
             for (Server* server : servers)
             {
                 // if someone initiates a connection to the registered sockets
                 if (server->IsServerSocketFD(events[i].data.fd))
                 {
-                    std::cout << "connect\n"; 
                     try
                     {
                         int incommingFD = acceptConnection(events[i]);
@@ -194,18 +192,34 @@ void ServerManager::runServers()
                 // if we can send them data and resolve the request
                 else if (server->IsListeningFD(events[i].data.fd))
                 {
-                    try
+                    if (events[i].events & EPOLLIN)
                     {
-                        if (server->respond(events[i].data.fd))
-                            DelFromEpoll(events[i].data.fd);
+                        try
+                        {
+                            server->getRequest(events[i].data.fd);
+                        }
+                        catch (std::exception& e)
+                        {
+                            std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        }
                     }
-                    catch (std::exception& e)
+                    
+                    if (events[i].events & EPOLLOUT)
                     {
-                        std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        try
+                        {
+                            if (server->respond(events[i].data.fd))
+                                DelFromEpoll(events[i].data.fd);
+                        }
+                        catch (std::exception& e)
+                        {
+                            std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                        }
                     }
                 }
             }
         }
+        checkTimeouts();
     }
 }
 
@@ -214,7 +228,7 @@ void ServerManager::AddToEpoll(int fd)
     if (epoll_ctl(polled, EPOLL_CTL_ADD, fd, &temp_event) < 0)
         std::cout << "Error while polling fds\n";
     else
-        std::cout << "inserted fd\n";
+        std::cout << "Added fd " << fd << " to epoll\n";
     // keeps the tracked fds for epoll_wait
     trackedFds++;
 }
@@ -224,7 +238,7 @@ void ServerManager::DelFromEpoll(int fd)
     if (epoll_ctl(polled, EPOLL_CTL_DEL, fd, &temp_event) < 0)
         std::cout << "Error while removing fd\n";
     else
-        std::cout << "removed fd\n";
+        std::cout << "Removed fd " << fd << " from epoll\n";
     // keeps the tracked fds for epoll_wait
     trackedFds--;
     close(fd);
@@ -238,7 +252,7 @@ void ServerManager::registerServerSockets()
     {
         for (auto& socket : server->GetSocketFDs())
         {
-			std::cout << "socket added\n";
+			std::cout << "Adding server socket\n";
 			temp_event.data.fd = socket.first;
             AddToEpoll(socket.first);
             setFdNonBlocking(socket.first);
@@ -248,11 +262,21 @@ void ServerManager::registerServerSockets()
 
 void ServerManager::WaitForEvents()
 {
-    eventAmount = epoll_wait(polled, events, 50, -1);
+    eventAmount = epoll_wait(polled, events, 50, 1000); // Block for max 1 second to allow timeouts
     if (eventAmount == -1)
     {
         std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed to exception
         perror("");
+    }
+}
+
+void ServerManager::checkTimeouts()
+{
+    for (Server* server : servers)
+    {
+        std::vector<int> timedOutFDs = server->checkTimeouts();
+        for (int fd : timedOutFDs)
+            DelFromEpoll(fd);
     }
 }
 
@@ -262,7 +286,7 @@ int ServerManager::acceptConnection(epoll_event event)
     if (incommingFd == -1)
         std::cerr << "ServerManager: AcceptException\n"; // should be exception
     setFdNonBlocking(incommingFd);
-    temp_event.events = EPOLLIN | EPOLLET;
+    temp_event.events = EPOLLIN | EPOLLOUT;
     temp_event.data.fd = incommingFd;
     return incommingFd;
 }

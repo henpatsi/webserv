@@ -8,13 +8,17 @@
 #include <list>
 #include <algorithm>
 
+#ifndef TIMEOUT_SEC
+# define TIMEOUT_SEC 5
+#endif
+
 struct Connection
 {
     int fd;
     int socketFD;
+    std::time_t connectTime;
     Route route;
     HttpRequest request;
-    bool headerRead = false;
 };
 
 class Server {
@@ -39,10 +43,14 @@ public:
     std::list<std::pair<int, bool>> GetSocketFDs() { return serverSocketFDS; }; 
     // method called on incomming request 
     void connect(int incommingFD, int socketFD);
-    // TODO method called when request is done
+    // disconnects when response done or timeout
     void disconnect(std::list<Connection>::iterator connection);
-    // gets called when server can respond 
+    // gets called when server can read
+    void getRequest(int fd);
+    // gets called when request read and server can write
     bool respond(int fd);
+    // checks if the connection is still alive
+    std::vector<int> checkTimeouts();
 
     class SocketOpenException : public std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }
