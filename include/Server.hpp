@@ -48,7 +48,7 @@ public:
     bool    IsListeningFD(int fd)       { return std::any_of(listeningFDS.begin(), listeningFDS.end(), [&](Connection x){return x.fd == fd; });}
     std::list<std::pair<int, bool>> GetSocketFDs() { return serverSocketFDS; }; 
     // method called on incomming request 
-    void connect(int incommingFD, int socketFD);
+    void connect(int incommingFD, int socketFD, sockaddr_in client_address);
     // disconnects when response done or timeout
     void disconnect(std::list<Connection>::iterator connection);
     // gets called when server can read

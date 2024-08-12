@@ -56,13 +56,14 @@ Route Server::findCorrectRoute(HttpRequest request)
         throw RouteException();
 }
 
-void Server::connect(int incommingFD, int socketFD) // Sets up the fd
+void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up the fd
 {
     // Create connection, get header from request
     Connection connection;
     connection.fd = incommingFD;
     connection.connectTime = std::time(nullptr);
     connection.request = HttpRequest(incommingFD);
+    connection.addr = addr;
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {

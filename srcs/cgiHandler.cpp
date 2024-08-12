@@ -56,17 +56,23 @@ void	cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &co
 	//need client network address, server port and server name from somewhere??
 }
 
-std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address)
+std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address, Route &route)
 {
 	char* envs[11];
-	char* args[2];
+	char* args[3];
 	std::string cgi;
 	int	toCGI[2];
 	int	fromCGI[2];
 	int	pid;
 
-	args[0] = (char *)request.getResourcePath().c_str();
-	args[1] = 0;
+
+	
+	//check resource exists and is executable
+	//check by file extension it's in route
+	//set args[0] and cgi by file extension
+	args[0] = 
+	args[1] = (char *)request.getResourcePath().c_str();
+	args[2] = 0;
 	create_envs(envs, request, config, client_address);
 	if (pipe(toCGI) == -1 || pipe(fromCGI) == -1)
 		throw PipeException();

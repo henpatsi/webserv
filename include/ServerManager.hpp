@@ -19,6 +19,7 @@ struct  cgiInfo
     int pid;
     cgiResponse response;
     int listeningFd;
+    std::time_t cgiStarted;
 };
 
 class ServerManager
@@ -36,8 +37,8 @@ class ServerManager
         std::vector <cgiInfo> info;
 
         // connection fields
-        const int addressSize = sizeof(sockaddr_storage);
-        sockaddr_storage client_addr;
+        const int addressSize = sizeof(sockaddr_in);
+        sockaddr_in client_addr;
         /*
          * registers and removes filedescriptors to the event poll
          * modify ServerManager.temp_event to get the correct event type
@@ -54,6 +55,7 @@ class ServerManager
         void WaitForEvents();
         // checks if any connection has timed out
         void checkTimeouts();
+    void handleCgiResponse(std::vector<cgiInfo>::iterator it);
     public:
         ServerManager(std::string path);
         ~ServerManager();

@@ -46,6 +46,8 @@ class	cgiResponse
 	cgiResponse(int fd);
 	bool	readCgiResponse(void);
 	int	getFailResponseCode();
+	void	setFailResponseCode(int code) { _failResponseCode = code; };
+	bool	isDone(){ return _done;}
 	std::string	getMethod();
 	std::string	getHeaders();
 	std::vector<char>	getContent();

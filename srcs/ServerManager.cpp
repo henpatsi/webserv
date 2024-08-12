@@ -182,7 +182,7 @@ void ServerManager::runServers()
                         int incommingFD = acceptConnection(events[i]);
                         setFdNonBlocking(incommingFD);
                         AddToEpoll(incommingFD);
-                        server->connect(incommingFD, events[i].data.fd);
+                        server->connect(incommingFD, events[i].data.fd, client_addr);
                     }
                     catch (std::exception& e)
                     {
@@ -220,7 +220,8 @@ void ServerManager::runServers()
                             {
                                DelFromEpoll(events[i].data.fd);
                                AddToEpoll(response.second);
-                               info.push_back((cgiInfo){response.second, response.first, cgiResponse{response.second}, events[i].data.fd}); 
+                               info.push_back((cgiInfo){response.second, response.first, cgiResponse{response.second}, events[i].data.fd, std::time(nullptr)}); 
+                                
                             }
                         }
                         catch (std::exception& e)
@@ -235,13 +236,7 @@ void ServerManager::runServers()
             {
                 if (it->response.isDone())
                 {
-                    Route _;
-                    HttpResponse response(it->response, _);
-                    if (send(it->listeningFd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                            throw ManagerRuntimeException("Failed to send response");
-                    DelFromEpoll(events[i].data.fd);
-                    close(events[i].data.fd);
-                    close(it->listeningFd);
+                    handleCgiResponse(it);
                     info.erase(it);
                 }
                 else
@@ -249,8 +244,14 @@ void ServerManager::runServers()
             }
         }
 
-        }
+    }
+    try
+    {
         checkTimeouts();
+    }
+   catch(std::exception &e)
+    {
+        std::cerr << e.what() << std::endl;
     }
 }
 
@@ -300,13 +301,40 @@ void ServerManager::WaitForEvents()
     }
 }
 
+
+void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
+{
+    Route _;
+    HttpResponse response(it->response, _);
+    if (send(it->listeningFd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
+            throw ManagerRuntimeException("Failed to send response");
+     DelFromEpoll(it->fd);
+     close(it->fd);
+     close(it->listeningFd);
+}
+
 void ServerManager::checkTimeouts()
 {
     for (Server* server : servers)
     {
         std::vector<int> timedOutFDs = server->checkTimeouts();
         for (int fd : timedOutFDs)
+        {
             DelFromEpoll(fd);
+            close(fd);
+        }
+    }
+    std::time_t currentTime = std::time(nullptr);
+    for (auto it = info.begin(); it != info.end(); it++)
+    {
+        if (currentTime - it->cgiStarted > TIMEOUT_SEC)
+         {
+            std::cout << "Cgi timed out\n";
+            it->response.setFailResponseCode(500);
+            handleCgiResponse(it);
+            kill(it->pid, SIGKILL);
+            info.erase(it);
+        }
     }
 }
 

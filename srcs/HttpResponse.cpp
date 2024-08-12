@@ -59,7 +59,7 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 	try
 	{
 		if (response.getFailResponseCode() != 0)
-			setErrorAndThrow(response.getFailResponseCode(), "Request failed");
+			setErrorAndThrow(response.getFailResponseCode(), "Cgi failed to respond");
 		
 		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(response.getMethod())))
 			setErrorAndThrow(405, "Method not allowed");
