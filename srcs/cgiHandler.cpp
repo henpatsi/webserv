@@ -56,7 +56,7 @@ void	cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &co
 	//need client network address, server port and server name from somewhere??
 }
 
-int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address)
+std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address)
 {
 	char* envs[11];
 	char* args[2];
@@ -80,12 +80,14 @@ int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &
 		chdir(request.getResourcePath().substr(0, request.getResourcePath().find_last_of('/')).c_str());
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)
 			throw DupException();
-		if (close(toCGI[1]) == -1 || close(fromCGI[0] == -1)) 
+		if (close(toCGI[1]) == -1 || close(toCGI[0]) == -1 || close(fromCGI[0]) == -1 || close(fromCGI[1]) == -1) 
 			throw CloseException();
 		execve(cgi.c_str(), (char **)args, (char **)envs);
+		throw ExecveException();
 	}
 	write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
 	if (close(toCGI[1] == -1 || close(fromCGI[1] == -1) || close(toCGI[0]) == -1))
 		throw CloseException();
-	return (fromCGI[0]);
+	std::pair <int, int> pair{pid, fromCGI[0]};
+	return (pair);
 }

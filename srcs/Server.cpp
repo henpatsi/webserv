@@ -110,7 +110,7 @@ void Server::getRequest(int fd)
     }
 }
 
-int Server::respond(int fd)
+std::pair<int, int> Server::respond(int fd)
 {
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
@@ -142,13 +142,17 @@ int Server::respond(int fd)
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
             disconnect(it);
-            return (1);
+            return (std::pair<int, int> (-1, 1));
         }
         else
+        {
             return (cgiHandler.runCGI(it->request, config, it->addr));
-    }
+        }
 
-    return (false);
+    return (std::pair<int, int> (-1, -1));
+    }
+    return (std::pair<int, int> (-1, 0));
+
 }
 
 std::vector<int> Server::checkTimeouts()

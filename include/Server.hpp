@@ -54,7 +54,7 @@ public:
     // gets called when server can read
     void getRequest(int fd);
     // gets called when request read and server can write
-    int respond(int fd);
+    std::pair <int, int> respond(int fd);
     // checks if the connection is still alive
     std::vector<int> checkTimeouts();
 

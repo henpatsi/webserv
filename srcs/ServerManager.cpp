@@ -209,14 +209,18 @@ void ServerManager::runServers()
                     {
                         try
                         {
-                            int respondStatus = server->respond(events[i].data.fd);
-                            if (respondStatus == 1)
+                            std::pair <int, int> response;
+                            response = server->respond(events[i].data.fd);
+                            if (response.second == 1)
+                            {
                                 DelFromEpoll(events[i].data.fd);
-                            if (respondStatus > 2)
+                                close(events[i].data.fd);
+                            }
+                            if (response.second > 2)
                             {
                                DelFromEpoll(events[i].data.fd);
-                               AddToEpoll(respondStatus);
-                               cgiFds.push_back(respondStatus); 
+                               AddToEpoll(response.second);
+                               info.push_back((cgiInfo){response.second, response.first, cgiResponse{response.second}, events[i].data.fd}); 
                             }
                         }
                         catch (std::exception& e)
@@ -225,12 +229,26 @@ void ServerManager::runServers()
                         }
                     }
                 }
-                else if (isCgiFd(events[i].data.fd))
-                {
-                    try
-                    {
-                        server->respondCgi(
             }
+            std::vector<cgiInfo>::iterator it = std::find_if(info.begin(), info.end(), [&](cgiInfo fdinfo){return fdinfo.fd == events[i].data.fd;});
+            if (it != info.end())
+            {
+                if (it->response.isDone())
+                {
+                    Route _;
+                    HttpResponse response(it->response, _);
+                    if (send(it->listeningFd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
+                            throw ManagerRuntimeException("Failed to send response");
+                    DelFromEpoll(events[i].data.fd);
+                    close(events[i].data.fd);
+                    close(it->listeningFd);
+                    info.erase(it);
+                }
+                else
+                        it->response.readCgiResponse();
+            }
+        }
+
         }
         checkTimeouts();
     }
@@ -254,7 +272,6 @@ void ServerManager::DelFromEpoll(int fd)
         std::cout << "Removed fd " << fd << " from epoll\n";
     // keeps the tracked fds for epoll_wait
     trackedFds--;
-    close(fd);
 }
 
 void ServerManager::registerServerSockets()
