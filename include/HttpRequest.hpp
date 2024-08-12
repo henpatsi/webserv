@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 16:38:22 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/12 08:27:07 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,6 +117,9 @@ class HttpRequest
 		// Saved parameters
 		std::string							method;
 		std::string							resourcePath;
+		std::string							resourcePathHost;
+		std::string							resourcePathIP;
+		int									resourcePathPort;
 		std::string							queryString;
 		std::map<std::string, std::string>	URIParameters = {}; // TODO delete if not needed
 		std::string							httpVersion;

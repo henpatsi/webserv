@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 16:36:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/12 17:02:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,23 +70,32 @@ void HttpRequest::readRequest()
 void HttpRequest::tryParseRequestLine()
 {
 	std::string eol = "\r\n";
-	std::vector<char>::iterator it = std::search(this->rawRequest.begin(), this->rawRequest.end(), eol.begin(), eol.end());
-	if (it == this->rawRequest.end()) // First line not yet read
+	std::vector<char>::iterator start = this->rawRequest.begin();
+	std::vector<char>::iterator end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+	if (end == start) // Allow one empty line before request line
+	{
+		start = std::next(end, 2);
+		end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+	}
+	if (end == this->rawRequest.end()) // First line not yet read
 	{
 		if (this->totalRead > MAX_REQUEST_LINE_LENGTH)
 			setErrorAndThrow(400, "Request line too long");
 		return ;
 	}
-	if (it == this->rawRequest.begin())
+	if (end == start)
 		setErrorAndThrow(400, "Request line is empty");
 
-	std::string requestLineString(this->rawRequest.begin(), std::next(it,2)); // Get line including \n
+	
+
+	std::string requestLineString(this->rawRequest.begin(), std::next(end,2)); // Get line including \n
 
 	std::istringstream lineStream(requestLineString);
 	std::string URI;
 	lineStream >> this->method;
 	lineStream >> URI;
 	lineStream >> this->httpVersion;
+
 
 	// Check that all present
 	if (this->method.empty() || this->method == "\r"
@@ -101,18 +110,49 @@ void HttpRequest::tryParseRequestLine()
 	// Check URI
 	if (URI.length() > MAX_URI_LENGTH)
 		setErrorAndThrow(414, "URI too long");
-	// Extracts path from the URI
-	this->resourcePath = URI.substr(0, URI.find('?'));
-	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
-		this->resourcePath.erase(this->resourcePath.find("#"));
+	std::string fullPathString = URI.substr(0, URI.find('?'));
+	if (fullPathString.find("#") != std::string::npos) // # marks end of path
+		fullPathString.erase(fullPathString.find("#"));
+	// Extract host if any
+	if (fullPathString.find("http://") != std::string::npos)
+	{
+		if (fullPathString.find("http://") != 0 || fullPathString.find('/', 7) == std::string::npos)
+			setErrorAndThrow(400, "Invalid URI format");
+		this->resourcePathHost = fullPathString.substr(7, fullPathString.find('/', 7));
+		fullPathString.erase(0, fullPathString.find('/', 7));
+	}
+	else if (fullPathString.find("www.") != std::string::npos)
+	{
+		if (fullPathString.find("www.") != 0 || fullPathString.find('/', 4) == std::string::npos)
+			setErrorAndThrow(400, "Invalid URI format");
+		this->resourcePathHost = fullPathString.substr(0, fullPathString.find('/', 4));
+		fullPathString.erase(0, fullPathString.find('/', 4));
+	}
+	else if (std::isdigit(fullPathString.front()))
+	{
+		this->resourcePathIP = fullPathString.substr(0, fullPathString.find('/'));
+		fullPathString.erase(0, fullPathString.find('/'));
+	}
+	// Extract port if any
+	if (this->resourcePathHost.find(':') != std::string::npos)
+	{
+		try
+		{
+			this->resourcePathPort = std::stoi(this->resourcePathHost.substr(this->resourcePathHost.find(':') + 1));
+			this->resourcePathHost.erase(this->resourcePathHost.find(':'));
+		}
+		catch(const std::exception& e)
+		{
+			setErrorAndThrow(400, "Invalid port number in URI");
+		}
+	}
+	// The resource path should be the remaining full path string
+	this->resourcePath = fullPathString;
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
-
-	// TODO maybe not needed
-	// Extracts the parameters from the URI into a map
-	if (URI.find('?') != std::string::npos && URI.back() != '?')
-		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	this->queryString = URI.find('?') + 1;
+	// Extract the query string if any
+	if (URI.find('?') != std::string::npos && URI.back() != '?') // TODO also check for #? Just do this for URI?
+		this->queryString = URI.substr(URI.find('?') + 1);
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
