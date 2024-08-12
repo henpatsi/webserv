@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:58:22 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 15:50:52 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,29 +97,31 @@ void HttpResponse::setError(int code)
 	this->responseCode = code;
 	this->contentType = "text/html";
 
-	if (this->customErrorPages[code] != "")
+	if (this->customErrorPages.find(code) != this->customErrorPages.end())
 	{
-		std::ifstream file;
-		char contentBuffer[FILE_READ_SIZE] = {0};
-
-		// Try open file
-		file.open(this->route.root + this->customErrorPages[code]);
+		// Open file as binary file
+		std::ifstream file(this->route.root + this->customErrorPages[code], std::ifstream::binary);
 		if (!file.good())
 		{
 			buildDefaultErrorContent(code);
 			return ;
 		}
-
-		// Read file content into content
-		while (file.good())
+		try
 		{
-			file.read(contentBuffer, FILE_READ_SIZE);
-			if ((file.rdstate() & std::ios_base::badbit) != 0)
-			{
-				buildDefaultErrorContent(code);
-				return ;
-			}
-			this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
+			file.unsetf(std::ios::skipws); // Prevents skipping spaces
+			// Get size of file
+			file.seekg(0, std::ios::end);
+			std::streampos fileSize = file.tellg();
+			file.seekg(0, std::ios::beg);
+			// Set content size to filesize
+			this->content.reserve(fileSize);
+			// Read file content into content
+			this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+		}
+		catch(const std::exception& e)
+		{
+			buildDefaultErrorContent(code);
+			return ;
 		}
 	}
 	else
@@ -212,9 +214,6 @@ void HttpResponse::buildDirectoryList(void)
 void HttpResponse::prepareHeadResponse(void)
 {
 	prepareGetResponse();
-
-	// if (this->path == "/") // TODO remove, ubuntu_tester requires this for some reason
-	// 	setErrorAndThrow(405, "HEAD not allowed for request path");
 }
 
 void HttpResponse::prepareGetResponse(void)
@@ -234,44 +233,45 @@ void HttpResponse::prepareGetResponse(void)
 	else if (this->path.find(".pdf") != std::string::npos)
 		this->contentType = "application/pdf";
 
-	std::ifstream file;
-	char contentBuffer[FILE_READ_SIZE] = {0};
-
-	// Try open file
-	file.open(this->path);
+	// Open file as binary file
+	std::ifstream file(this->path, std::ifstream::binary);
 	if (!file.good())
 		setErrorAndThrow(404, "Failed to open file in GET");
-
+	file.unsetf(std::ios::skipws); // Prevents skipping spaces
+	// Get size of file
+	file.seekg(0, std::ios::end);
+	std::streampos fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+	// Set content size to filesize
+	this->content.reserve(fileSize);
 	// Read file content into content
-	while (file.good())
-	{
-		file.read(contentBuffer, FILE_READ_SIZE);
-		if ((file.rdstate() & std::ios_base::badbit) != 0)
-			setErrorAndThrow(500, "Failed to read file in GET");
-		this->content.insert(this->content.end(), contentBuffer, contentBuffer + FILE_READ_SIZE);
-	}
+	this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
 
 	this->responseCode = 200;
 }
 
 void HttpResponse::preparePostResponse(HttpRequest &request)
 {
-	if (this->route.uploadDir.back() != '/')
+	prepareGetResponse();
+
+	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
-	if (this->path == this->route.uploadDir)
+
+	if (multipartDataContainsFile(this->request.getMultipartData())) // Check if there are any files
 	{
-		if (access(this->path.c_str(), F_OK) == -1)
-			setErrorAndThrow(404, "Upload directory not found");
+		if (this->route.acceptUpload == false)
+			setErrorAndThrow(403, "Uploading not allowed for request path");
+		if (this->route.uploadDir == "")
+			setErrorAndThrow(403, "Upload directory not set for request path");
+		if (access(this->route.uploadDir.c_str(), F_OK) == -1)
+			setErrorAndThrow(403, "Upload directory not accessible");
+
 		int ret = writeMultipartData(request.getMultipartData(), this->route.uploadDir);
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		this->path = "www/html/success.html";
-		prepareGetResponse();
 		this->responseCode = 201;
 	}
-	else
-		prepareGetResponse();
 }
 
 void HttpResponse::prepareDeleteResponse(void)
@@ -297,22 +297,17 @@ void HttpResponse::prepareDeleteResponse(void)
 // Returns 0 for success, error code for failure
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)
 {
-	bool containsFiles = false;
-
 	for (multipartData data : dataVector)
 	{
 		if (data.boundary != "") // Write nested multipart data
 		{
 			int ret = writeMultipartData(data.multipartDataVector, directory);
-			if (ret == 0)
+			if (ret != 0)
 				return ret;
-			containsFiles = true; // If no error, must have written a file
 			continue ;
 		}
 		else if (data.filename == "")
 			continue ;
-
-		containsFiles = true;
 
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
@@ -326,9 +321,25 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		file.close();
 	}
 
-	if (!containsFiles)
-		return (400);
 	return (0);
+}
+
+bool multipartDataContainsFile(std::vector<multipartData> dataVector)
+{
+	if (dataVector.empty())
+		return false;
+
+	for (multipartData data : dataVector)
+	{
+		if (data.filename != "")
+			return true;
+		if (data.boundary != "") // Check nested multipart data
+		{
+			if (multipartDataContainsFile(data.multipartDataVector))
+				return true;
+		}
+	}
+	return false;
 }
 
 // EXCEPTIONS

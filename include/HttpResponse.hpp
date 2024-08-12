@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/07/31 18:06:00 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 14:34:47 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@
 # include <filesystem>
 # include <map>
 # include <ctime>
+# include <iterator>
 
 # include <unistd.h>
 # include <sys/types.h>
@@ -32,7 +33,8 @@
 #  define FILE_READ_SIZE 1024
 # endif
 
-int writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
+int		writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
+bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 
 class HttpResponse
 {

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/09 08:39:28 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/11 16:36:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ void HttpRequest::readFD()
 	if (bytesRead == 0)
 		setErrorAndThrow(400, "Nothing to read");
 
-	totalRead = bytesRead;
+	this->totalRead += bytesRead;
 	this->rawRequest.insert(this->rawRequest.end(), contentBuffer, contentBuffer + bytesRead);
 }
 
@@ -107,10 +107,12 @@ void HttpRequest::tryParseRequestLine()
 		this->resourcePath.erase(this->resourcePath.find("#"));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
+
+	// TODO maybe not needed
 	// Extracts the parameters from the URI into a map
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	queryString = URI.find('?') + 1;
+	this->queryString = URI.find('?') + 1;
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
@@ -120,6 +122,7 @@ void HttpRequest::tryParseRequestLine()
 
 	this->requestLineLength = requestLineString.length();
 
+	std::cout << "- Request line parsed -\n";
 	// std::cout << "Request line = '" << requestLineString << "'\n";
 	// std::cout << "Request line length = " << this->requestLineLength << "\n";
 }
@@ -184,8 +187,6 @@ void HttpRequest::tryParseHeader()
 			setErrorAndThrow(400, "Invalid port number");
 		}
 	}
-	else
-		this->port = 80;
 
 	// Extract content info
 	if (this->headers.find("transfer-encoding") != this->headers.end())
@@ -206,17 +207,26 @@ void HttpRequest::tryParseHeader()
 		if (this->contentLength > clientBodyLimit)
 			setErrorAndThrow(413, "Request body larger than client body limit");
 	}
+	else if (this->headers.find("content-type") != this->headers.end())
+	{
+		setErrorAndThrow(411, "Content length required");
+	}
 	else
 		this->requestComplete = true;
 
 	this->headerLength = headerString.length();
 
+	std::cout << "- Header parsed -\n";
 	// std::cout << "Header line = '" << headerString << "'\n";
 	// std::cout << "Header length = " << this->headerLength << "\n";
 }
 
 void HttpRequest::tryParseContent()
 {
+	std::cout << "Content length = " << this->contentLength << "\n";
+	std::cout << "Total read = " << this->totalRead << "\n";
+	std::cout << "Content read = " << this->totalRead - this->requestLineLength - this->headerLength << "\n";
+
 	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
@@ -242,6 +252,7 @@ void HttpRequest::tryParseContent()
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
 
+	std::cout << "- Content parsed -\n";
 	// std::vector<char> rawContent = getRawContent();
 	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
 	// std::cout << "Raw content = '" << rawContentString << "'\n";
@@ -270,7 +281,7 @@ void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 
 		try
 		{
-			chunkSize = std::stoi(std::string(chunkedVector.begin(), std::prev(end, 1)));
+			chunkSize = std::stoi(std::string(start, end), 0, 16);
 		}
 		catch(const std::exception& e)
 		{
@@ -317,8 +328,8 @@ void HttpRequest::debugPrint()
 	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
 
-	std::vector<char> rawContent = getRawContent();
-	std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	// std::vector<char> rawContent = getRawContent();
+	// std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
 		std::cout << "Multipart data:";
@@ -347,6 +358,12 @@ void HttpRequest::debugPrint()
 	}
 
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
+}
+
+std::vector<char>	HttpRequest::getRawContent(void)
+{
+	std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
+	return rawContent;
 }
 
 // HELPER FUNCTIONS
