@@ -110,7 +110,7 @@ void Server::getRequest(int fd)
     }
 }
 
-bool Server::respond(int fd)
+int Server::respond(int fd)
 {
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
@@ -136,11 +136,16 @@ bool Server::respond(int fd)
         }
 
         std::cout << "\n--- Responding to client ---\n";
-        HttpResponse response(it->request, it->route);
-        if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-            throw ServerManager::ManagerRuntimeException("Failed to send response");
-        disconnect(it);
-        return (true);
+        if (it->request.isCgi() == 0)
+        {
+            HttpResponse response(it->request, it->route);
+            if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
+                throw ServerManager::ManagerRuntimeException("Failed to send response");
+            disconnect(it);
+            return (1);
+        }
+        else
+            return (cgiHandler.runCGI(it->request, config, it->addr));
     }
 
     return (false);

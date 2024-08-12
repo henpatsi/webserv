@@ -25,7 +25,7 @@ class	cgiHandler
 		std::string	hostname;
 		std::string	remote_address;
 	public:
-		int	runCGI(HttpRequest &resquest, ServerConfig &config, sockaddr_in &client_address);	
+		int	runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address);	
 		void	create_envs(char **envs, HttpRequest &request, ServerConfig &config, sockaddr_in &client_address);
     
 	class PipeException : std::exception {

@@ -4,6 +4,7 @@
 #include "ServerConfig.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "cgiHandler.hpp"
 
 #include <list>
 #include <algorithm>
@@ -17,8 +18,12 @@ struct Connection
     int fd;
     int socketFD;
     std::time_t connectTime;
+    bool isCgi;
     Route route;
     HttpRequest request;
+    cgiResponse cgiResponse;
+    HttpResponse response;
+    sockaddr_in addr;
 };
 
 class Server {
@@ -34,6 +39,7 @@ private:
     std::string GetAnswer();
     // utilfunction of getAnswer, finds the route that matches request location
     Route findCorrectRoute(HttpRequest request);
+    cgiHandler  cgiHandler;
 public:
     Server(ServerConfig config);
 
@@ -48,7 +54,7 @@ public:
     // gets called when server can read
     void getRequest(int fd);
     // gets called when request read and server can write
-    bool respond(int fd);
+    int respond(int fd);
     // checks if the connection is still alive
     std::vector<int> checkTimeouts();
 

@@ -209,8 +209,15 @@ void ServerManager::runServers()
                     {
                         try
                         {
-                            if (server->respond(events[i].data.fd))
+                            int respondStatus = server->respond(events[i].data.fd);
+                            if (respondStatus == 1)
                                 DelFromEpoll(events[i].data.fd);
+                            if (respondStatus > 2)
+                            {
+                               DelFromEpoll(events[i].data.fd);
+                               AddToEpoll(respondStatus);
+                               cgiFds.push_back(respondStatus); 
+                            }
                         }
                         catch (std::exception& e)
                         {
@@ -218,6 +225,11 @@ void ServerManager::runServers()
                         }
                     }
                 }
+                else if (isCgiFd(events[i].data.fd))
+                {
+                    try
+                    {
+                        server->respondCgi(
             }
         }
         checkTimeouts();

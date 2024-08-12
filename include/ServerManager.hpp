@@ -25,6 +25,7 @@ class ServerManager
         struct epoll_event* events;
         int trackedFds;
         int eventAmount;
+        std::vector <int> cgiFds;
 
         // connection fields
         const int addressSize = sizeof(sockaddr_storage);
@@ -52,6 +53,7 @@ class ServerManager
         std::string GetPath() const;
 
         void runServers();
+        bool isCgiFd(int fd) { return (std::find(cgiFds.begin(), cgiFds.end(), fd) != cgiFds.end()); }
         
         class FileIssueException : MANAGEREXCEPTION;
         class ServerInServerException : MANAGEREXCEPTION;
