@@ -85,6 +85,8 @@ class HttpRequest
 		std::string							getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
 		bool								isComplete(void) { return this->requestComplete; }
+		bool	isCgi(void);
+		std::string getFileExtension(void) { return this->fileExtension; }
 
 		// Reading content
 		void								readRequest();
@@ -125,6 +127,7 @@ class HttpRequest
 		int									port = 80;
 		std::vector<multipartData>			multipartDataVector = {};
 		std::map<std::string, std::string>	urlEncodedData = {};
+		std::string fileExtension;
 
 		void	readFD(void);
 		void	tryParseRequestLine(void);

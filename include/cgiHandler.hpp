@@ -37,6 +37,12 @@ class	cgiHandler
 	class CloseException : std::exception {
         const char * what() const noexcept { return ("Close failed"); }
     };
+	class ExecveException : std::exception {
+        const char * what() const noexcept { return ("Execve failed"); }
+    };
+	class CgiNotInRouteException : std::exception {
+        const char * what() const noexcept { return ("Cgi not in Route"); }
+    };
 };
 
 #endif

@@ -21,8 +21,6 @@ struct Connection
     bool isCgi;
     Route route;
     HttpRequest request;
-    cgiResponse cgiResponse;
-    HttpResponse response;
     sockaddr_in addr;
 };
 
@@ -39,7 +37,7 @@ private:
     std::string GetAnswer();
     // utilfunction of getAnswer, finds the route that matches request location
     Route findCorrectRoute(HttpRequest request);
-    cgiHandler  cgiHandler;
+    cgiHandler  cgi_handler;
 public:
     Server(ServerConfig config);
 

@@ -227,6 +227,7 @@ void ServerManager::runServers()
                         catch (std::exception& e)
                         {
                             std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
+                            //send error response here???
                         }
                     }
                 }
@@ -240,7 +241,7 @@ void ServerManager::runServers()
                     info.erase(it);
                 }
                 else
-                        it->response.readCgiResponse();
+                    it->response.readCgiResponse();
             }
         }
 
@@ -325,7 +326,7 @@ void ServerManager::checkTimeouts()
         }
     }
     std::time_t currentTime = std::time(nullptr);
-    for (auto it = info.begin(); it != info.end(); it++)
+    for(auto it = info.begin(); it != info.end();)
     {
         if (currentTime - it->cgiStarted > TIMEOUT_SEC)
          {
@@ -333,8 +334,10 @@ void ServerManager::checkTimeouts()
             it->response.setFailResponseCode(500);
             handleCgiResponse(it);
             kill(it->pid, SIGKILL);
-            info.erase(it);
+            it = info.erase(it);
         }
+        else
+        it++;
     }
 }
 

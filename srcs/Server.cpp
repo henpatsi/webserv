@@ -147,7 +147,7 @@ std::pair<int, int> Server::respond(int fd)
         }
         else
         {
-            return (cgiHandler.runCGI(it->request, config, it->addr));
+            return (cgi_handler.runCGI(it->request, config, it->addr, it->route));
         }
 
     return (std::pair<int, int> (-1, -1));

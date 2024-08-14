@@ -60,17 +60,22 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 {
 	char* envs[11];
 	char* args[3];
-	std::string cgi;
 	int	toCGI[2];
 	int	fromCGI[2];
 	int	pid;
 
 
 	
-	//check resource exists and is executable
 	//check by file extension it's in route
 	//set args[0] and cgi by file extension
-	args[0] = 
+	if (route.CGI.find(request.getFileExtension()) == route.CGI.npos)
+		throw CgiNotInRouteException();
+	std::string cgiExecutable;
+	if (request.getFileExtension() == "php")
+		cgiExecutable = "php";
+	if (request.getFileExtension() == "py")
+		cgiExecutable = "python3";
+	args[0] = (char *)cgiExecutable.c_str();
 	args[1] = (char *)request.getResourcePath().c_str();
 	args[2] = 0;
 	create_envs(envs, request, config, client_address);
@@ -88,7 +93,7 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 			throw DupException();
 		if (close(toCGI[1]) == -1 || close(toCGI[0]) == -1 || close(fromCGI[0]) == -1 || close(fromCGI[1]) == -1) 
 			throw CloseException();
-		execve(cgi.c_str(), (char **)args, (char **)envs);
+		execve(cgiExecutable.c_str(), (char **)args, (char **)envs);
 		throw ExecveException();
 	}
 	write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
