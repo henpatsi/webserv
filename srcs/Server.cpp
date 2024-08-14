@@ -86,13 +86,13 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
 
     listeningFDS.erase(connectionIT);
 
-    for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
-    {
-        if (it->first == connectionIT->socketFD)
-        {
-            it->second = false;
-        }
-    }
+//    for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
+//    {
+//        if (it->first == connectionIT->socketFD)
+//        {
+//            it->second = false;
+//        }
+//    }
 }
 
 void Server::getRequest(int fd)
