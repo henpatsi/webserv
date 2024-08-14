@@ -34,23 +34,23 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	path_info = "PATH_INFO=";
 	path_info += route.root + route.location;
 	envs[1] = (char *) path_info.c_str();
-	query_string += "QUERY_STRING=" + request.getQueryString();
+	query_string = "QUERY_STRING=" + request.getQueryString();
 	envs[2] = (char *) query_string.c_str();
-	method += "REQUEST_METHOD=" + request.getMethod();
+	method = "REQUEST_METHOD=" + request.getMethod();
 	envs[3] = (char *) method.c_str();
-	script_name += "SCRIPT_NAME=" + request.getResourcePath();	
+	script_name = "SCRIPT_NAME=" + request.getResourcePath();	
 	envs[4] = (char *) script_name.c_str();
-	server_protocol += "SERVER_PROTOCOL=HTTP/1.1";	
+	server_protocol = "SERVER_PROTOCOL=HTTP/1.1";	
 	envs[5] = (char *) server_protocol.c_str();
-	content_length += "CONTENT_LENGTH=" + std::to_string(request.getRawContent().size());
+	content_length = "CONTENT_LENGTH=" + std::to_string(request.getRawContent().size());
 	envs[6] = (char *) content_length.c_str();
-	content_type += "CONTENT_TYPE=" + request.getHeaders().find("content-type")->second;
+	content_type = "CONTENT_TYPE=" + request.getHeaders().find("content-type")->second;
 	envs[7] = (char *) content_type.c_str();
-	remote_address += "REMOTE_ADDR=" + ntoa(client_address);
+	remote_address = "REMOTE_ADDR=" + ntoa(client_address);
 	envs[8] = (char *) remote_address.c_str();
-	hostname += "SERVER_NAME=" + config.getName();
+	hostname = "SERVER_NAME=" + config.getName();
 	envs[9] = (char *) hostname.c_str();
-	port += "SERVER_PORT=" + std::to_string(config.getPorts().at(0));
+	port = "SERVER_PORT=" + std::to_string(config.getPorts().at(0));
 	envs[10] = (char *) port.c_str();
 	envs[11] = 0;
 	return envs;
@@ -59,12 +59,12 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 
 std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address, Route &route)
 {
-	char	*envs[16] = {};
+	char* envs[16] = {};
 	char* args[3] = {};
 	int	toCGI[2];
 	int	fromCGI[2];
 	int	pid;
-	
+
 	if (route.CGI.find(request.getFileExtension()) == route.CGI.npos)
 		throw RunCgiException("CGI not allowed");
 	std::string cgiExecutable;
@@ -87,7 +87,8 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	pid = fork();
 	if (pid == 0)
 	{
-		chdir(cgiPath.substr(0, cgiPath.find_last_of("/")).c_str());
+		std::string path = route.root + route.location;
+		chdir(path.c_str());
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)
 			throw RunCgiException("Dup failed");
 		if (close(toCGI[1]) == -1 || close(toCGI[0]) == -1 || close(fromCGI[0]) == -1 || close(fromCGI[1]) == -1) 
