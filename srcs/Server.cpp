@@ -84,15 +84,15 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
 {
     std::cout << "Disconnecting " << connectionIT->fd << " from server\n";
 
-    listeningFDS.erase(connectionIT);
 
-//    for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
-//    {
-//        if (it->first == connectionIT->socketFD)
-//        {
-//            it->second = false;
-//        }
-//    }
+    for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
+    {
+        if (it->first == connectionIT->socketFD)
+        {
+            it->second = false;
+        }
+    }
+    listeningFDS.erase(connectionIT);
 }
 
 void Server::getRequest(int fd)
@@ -136,9 +136,9 @@ std::pair<int, int> Server::respond(int fd)
             }
         }
 
-        std::cout << "\n--- Responding to client ---\n";
         if (it->request.isCgi() == 0)
         {
+            std::cout << "\n--- Responding to client ---\n";
             HttpResponse response(it->request, it->route);
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
@@ -147,6 +147,7 @@ std::pair<int, int> Server::respond(int fd)
         }
         else
         {
+            std::cout << "\n--- Running CGI ---\n";
             return (cgi_handler.runCGI(it->request, config, it->addr, it->route));
         }
 
