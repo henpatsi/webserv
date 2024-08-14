@@ -148,9 +148,17 @@ std::pair<int, int> Server::respond(int fd)
         else
         {
             std::cout << "\n--- Running CGI ---\n";
-            return (cgi_handler.runCGI(it->request, config, it->addr, it->route));
+            try
+            {
+                std::pair<int, int> ret = cgi_handler.runCGI(it->request, config, it->addr, it->route);
+                return ret;
+            }
+            catch(std::exception &e)
+            {
+                std::cerr << e.what() << std::endl;
+                return (std::pair<int, int> (-1, -1));
+            }
         }
-
     return (std::pair<int, int> (-1, -1));
     }
     return (std::pair<int, int> (-1, 0));
