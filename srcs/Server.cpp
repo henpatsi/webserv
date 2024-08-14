@@ -50,6 +50,12 @@ Route Server::findCorrectRoute(HttpRequest request)
         std::cout << "Route found!\n";
         std::cout << "root: " << fitting.root << "\n";
         std::cout << "location: " << fitting.location << "\n";
+        if (request.isCgi())
+        {
+            std::string cgiPath = fitting.root + fitting.location;
+            if (access(cgiPath.c_str(), F_OK | X_OK) != 0)
+                throw RouteException();
+        }
         return fitting;
     }
     else
@@ -153,10 +159,15 @@ std::pair<int, int> Server::respond(int fd)
                 std::pair<int, int> ret = cgi_handler.runCGI(it->request, config, it->addr, it->route);
                 return ret;
             }
-            catch(std::exception &e)
+            catch(const std::exception &e)
             {
+                it->request.setFailResponseCode(403);
                 std::cerr << e.what() << std::endl;
-                return (std::pair<int, int> (-1, -1));
+                HttpResponse response(it->request, it->route);
+                if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
+                    throw ServerManager::ManagerRuntimeException("Failed to send response");
+                disconnect(it);
+                return (std::pair<int, int> (-1, 1));
             }
         }
     return (std::pair<int, int> (-1, -1));

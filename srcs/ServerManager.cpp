@@ -167,11 +167,11 @@ void ServerManager::runServers()
 {
     while (1)
     {
-        std::cout << "waiting...\n";
+    //    std::cout << "waiting...\n";
         WaitForEvents();
         for (int i = 0; i < eventAmount; i++)
         {
-            std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
+    //        std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
             for (Server* server : servers)
             {
                 // if someone initiates a connection to the registered sockets

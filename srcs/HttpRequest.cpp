@@ -108,8 +108,6 @@ void HttpRequest::tryParseRequestLine()
 	this->fileExtension = this->resourcePath;
 	this->fileExtension.erase(0, this->fileExtension.find_last_of("/") + 1);
 	this->fileExtension.erase(0, this->fileExtension.find_last_of(".") + 1);
-	if (this->isCgi() && access(this->resourcePath.c_str(), F_OK | X_OK) != 0)
-		setErrorAndThrow(400, "Cgi resource not accessible");
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
 
