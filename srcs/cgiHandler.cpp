@@ -44,7 +44,10 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[5] = (char *) server_protocol.c_str();
 	content_length = "CONTENT_LENGTH=" + std::to_string(request.getRawContent().size());
 	envs[6] = (char *) content_length.c_str();
-	content_type = "CONTENT_TYPE=" + request.getHeaders().find("content-type")->second;
+	if (request.getHeaders().find("content-type:") != request.getHeaders().end())
+		content_type = "CONTENT_TYPE=" + request.getHeaders().at("content-type");
+	else
+		content_type = "CONTENT_TYPE=";
 	envs[7] = (char *) content_type.c_str();
 	remote_address = "REMOTE_ADDR=" + ntoa(client_address);
 	envs[8] = (char *) remote_address.c_str();
@@ -71,8 +74,8 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	if (request.getFileExtension() == "php")
 		cgiExecutable = "php";
 	if (request.getFileExtension() == "py")
-		cgiExecutable = "python3";
-	std::string cgiPath = route.root + request.getResourcePath();
+		cgiExecutable = "/usr/bin/python3";
+	std::string cgiPath = "./" + request.getResourcePath().erase(0, request.getResourcePath().find_last_of("/") + 1);
 	args[0] = (char *)cgiExecutable.c_str();
 	args[1] = (char *)cgiPath.c_str();
 	args[2] = 0;
@@ -89,10 +92,12 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	{
 		std::string path = route.root + route.location;
 		chdir(path.c_str());
+		std::cout << "chdir " << path.c_str() << std::endl;
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)
 			throw RunCgiException("Dup failed");
 		if (close(toCGI[1]) == -1 || close(toCGI[0]) == -1 || close(fromCGI[0]) == -1 || close(fromCGI[1]) == -1) 
 			throw RunCgiException("Close failed");
+		sleep(1000);
 		execve(cgiExecutable.c_str(), args, create_envs(envs, request, config, client_address, route));
 		throw RunCgiException("Execve failed");
 	}

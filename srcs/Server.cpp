@@ -157,6 +157,7 @@ std::pair<int, int> Server::respond(int fd)
             try
             {
                 std::pair<int, int> ret = cgi_handler.runCGI(it->request, config, it->addr, it->route);
+                disconnect(it);
                 return ret;
             }
             catch(const std::exception &e)
