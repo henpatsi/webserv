@@ -5,6 +5,5 @@ Default values for a route?
 Check that URI pre part matches host header?
 
 Check request host (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)
-Check duplicate headers
 
 Check HttpRequest is HTTP/1.1 compliant

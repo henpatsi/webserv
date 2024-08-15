@@ -154,6 +154,8 @@ void HttpRequest::tryParseHeader()
 			setErrorAndThrow(400, "Header key is empty");
 		if (key.find_first_of(SPACECHARS) != std::string::npos)
 			setErrorAndThrow(400, "Header key contains space character");
+		if (this->headers.find(key) != this->headers.end())
+			setErrorAndThrow(400, "Duplicate headers");
 
 		std::string value = line.substr(line.find(':') + 1);
 		size_t valueStart = value.find_first_not_of(SPACECHARS);
