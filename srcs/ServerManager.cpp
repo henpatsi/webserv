@@ -259,7 +259,6 @@ ServerManager::runServers ()
               [&] (cgiInfo fdinfo) { return fdinfo.fd == events[i].data.fd; });
           if (it != info.end ())
             {
-              std::cout << "got here" << std::endl;
               if (it->response.isDone ())
                 {
                   handleCgiResponse (it);
@@ -344,8 +343,8 @@ ServerManager::handleCgiResponse (std::vector<cgiInfo>::iterator it)
       == -1)
     throw ManagerRuntimeException ("Failed to send response");
   DelFromEpoll (it->fd);
-  close (it->fd);
-  close (it->listeningFd);
+  if (close(it->fd) == -1 || close (it->listeningFd))
+    throw ManagerRuntimeException ("Failed to close fd");
 }
 
 void

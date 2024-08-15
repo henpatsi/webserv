@@ -1,11 +1,9 @@
 #include "cgiResponse.hpp"
+#include <iostream>
 
 const char* cgiResponse::CgiRequestException::what() const throw()
 {
-	return this->message.c_str();
-}
-
-void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
+	return this->message.c_str(); } void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
 {
 	_failResponseCode = responseCode;
 	_done = true;
@@ -45,7 +43,7 @@ void	cgiResponse::setContent()
 	}
 	else if (_contentLengthSet == 0 && _bodyBegin != 0)
 	{
-		for (size_t i = 0; i + _bodyBegin < _message.size() - (_bodyBegin + 1); i++)
+		for (size_t i = 0; i + _bodyBegin < _message.size(); i++)
 		_content.push_back(_message[i + _bodyBegin]);
 	}
 }
@@ -53,6 +51,7 @@ void	cgiResponse::setContent()
 void	cgiResponse::setHeader(std::string line)
 {
 	std::string key = line.substr(0, line.find(':'));
+	key = key + ":";
 	std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){ return std::tolower(c); });
 	if (key.empty())
 		setErrorAndThrow(500, "CGI response header key is empty");
@@ -68,14 +67,14 @@ void	cgiResponse::setHeader(std::string line)
 	else
 		value = value.substr(valueStart, valueEnd - valueStart + 1);
 	_headers[key] = value;
-	if (_headers.find("content-type:") == _headers.end())
-		setErrorAndThrow(500, "Invalid CGI response header");
 }
 
 void	cgiResponse::setFields()
 {
 	if (_headers.find("content-type:") != _headers.end())
 		_contentType = _headers.find("content-type:")->second;
+	else
+		setErrorAndThrow(500, "Content-type not set in CGI response header");
 	if (_headers.find("content-length:") != _headers.end())
 	{
 		_contentLength = std::atoi(_headers.find("content-length:")->second.c_str());
@@ -94,7 +93,7 @@ void	cgiResponse::checkHeaderStr()
 	for(size_t i = 1; i < _headerStr.size(); i++)
 	{
 		if (_headerStr[i-1] == '\r' && _headerStr[i] != '\n')
-			setErrorAndThrow(500, "Invalid CGI response header");
+			setErrorAndThrow(500, "Naked \r in CGI response header");
 	}
 }
 
@@ -109,7 +108,7 @@ void	cgiResponse::parseBuffer()
 		if (line.empty())
 			break;
 		if (line.back() == '\r')
-			line.erase(line.at(line.npos - 1));
+			line.pop_back();
 		if (line.empty())
 			break;
 		setHeader(line);
