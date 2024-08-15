@@ -1,5 +1,16 @@
 #include "../include/cgiHandler.hpp"
 
+static void setFdNonBlocking(int fd)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+        throw std::system_error();
+    flags |= O_NONBLOCK;
+    int res = fcntl(fd, F_SETFL, flags);
+    if (res == -1)
+        throw std::system_error();
+}
+
 std::string	ntoa(sockaddr_in &address)
 {
 	uint32_t a = address.sin_addr.s_addr;
@@ -59,9 +70,14 @@ int	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &
 	create_envs(envs, request, config, client_address);
 	if (pipe(toCGI) == -1 || pipe(fromCGI) == -1)
 		throw PipeException();
+	setFdNonBlocking(toCGI[0]);
+	setFdNonBlocking(toCGI[1]);
+	setFdNonBlocking(fromCGI[0]);
+	setFdNonBlocking(fromCGI[1]);
 	pid = fork();
 	if (pid == 0)
 	{
+		chdir(request.getResourcePath().substr(0, request.getResourcePath().find_last_of('/')).c_str());
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)
 			throw DupException();
 		if (close(toCGI[1]) == -1 || close(fromCGI[0] == -1)) 

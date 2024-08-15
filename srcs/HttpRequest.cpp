@@ -164,7 +164,7 @@ void HttpRequest::tryParseHeader()
 			value = "";
 		else
 			value = value.substr(valueStart, valueEnd - valueStart + 1);
-
+`
 		this->headers[key] = value;
 	}
 

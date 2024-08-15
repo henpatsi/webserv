@@ -14,12 +14,12 @@
 #include <filesystem>
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), request(request)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 {
 	try
 	{
-		if (this->request.getFailResponseCode() != 0)
-			setErrorAndThrow(this->request.getFailResponseCode(), "Request failed");
+		if (request.getFailResponseCode() != 0)
+			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
 		
 		this->path = this->route.root + request.getResourcePath();
 		if (std::filesystem::is_directory(this->path))
@@ -29,16 +29,16 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 		}
 		std::cout << "Path: " << this->path << "\n";
 
-		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(this->request.getMethod())))
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(request.getMethod())))
 			setErrorAndThrow(405, "Method not allowed");
 
-		if (this->request.getMethod() == "HEAD")
+		if (request.getMethod() == "HEAD")
 			prepareHeadResponse();
-		else if (this->request.getMethod() == "GET")
+		else if (request.getMethod() == "GET")
 			prepareGetResponse();
-		else if (this->request.getMethod() == "POST")
-			preparePostResponse();
-		else if (this->request.getMethod() == "DELETE")
+		else if (request.getMethod() == "POST")
+			preparePostResponse(request);
+		else if (request.getMethod() == "DELETE")
 			prepareDeleteResponse();
 		else
 			setErrorAndThrow(501, "Request method not implemented");
@@ -52,7 +52,32 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route), r
 		setError(500);
 	}
 
-	buildResponse();
+	buildResponse(request);
+
+	std::cout << "Response code: " << this->responseCode << "\n";
+}
+
+HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
+{
+	try
+	{
+		if (response.getFailResponseCode() != 0)
+			setErrorAndThrow(response.getFailResponseCode(), "Request failed");
+		
+		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(response.getMethod())))
+			setErrorAndThrow(405, "Method not allowed");
+
+	}
+	catch(ResponseException& e) // Known error, response ready to build
+	{
+		std::cerr << "ResponseException: " << e.what() << "\n";
+	}
+	catch(...) // Something that was not considered went wrong
+	{
+		setError(500);
+	}
+
+	buildResponse(response);
 
 	std::cout << "Response code: " << this->responseCode << "\n";
 }
@@ -112,7 +137,26 @@ void HttpResponse::setErrorAndThrow(int code, std::string message)
 	throw ResponseException(message);
 }
 
-void HttpResponse::buildResponse()
+void HttpResponse::buildResponse(cgiResponse& response)
+{
+	time_t timestamp = time(nullptr);
+	struct tm *timedata = std::gmtime(&timestamp);
+	char buffer[100] = {0};
+	std::string responseString;
+	if (std::strftime(buffer, 99, "%a, %d %b %Y %T GMT", timedata) == 0)
+		setError(500);
+
+	responseString = "HTTP/1.1 " + std::to_string(this->responseCode) + "\r\n";
+	responseString += "Date: " + std::string(buffer) + "\r\n";
+	responseString += response.getHeaders();
+	responseString += "\r\n";
+
+	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
+	if (response.getMethod() != "HEAD")
+		this->response.insert(this->response.end(), response.getContent().begin(), response.getContent().end());
+}
+
+void HttpResponse::buildResponse(HttpRequest &request)
 {
 	std::string responseString;
 
@@ -129,7 +173,7 @@ void HttpResponse::buildResponse()
 	responseString += "\r\n";
 
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
-	if (this->request.getMethod() != "HEAD")
+	if (request.getMethod() != "HEAD")
 		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
 }
 
@@ -209,12 +253,12 @@ void HttpResponse::prepareGetResponse(void)
 	this->responseCode = 200;
 }
 
-void HttpResponse::preparePostResponse(void)
+void HttpResponse::preparePostResponse(HttpRequest &request)
 {
 	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
 
-	if (multipartDataContainsFile(this->request.getMultipartData())) // Check if there are any files
+	if (multipartDataContainsFile(request.getMultipartData())) // Check if there are any files
 	{
 		if (this->route.acceptUpload == false)
 			setErrorAndThrow(403, "Uploading not allowed for request path");

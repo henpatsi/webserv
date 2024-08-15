@@ -9,12 +9,13 @@
 /*   Updated: 2024/08/11 14:34:47 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
+#pragma once
 #ifndef HTTPRESPONSE_HPP
 # define HTTPRESPONSE_HPP
 
 # include "HttpRequest.hpp"
 # include "ServerConfig.hpp"
+# include "cgiResponse.hpp"
 
 # include <string>
 # include <iostream>
@@ -40,6 +41,7 @@ class HttpResponse
 	public:
 		HttpResponse(void);
 		HttpResponse(HttpRequest& request, Route& route);
+		HttpResponse(cgiResponse& cgiresponse, Route& route);
 
 		std::string getPath(void) { return this->path; }
 		std::string getContentType(void) { return this->contentType; };
@@ -59,7 +61,6 @@ class HttpResponse
 	private:
 		std::string path;
 		Route& route;
-		HttpRequest& request;
 		std::string contentType;
 		int responseCode = 500;
 		std::vector<char> content;
@@ -86,11 +87,12 @@ class HttpResponse
 		void buildDefaultErrorContent(int code);
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
-		void buildResponse(void);
+		void buildResponse(HttpRequest &request);
+		void buildResponse(cgiResponse& response);
 		void buildDirectoryList(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);
-		void preparePostResponse(void);
+		void preparePostResponse(HttpRequest &request);
 		void prepareDeleteResponse(void);
 };
 
