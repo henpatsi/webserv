@@ -113,9 +113,9 @@ class HttpRequest
 		// Saved parameters
 		std::string							method;
 		std::string							resourcePath;
-		std::string							resourcePathHost;
-		std::string							resourcePathIP;
-		int									resourcePathPort = 80;
+		// std::string							resourcePathHost;
+		// std::string							resourcePathIP;
+		// int									resourcePathPort = 80;
 		std::string							queryString;
 		std::string							httpVersion;
 		std::map<std::string, std::string>	headers = {};

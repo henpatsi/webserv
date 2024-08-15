@@ -269,36 +269,39 @@ void HttpRequest::extractURI(std::string URI)
 		URI.erase(URI.find("#"));
 
 	std::string fullPathString = URI.substr(0, URI.find('?'));
+	
+	if (fullPathString.front() != '/') // TODO use commented out portion below if absolute path accepted
+		setErrorAndThrow(400, "Invalid resource path");
 
-	// Extract host if any
-	if (fullPathString.front() != '/')
-	{
-		if (fullPathString.find("http://") != std::string::npos)
-		{
-			if (fullPathString.find("http://") != 0)
-				setErrorAndThrow(400, "Invalid URI format");
-			fullPathString.erase(0, 7);
-		}
-		if (!std::isdigit(fullPathString.front()))
-			this->resourcePathHost = fullPathString.substr(0, fullPathString.find('/'));
-		else
-			this->resourcePathIP = fullPathString.substr(0, fullPathString.find('/'));
-		fullPathString.erase(0, fullPathString.find('/'));
-	}
+	// // Extract host if any
+	// if (fullPathString.front() != '/')
+	// {
+	// 	if (fullPathString.find("http://") != std::string::npos)
+	// 	{
+	// 		if (fullPathString.find("http://") != 0)
+	// 			setErrorAndThrow(400, "Invalid URI format");
+	// 		fullPathString.erase(0, 7);
+	// 	}
+	// 	if (!std::isdigit(fullPathString.front()))
+	// 		this->resourcePathHost = fullPathString.substr(0, fullPathString.find('/'));
+	// 	else
+	// 		this->resourcePathIP = fullPathString.substr(0, fullPathString.find('/'));
+	// 	fullPathString.erase(0, fullPathString.find('/'));
+	// }
 
-	// Extract port if any
-	if (this->resourcePathHost.find(':') != std::string::npos)
-	{
-		try
-		{
-			this->resourcePathPort = std::stoi(this->resourcePathHost.substr(this->resourcePathHost.find(':') + 1));
-			this->resourcePathHost.erase(this->resourcePathHost.find(':'));
-		}
-		catch(const std::exception& e)
-		{
-			setErrorAndThrow(400, "Invalid port number in URI");
-		}
-	}
+	// // Extract port if any
+	// if (this->resourcePathHost.find(':') != std::string::npos)
+	// {
+	// 	try
+	// 	{
+	// 		this->resourcePathPort = std::stoi(this->resourcePathHost.substr(this->resourcePathHost.find(':') + 1));
+	// 		this->resourcePathHost.erase(this->resourcePathHost.find(':'));
+	// 	}
+	// 	catch(const std::exception& e)
+	// 	{
+	// 		setErrorAndThrow(400, "Invalid port number in URI");
+	// 	}
+	// }
 
 	// The resource path should be the remaining full path string
 	this->resourcePath = fullPathString;
@@ -309,10 +312,9 @@ void HttpRequest::extractURI(std::string URI)
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		this->queryString = URI.substr(URI.find('?') + 1);
 
-	std::cout << "URI host: '" << this->resourcePathHost << "'\n";
-	std::cout << "URI port: '" << this->resourcePathPort << "'\n";
-	std::cout << "URI IP: '" << this->resourcePathIP << "'\n";
-	std::cout << "URI query: '" << this->queryString << "'\n";
+	// std::cout << "URI host: '" << this->resourcePathHost << "'\n";
+	// std::cout << "URI port: '" << this->resourcePathPort << "'\n";
+	// std::cout << "URI IP: '" << this->resourcePathIP << "'\n";
 }
 
 void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
@@ -374,6 +376,7 @@ void HttpRequest::debugPrint()
 	/* DEBUG PRINT */
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
+	std::cout << "Query string: " << this->queryString << "\n"; 
 	std::cout << "HTTP version: " << this->httpVersion << "\n";
 	std::cout << "Headers:\n";
 	for (auto param : this->headers)
