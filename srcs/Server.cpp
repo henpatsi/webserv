@@ -81,7 +81,6 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
     }
 
     listeningFDS.push_back(connection);
-    
 
     std::cout << "Connected " << connection.fd << " to server\n";
 }

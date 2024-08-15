@@ -192,7 +192,6 @@ void ServerManager::runServers()
 				// if we can send them data and resolve the request
 				else if (server->IsListeningFD(events[i].data.fd))
 				{
-					// SM::readMore
 					if (events[i].events & EPOLLIN)
 						readMore(*server, events[i]);
 					if (events[i].events & EPOLLOUT)
