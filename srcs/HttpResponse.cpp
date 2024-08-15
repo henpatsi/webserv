@@ -103,9 +103,10 @@ void HttpResponse::setError(int code)
 	if (this->customErrorPages.find(code) != this->customErrorPages.end())
 	{
 		// Open file as binary file
-		std::ifstream file(this->route.root + this->customErrorPages[code], std::ifstream::binary);
+		std::ifstream file(this->customErrorPages[code], std::ifstream::binary);
 		if (!file.good())
 		{
+			std::cerr << "Custom error page could not be opened\n";
 			buildDefaultErrorContent(code);
 			return ;
 		}
@@ -123,6 +124,7 @@ void HttpResponse::setError(int code)
 		}
 		catch(const std::exception& e)
 		{
+			std::cerr << "Custom error read error\n";
 			buildDefaultErrorContent(code);
 			return ;
 		}

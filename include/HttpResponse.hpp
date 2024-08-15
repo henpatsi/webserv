@@ -81,7 +81,7 @@ class HttpResponse
 			{ 505, "HTTP Version Not Supported" }
 		};
 		std::map<int, std::string> customErrorPages = {
-			{ 404, "html/400/404.html" } // TODO get these from config file
+			{ 404, "www/html/400/404.html" } // TODO get these from config file
 		};
 
 		void buildDefaultErrorContent(int code);
