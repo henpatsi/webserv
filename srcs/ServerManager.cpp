@@ -180,11 +180,11 @@ ServerManager::runServers ()
 {
   while (1)
     {
-      //    std::cout << "waiting...\n";
+    //  std::cout << "waiting...\n";
       WaitForEvents ();
       for (int i = 0; i < eventAmount; i++)
         {
-          std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
+     //     std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
           for (Server *server : servers)
             {
               // if someone initiates a connection to the registered sockets
@@ -235,6 +235,8 @@ ServerManager::runServers ()
                           if (response.second > 2)
                             {
                               DelFromEpoll (events[i].data.fd);
+                              temp_event.events = EPOLLIN;
+                              temp_event.data.fd = response.second;
                               AddToEpoll (response.second);
                               info.push_back ((cgiInfo){
                                   response.second, response.first,
@@ -252,22 +254,22 @@ ServerManager::runServers ()
                     }
                 }
             }
-          std::vector<cgiInfo>::iterator it = std::find_if (
-              info.begin (), info.end (),
-              [&] (cgiInfo fdinfo) { return fdinfo.fd == events[i].data.fd; });
-          if (it != info.end ())
-            {
-              std::cout << "got here" << std::endl;
-              if (it->response.isDone ())
-                {
-                  handleCgiResponse (it);
-                  info.erase (it);
-                }
-              else
-                {
-                  it->response.readCgiResponse ();
-                }
-            }
+          /* std::vector<cgiInfo>::iterator it = std::find_if ( */
+          /*     info.begin (), info.end (), */
+          /*     [&] (cgiInfo fdinfo) { return fdinfo.fd == events[i].data.fd; }); */
+          /* if (it != info.end ()) */
+          /*   { */
+          /*     std::cout << "got here" << std::endl; */
+          /*     if (it->response.isDone ()) */
+          /*       { */
+          /*         handleCgiResponse (it); */
+          /*         info.erase (it); */
+          /*       } */
+          /*     else */
+          /*       { */
+          /*         it->response.readCgiResponse (); */
+          /*       } */
+          /*   } */
         }
       try
         {
@@ -337,8 +339,8 @@ ServerManager::handleCgiResponse (std::vector<cgiInfo>::iterator it)
 {
   Route _;
   HttpResponse response (it->response, _);
-  if (send (it->listeningFd, &response.getResponse ()[0],
-            response.getResponse ().size (), 0)
+  if (send (it->listeningFd, &response.getResponse()[0],
+            response.getResponse().size (), 0)
       == -1)
     throw ManagerRuntimeException ("Failed to send response");
   DelFromEpoll (it->fd);
@@ -367,6 +369,7 @@ ServerManager::checkTimeouts ()
           it->response.setFailResponseCode (500);
           handleCgiResponse (it);
           kill (it->pid, SIGKILL);
+          std::cout << "Killed " << it->pid << std::endl;
           it = info.erase (it);
         }
       else
