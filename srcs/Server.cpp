@@ -117,8 +117,9 @@ void Server::getRequest(int fd)
     }
 }
 
-std::pair<int, int> Server::respond(int fd)
+ServerResponse Server::respond(int fd)
 {
+    ServerResponse res;
     std::list<Connection>::iterator it;
     for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
@@ -149,7 +150,6 @@ std::pair<int, int> Server::respond(int fd)
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
             disconnect(it);
-            return (std::pair<int, int> (-1, 1));
         }
         else
         {
@@ -158,7 +158,9 @@ std::pair<int, int> Server::respond(int fd)
             {
                 std::pair<int, int> ret = cgi_handler.runCGI(it->request, config, it->addr, it->route);
                 disconnect(it);
-                return ret;
+                res.pid = ret.first;
+                res.fd = ret.second;
+                return res;
             }
             catch(const std::exception &e)
             {
@@ -168,13 +170,10 @@ std::pair<int, int> Server::respond(int fd)
                 if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                     throw ServerManager::ManagerRuntimeException("Failed to send response");
                 disconnect(it);
-                return (std::pair<int, int> (-1, 1));
             }
         }
-    return (std::pair<int, int> (-1, -1));
     }
-    return (std::pair<int, int> (-1, 0));
-
+    return (res);
 }
 
 std::vector<int> Server::checkTimeouts()
