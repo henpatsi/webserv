@@ -32,11 +32,11 @@
 #  define MAX_URI_LENGTH 8192
 # endif
 
-# ifndef MAX_REQUEST_LINE_LENGTH
-#  define MAX_REQUEST_LINE_LENGTH 16384 // TODO make this a more reasonable length?
+# ifndef MAX_REQUEST_LINE_LENGTH // Includes room for 2 spaces and \r\n
+#  define MAX_REQUEST_LINE_LENGTH (MAX_URI_LENGTH + std::string("DELETE").length() + std::string("HTTP/1.1").length() + 4)
 # endif
 
-# ifndef MAX_HEADER_SIZE // TODO actually use this
+# ifndef MAX_HEADER_SIZE
 #  define MAX_HEADER_SIZE 4096
 # endif
 
@@ -60,7 +60,6 @@ struct multipartData
 	std::vector<multipartData>	multipartDataVector = {};
 };
 
-void	extractURIParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString); // TODO delete if not needed
 int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
 
 class HttpRequest
@@ -73,15 +72,12 @@ class HttpRequest
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
-		std::map<std::string, std::string>	getURIParameters(void) { return this->URIParameters; }
-		std::string							getURIParameter(std::string key) { return this->URIParameters[key]; }
 		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(void);
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
-		std::map<std::string, std::string>	getUrlEncodedData(void) { return this->urlEncodedData; } // TODO delete if not needed
 		std::string							getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
 		bool								isComplete(void) { return this->requestComplete; }
@@ -119,22 +115,21 @@ class HttpRequest
 		std::string							resourcePath;
 		std::string							resourcePathHost;
 		std::string							resourcePathIP;
-		int									resourcePathPort;
+		int									resourcePathPort = 80;
 		std::string							queryString;
-		std::map<std::string, std::string>	URIParameters = {}; // TODO delete if not needed
 		std::string							httpVersion;
 		std::map<std::string, std::string>	headers = {};
 		std::string 						host;
 		int									port = 80;
 		std::vector<multipartData>			multipartDataVector = {};
-		std::map<std::string, std::string>	urlEncodedData = {};
 
 		void	readFD(void);
 		void	tryParseRequestLine(void);
 		void	tryParseHeader(void);
 		void	tryParseContent(void);
 
-		void 	unchunkContent(std::vector<char>& chunkedVector);
+		void	extractURI(std::string URI);
+		void	unchunkContent(std::vector<char>& chunkedVector);
 		void	setErrorAndThrow(int code, std::string message);
 		void	debugPrint(void);
 };

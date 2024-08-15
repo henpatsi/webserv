@@ -1,8 +1,9 @@
 TODO
 
+Do not assume something is dir and add /, check if it is
+
 Default values for a route?
 
-URI remove pre part
 Check that URI pre part matches host header?
 
 Check request host (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host)

@@ -1,14 +1,7 @@
 
 RULES
 
-"Although the line terminator for the start-line and fields is the sequence CRLF, a recipient MAY recognize a single LF as a line terminator and ignore any preceding CR."
-	As far as I can tell, we don't accept 
-
 A recipient of a bare CR MUST consider that element to be invalid or replace each bare CR with SP before processing the element or forwarding the message. 
 	Currently not handled. Not sure where to test. Check that when \r is found, next char is \n in readLine? 
 
 ERRORS ABOVE: 400 (Bad Request)
-
-are we handling this? if yes, how?   --- PARSED IN HTTP REQUEST BUT NOT HANDLED ANYWHERE
-	GET /where?q=now HTTP/1.1
-	Host: www.example.org

@@ -208,8 +208,6 @@ void HttpResponse::prepareGetResponse(void)
 
 void HttpResponse::preparePostResponse(void)
 {
-	prepareGetResponse();
-
 	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
 
@@ -226,8 +224,11 @@ void HttpResponse::preparePostResponse(void)
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
+		prepareGetResponse();
 		this->responseCode = 201;
 	}
+	else
+		prepareGetResponse();
 }
 
 void HttpResponse::prepareDeleteResponse(void)
