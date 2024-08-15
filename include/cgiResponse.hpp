@@ -20,9 +20,9 @@ class	cgiResponse
 	std::string	_status;
 	std::string	_method;
 	std::string	_contentType;
-	int		_fd;
-	int		_reponseCode;
-	int		_failResponseCode;
+	int		_fd = 0;
+	int		_reponseCode = 0;
+	int		_failResponseCode = 0;
 	size_t		_contentLength;
 	size_t		_bodyBegin;
 	std::map<std::string, std::string>	_headers = {};
