@@ -254,22 +254,22 @@ ServerManager::runServers ()
                     }
                 }
             }
-          /* std::vector<cgiInfo>::iterator it = std::find_if ( */
-          /*     info.begin (), info.end (), */
-          /*     [&] (cgiInfo fdinfo) { return fdinfo.fd == events[i].data.fd; }); */
-          /* if (it != info.end ()) */
-          /*   { */
-          /*     std::cout << "got here" << std::endl; */
-          /*     if (it->response.isDone ()) */
-          /*       { */
-          /*         handleCgiResponse (it); */
-          /*         info.erase (it); */
-          /*       } */
-          /*     else */
-          /*       { */
-          /*         it->response.readCgiResponse (); */
-          /*       } */
-          /*   } */
+          std::vector<cgiInfo>::iterator it = std::find_if (
+              info.begin (), info.end (),
+              [&] (cgiInfo fdinfo) { return fdinfo.fd == events[i].data.fd; });
+          if (it != info.end ())
+            {
+              std::cout << "got here" << std::endl;
+              if (it->response.isDone ())
+                {
+                  handleCgiResponse (it);
+                  info.erase (it);
+                }
+              else
+                {
+                  it->response.readCgiResponse ();
+                }
+            }
         }
       try
         {
