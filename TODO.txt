@@ -1,7 +1,5 @@
 TODO
 
-Do not assume something is dir and add /, check if it is
-
 Default values for a route?
 
 Check that URI pre part matches host header?
