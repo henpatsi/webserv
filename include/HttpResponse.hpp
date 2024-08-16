@@ -78,6 +78,7 @@ class HttpResponse
 			{ 415, "Unsupported Media Type" },
 			{ 500, "Internal Server Error" },
 			{ 501, "Not Implemented" },
+			{ 504, "Gateway Timeout" },
 			{ 505, "HTTP Version Not Supported" }
 		};
 		std::map<int, std::string> customErrorPages = {

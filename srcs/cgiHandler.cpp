@@ -38,7 +38,7 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[2] = (char *) query_string.c_str();
 	method = "REQUEST_METHOD=" + request.getMethod();
 	envs[3] = (char *) method.c_str();
-	script_name = "SCRIPT_NAME=" + request.getResourcePath();	
+	script_name = "SCRIPT_NAME=" + route.root + request.getResourcePath();	
 	envs[4] = (char *) script_name.c_str();
 	server_protocol = "SERVER_PROTOCOL=HTTP/1.1";	
 	envs[5] = (char *) server_protocol.c_str();
@@ -53,7 +53,7 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[8] = (char *) remote_address.c_str();
 	hostname = "SERVER_NAME=" + config.getName();
 	envs[9] = (char *) hostname.c_str();
-	port = "SERVER_PORT=" + std::to_string(config.getPorts().at(0));
+	port = "SERVER_PORT=" + std::to_string(htons(config.getPorts().at(0)));
 	envs[10] = (char *) port.c_str();
 	envs[11] = 0;
 	return envs;

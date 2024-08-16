@@ -299,7 +299,7 @@ void ServerManager::checkTimeouts()
 		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
 		{
 			std::cout << "Cgi timed out\n";
-			it->response.setFailResponseCode(500);
+			it->response.setFailResponseCode(504);
 			handleCgiResponse(it);
 			kill(it->pid, SIGKILL);
 			std::cout << "Killed " << it->pid << std::endl;
