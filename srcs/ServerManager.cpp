@@ -276,11 +276,21 @@ void ServerManager::checkTimeouts()
 {
 	for (Server *server : servers)
 	{
-		std::vector<int> timedOutFDs = server->checkTimeouts();
-		for (int fd : timedOutFDs)
+		try
 		{
-			DelFromEpoll(fd);
-			close(fd);
+			std::vector<int> timedOutFDs = server->checkTimeouts();
+			for (int fd : timedOutFDs)
+			{
+				DelFromEpoll(fd);
+				close(fd);
+			}
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr
+				<< "ServerManager: CheckTimeoutsError: " << e.what()
+				<< "\n";
+			// TODO check that nothing needs to be done here
 		}
 	}
 	std::time_t currentTime = std::time(nullptr);
@@ -348,16 +358,18 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 {
 	try
 	{
-		ServerResponse response = server.respond(event.data.fd);
-		if (response.fd.has_value() && response.pid.has_value())
+		std::pair<bool, ServerResponse> response = server.respond(event.data.fd);
+		if (!response.first)
+			return ;
+		if (response.second.fd.has_value() && response.second.pid.has_value())
 		{
 			DelFromEpoll(event.data.fd);
 			temp_event.events = EPOLLIN;
-			temp_event.data.fd = response.fd.value();
-			AddToEpoll(response.fd.value());
+			temp_event.data.fd = response.second.fd.value();
+			AddToEpoll(response.second.fd.value());
 			info.push_back((cgiInfo){
-				response.fd.value(), response.pid.value(),
-				cgiResponse{response.fd.value()},
+				response.second.fd.value(), response.second.pid.value(),
+				cgiResponse{response.second.fd.value()},
 				event.data.fd, std::time(nullptr)});
 		}
 		else

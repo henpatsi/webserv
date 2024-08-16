@@ -121,7 +121,7 @@ void Server::getRequest(int fd)
     }
 }
 
-ServerResponse Server::respond(int fd)
+std::pair<bool, ServerResponse> Server::respond(int fd)
 {
     ServerResponse res;
     std::list<Connection>::iterator it;
@@ -131,7 +131,9 @@ ServerResponse Server::respond(int fd)
             break;
     }
 
-    if (it->request.isComplete())
+    bool requestComplete = it->request.isComplete();
+
+    if (requestComplete)
     {
         if (it->request.getFailResponseCode() == 0) // Only find route if no previous error occured
         {
@@ -164,7 +166,7 @@ ServerResponse Server::respond(int fd)
                 disconnect(it);
                 res.pid = ret.first;
                 res.fd = ret.second;
-                return res;
+                return (std::pair<bool, ServerResponse>(requestComplete, res));
             }
             catch(const std::exception &e)
             {
@@ -178,7 +180,7 @@ ServerResponse Server::respond(int fd)
             }
         }
     }
-    return (res);
+    return (std::pair<bool, ServerResponse>(requestComplete, res));
 }
 
 std::vector<int> Server::checkTimeouts()
