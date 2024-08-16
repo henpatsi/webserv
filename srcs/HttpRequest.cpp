@@ -104,31 +104,8 @@ void HttpRequest::tryParseRequestLine()
 	// Check method
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
 		setErrorAndThrow(501, "Method not implemented");
-
-<<<<<<< HEAD
-	// Check URI
-	if (URI.length() > MAX_URI_LENGTH)
-		setErrorAndThrow(414, "URI too long");
-	// Extracts path from the URI
-	this->resourcePath = URI.substr(0, URI.find('?'));
-	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
-		this->resourcePath.erase(this->resourcePath.find("#"));
-	this->fileExtension = this->resourcePath;
-	this->fileExtension.erase(0, this->fileExtension.find_last_of("/") + 1);
-	this->fileExtension.erase(0, this->fileExtension.find_last_of(".") + 1);
-	if (this->resourcePath.empty())
-		setErrorAndThrow(400, "Resource path is empty");
-
-	// TODO maybe not needed
-	// Extracts the parameters from the URI into a map
-	if (URI.find('?') != std::string::npos && URI.back() != '?')
-		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	this->queryString = URI.find('?') + 1;
-=======
 	// Extract all portions of the URI
 	extractURI(URI);
->>>>>>> f1932b634dfbbdce6bab130cada878966641d5eb
-
 	// Check HTTP version
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400, "HTTP version is empty");
@@ -175,13 +152,8 @@ void HttpRequest::tryParseHeader()
 			setErrorAndThrow(400, "Header key is empty");
 		if (key.find_first_of(SPACECHARS) != std::string::npos)
 			setErrorAndThrow(400, "Header key contains space character");
-<<<<<<< HEAD
-		if (headers.find(key) != headers.end())
-			setErrorAndThrow(400, "Duplicate header");
-=======
 		if (this->headers.find(key) != this->headers.end())
 			setErrorAndThrow(400, "Duplicate headers");
->>>>>>> f1932b634dfbbdce6bab130cada878966641d5eb
 
 		std::string value = line.substr(line.find(':') + 1);
 		size_t valueStart = value.find_first_not_of(SPACECHARS);
