@@ -11,8 +11,20 @@ echo "---Test simple GET---"
 curl http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
+echo "---Test GET that does not exist---"
+curl http://$SERVER_IP:$SERVER_PORT/doesnotexist
+echo ""
+
+echo "---Test GET from port with no path to resource---"
+curl http://127.0.0.1:8000/success.html
+echo ""
+
 echo "---Test simple POST---"
 curl -d "message=Hello, World!&name=mom" http://$SERVER_IP:$SERVER_PORT/success.html
+echo ""
+
+echo "---Test POST to server with no permissions---"
+curl -d "message=Hello, World!&name=mom" http://127.42.42.42:8080/success.html
 echo ""
 
 echo "---Test simple POST with false line length---"
@@ -37,6 +49,18 @@ echo ""
 
 echo "---Test PUT upload---"
 curl -T "tester.sh" http://$SERVER_IP:$SERVER_PORT/uploads
+echo ""
+
+echo "---Test DELETE---"
+curl -X "DELETE" http://$SERVER_IP:$SERVER_PORT/uploads/todo.txt
+echo ""
+
+echo "---Test DELETE nonexisting---"
+curl -X "DELETE" http://$SERVER_IP:$SERVER_PORT/uploads/doesnotexist
+echo ""
+
+echo "---Duplicate keys---"
+curl -H "Key:value" -H "Key:value2" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
 echo "---Key Value Together---" # NGINX allows
@@ -83,26 +107,3 @@ echo "---Test Empty Header Key2---" # NGINX does not allow
 curl -H " : asdf" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
-echo "---Test Empty Header KeyValue1---" # NGINX does not allow
-curl -H ":,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""
-
-echo "---Test Empty Header KeyValue2---" # NGINX does not allow
-curl -H " : ,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""
-
-echo "---Test Empty Header KeyValue3---" # NGINX does not allow
-curl -H ": ,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""
-
-echo "---Test Empty Header KeyValue4---" # NGINX does not allow
-curl -H " :,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""
-
-echo "---Test Empty Header KeyValue5---" # NGINX does not allow
-curl -H ":  ,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""
-
-echo "---Test Empty Header KeyValue6---" # NGINX does not allow
-curl -H " :  ,Key: Value" http://$SERVER_IP:$SERVER_PORT/success.html
-echo ""

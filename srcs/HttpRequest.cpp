@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 16:36:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/12 17:02:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,24 +70,31 @@ void HttpRequest::readRequest()
 void HttpRequest::tryParseRequestLine()
 {
 	std::string eol = "\r\n";
-	std::vector<char>::iterator it = std::search(this->rawRequest.begin(), this->rawRequest.end(), eol.begin(), eol.end());
-	if (it == this->rawRequest.end()) // First line not yet read
+	std::vector<char>::iterator start = this->rawRequest.begin();
+	std::vector<char>::iterator end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+	if (end == start) // Allow one empty line before request line
+	{
+		start = std::next(end, 2);
+		end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+	}
+	if (end == this->rawRequest.end()) // First line not yet read
 	{
 		if (this->totalRead > MAX_REQUEST_LINE_LENGTH)
 			setErrorAndThrow(400, "Request line too long");
 		return ;
 	}
-	if (it == this->rawRequest.begin())
+	if (end == start)
 		setErrorAndThrow(400, "Request line is empty");
 
-	std::string requestLineString(this->rawRequest.begin(), std::next(it,2)); // Get line including \n
+	std::string requestLineString(start, std::next(end, 2)); // Get line including \r\n
+	if (requestLineString.length() > MAX_REQUEST_LINE_LENGTH)
+		setErrorAndThrow(400, "Request line too long");
 
 	std::istringstream lineStream(requestLineString);
 	std::string URI;
 	lineStream >> this->method;
 	lineStream >> URI;
 	lineStream >> this->httpVersion;
-
 	// Check that all present
 	if (this->method.empty() || this->method == "\r"
 		|| URI.empty() || URI == "\r"
@@ -98,21 +105,8 @@ void HttpRequest::tryParseRequestLine()
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
 		setErrorAndThrow(501, "Method not implemented");
 
-	// Check URI
-	if (URI.length() > MAX_URI_LENGTH)
-		setErrorAndThrow(414, "URI too long");
-	// Extracts path from the URI
-	this->resourcePath = URI.substr(0, URI.find('?'));
-	if (this->resourcePath.find("#") != std::string::npos) // # marks end of resource path
-		this->resourcePath.erase(this->resourcePath.find("#"));
-	if (this->resourcePath.empty())
-		setErrorAndThrow(400, "Resource path is empty");
-
-	// TODO maybe not needed
-	// Extracts the parameters from the URI into a map
-	if (URI.find('?') != std::string::npos && URI.back() != '?')
-		extractURIParameters(this->URIParameters, URI.substr(URI.find('?') + 1));
-	this->queryString = URI.find('?') + 1;
+	// Extract all portions of the URI
+	extractURI(URI);
 
 	// Check HTTP version
 	if (this->httpVersion.empty())
@@ -133,9 +127,15 @@ void HttpRequest::tryParseHeader()
 	std::vector<char>::iterator headerStart = this->rawRequest.begin() + requestLineLength;
 	std::vector<char>::iterator it = std::search(headerStart, this->rawRequest.end(), eoh.begin(), eoh.end());
 	if (it == this->rawRequest.end()) // Header not yet fully read
+	{
+		if (this->totalRead - this->requestLineLength > MAX_HEADER_SIZE)
+			setErrorAndThrow(400, "Header too long");
 		return ;
+	}
 
 	std::string headerString(headerStart, std::next(it,4)); // Get string including end of header \r\n
+	if (headerString.length() > MAX_REQUEST_LINE_LENGTH)
+		setErrorAndThrow(400, "Header too long");
 	std::istringstream sstream(headerString);
 	std::string line;
 
@@ -154,8 +154,8 @@ void HttpRequest::tryParseHeader()
 			setErrorAndThrow(400, "Header key is empty");
 		if (key.find_first_of(SPACECHARS) != std::string::npos)
 			setErrorAndThrow(400, "Header key contains space character");
-		if (headers.find(key) != headers.end())
-			setErrorAndThrow(400, "Duplicate header");
+		if (this->headers.find(key) != this->headers.end())
+			setErrorAndThrow(400, "Duplicate headers");
 
 		std::string value = line.substr(line.find(':') + 1);
 		size_t valueStart = value.find_first_not_of(SPACECHARS);
@@ -261,12 +261,68 @@ void HttpRequest::tryParseContent()
 	this->requestComplete = true;
 }
 
+void HttpRequest::extractURI(std::string URI)
+{
+	if (URI.length() > MAX_URI_LENGTH)
+		setErrorAndThrow(414, "URI too long");
+	if (URI.find("#") != std::string::npos) // ignore anythign after #
+		URI.erase(URI.find("#"));
+
+	std::string fullPathString = URI.substr(0, URI.find('?'));
+	
+	if (fullPathString.front() != '/') // TODO use commented out portion below if absolute path accepted
+		setErrorAndThrow(400, "Invalid resource path");
+
+	// // Extract host if any
+	// if (fullPathString.front() != '/')
+	// {
+	// 	if (fullPathString.find("http://") != std::string::npos)
+	// 	{
+	// 		if (fullPathString.find("http://") != 0)
+	// 			setErrorAndThrow(400, "Invalid URI format");
+	// 		fullPathString.erase(0, 7);
+	// 	}
+	// 	if (!std::isdigit(fullPathString.front()))
+	// 		this->resourcePathHost = fullPathString.substr(0, fullPathString.find('/'));
+	// 	else
+	// 		this->resourcePathIP = fullPathString.substr(0, fullPathString.find('/'));
+	// 	fullPathString.erase(0, fullPathString.find('/'));
+	// }
+
+	// // Extract port if any
+	// if (this->resourcePathHost.find(':') != std::string::npos)
+	// {
+	// 	try
+	// 	{
+	// 		this->resourcePathPort = std::stoi(this->resourcePathHost.substr(this->resourcePathHost.find(':') + 1));
+	// 		this->resourcePathHost.erase(this->resourcePathHost.find(':'));
+	// 	}
+	// 	catch(const std::exception& e)
+	// 	{
+	// 		setErrorAndThrow(400, "Invalid port number in URI");
+	// 	}
+	// }
+
+	// The resource path should be the remaining full path string
+	this->resourcePath = fullPathString;
+	if (this->resourcePath.empty())
+		setErrorAndThrow(400, "Resource path is empty");
+
+	// Extract the query string if any
+	if (URI.find('?') != std::string::npos && URI.back() != '?')
+		this->queryString = URI.substr(URI.find('?') + 1);
+
+	// std::cout << "URI host: '" << this->resourcePathHost << "'\n";
+	// std::cout << "URI port: '" << this->resourcePathPort << "'\n";
+	// std::cout << "URI IP: '" << this->resourcePathIP << "'\n";
+}
+
 void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 {
+	std::string eol = "\r\n";
 	std::vector<char> unchunkedVector;
 	std::vector<char>::iterator start;
 	std::vector<char>::iterator end;
-	std::string eol = "\r\n";
 	size_t chunkSize;
 
 	start = chunkedVector.begin();
@@ -320,10 +376,8 @@ void HttpRequest::debugPrint()
 	/* DEBUG PRINT */
 	std::cout << "\nMethod: " << this->method << "\n";
 	std::cout << "Resource path: " << this->resourcePath << "\n";
+	std::cout << "Query string: " << this->queryString << "\n"; 
 	std::cout << "HTTP version: " << this->httpVersion << "\n";
-	std::cout << "URI parameters:\n";
-	for (auto param : this->URIParameters)
-		std::cout << "  " << param.first << " = " << param.second << "\n";
 	std::cout << "Headers:\n";
 	for (auto param : this->headers)
 		std::cout << "  " << param.first << " = " << param.second << "\n";
@@ -350,12 +404,6 @@ void HttpRequest::debugPrint()
 			// }
 		}
 	}
-	else if (this->urlEncodedData.size() > 0)
-	{
-		std::cout << "Url encoded data:\n";
-		for (auto param : this->urlEncodedData)
-			std::cout << "  " << param.first << " = " << param.second << "\n";
-	}
 
 	std::cout << "\nREQUEST INFO FINISHED\n\n";
 }
@@ -367,23 +415,6 @@ std::vector<char>	HttpRequest::getRawContent(void)
 }
 
 // HELPER FUNCTIONS
-
-void extractURIParameters(std::map<std::string, std::string>& parametersMap, std::string parametersString)
-{
-	while (1)
-	{
-		std::string parameter = parametersString.substr(0, parametersString.find('&'));
-		if (parameter.find('=') != std::string::npos && parameter.front() != '=' && parameter.back() != '=')
-		{
-			std::string key = parameter.substr(0, parameter.find('='));
-			std::string value = parameter.substr(parameter.find('=') + 1);
-			parametersMap[key] = value;
-		}
-		if (parametersString.find('&') == std::string::npos || parametersString.find('&') == parametersString.size() - 1)
-			break ;
-		parametersString = parametersString.substr(parametersString.find('&') + 1);
-	}
-}
 
 int extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary)
 {
