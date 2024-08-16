@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 16:01:21 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 16:44:56 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -287,7 +287,7 @@ void HttpRequest::tryParseContent()
 	}
 	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
 		return ;
-	else if (this->headers.find("conten-type") != this->headers.end() && this->headers["content-type"].find("multipart/form-data") != std::string::npos)
+	else if (this->headers.find("content-type") != this->headers.end() && this->headers["content-type"].find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
