@@ -52,9 +52,9 @@ Route Server::findCorrectRoute(HttpRequest request)
         std::cout << "location: " << fitting.location << "\n";
         if (request.isCgi())
         {
-           // std::string cgiPath = fitting.root + fitting.location;
-	    std::string cgiPath = fitting.root + fitting.location + request.getResourcePath().erase(0, request.getResourcePath().find_last_of("/"));
-            std::cout << "cgi Path: " << cgiPath;
+	    std::string cgiPath = fitting.root;
+            cgiPath += request.getResourcePath();
+            std::cout << "cgi Path: " << cgiPath << std::endl;
             if (access(cgiPath.c_str(), F_OK | X_OK) != 0)
             {
                 std::cout << "CGI path not valid" << std::endl;

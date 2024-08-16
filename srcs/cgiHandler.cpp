@@ -69,13 +69,17 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	int	pid;
 
 	if (route.CGI.find(request.getFileExtension()) == route.CGI.npos)
+	{
 		throw RunCgiException("CGI not allowed");
+	}
 	std::string cgiExecutable;
 	if (request.getFileExtension() == "php")
 		cgiExecutable = "/usr/bin/php";
 	if (request.getFileExtension() == "py")
 		cgiExecutable = "/usr/bin/python3";
-	std::string cgiPath = "./" + request.getResourcePath().erase(0, request.getResourcePath().find_last_of("/") + 1);
+	std::string cgiPath = route.root + request.getResourcePath();
+	cgiPath = cgiPath.substr(cgiPath.find_last_of("/") + 1);
+	std::cout << "cgiPath: " << cgiPath << std::endl;
 	args[0] = (char *)cgiExecutable.c_str();
 	args[1] = (char *)cgiPath.c_str();
 	args[2] = 0;
