@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 16:44:56 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 17:03:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -291,7 +291,7 @@ void HttpRequest::tryParseContent()
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
-		std::vector<char> rawContent = getRawContent();
+		std::vector<char> rawContent = getRawContent(this->contentLength);
 		int extractRet = extractMultipartData(this->multipartDataVector, rawContent, boundary);
 		if (extractRet != 0)
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
@@ -455,9 +455,15 @@ void HttpRequest::debugPrint()
 	std::cerr << "\nREQUEST INFO FINISHED\n\n";
 }
 
-std::vector<char>	HttpRequest::getRawContent(void)
+std::vector<char>	HttpRequest::getRawContent(size_t length)
 {
-	std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
+	std::vector<char>::iterator start = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+	std::vector<char>::iterator end;
+	if (length == 0)
+		end = this->rawRequest.end();
+	else
+		end = std::next(start, length);
+	std::vector<char> rawContent(start, end);
 	return rawContent;
 }
 

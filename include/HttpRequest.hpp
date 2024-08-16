@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 12:24:01 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 17:03:26 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,7 @@ class HttpRequest
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
-		std::vector<char>					getRawContent(void);
+		std::vector<char>					getRawContent(size_t length = 0);
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::string							getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }

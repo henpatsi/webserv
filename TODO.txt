@@ -3,3 +3,15 @@ TODO
 Default values for a route?
 
 Check HttpRequest is HTTP/1.1 compliant
+
+
+
+check for std::next overflow / std::prev underflow
+make delete not default to success page
+
+
+- fix in main branch
+request line length if empty line
+check if anything after version
+check for content type before checking its value
+check that only max content length of content is being parsed, even if more available
