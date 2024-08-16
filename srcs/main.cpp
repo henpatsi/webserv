@@ -6,11 +6,9 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 13:41:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 14:52:45 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-bool debug = false;
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
@@ -19,13 +17,15 @@ int main(int argc, char *argv[])
 {
 	if (argc != 2)
 	{
-		std::cerr << "Usage: ./webserv [request]\n";
+		std::cerr << "Usage: ./webserv [request file]\n";
 		return 1;
 	}
 
-	std::string requestString(argv[1]);
+	std::ifstream file(argv[1]);
+	std::stringstream requestStringStream;
+	requestStringStream << file.rdbuf();
 
-	// std::cerr << "Request:\n'" << requestString << "'\n";
+	// std::cerr << "Request:\n'" << requestStringStream.str() << "'\n";
 
 	Route route;
 	route.acceptUpload = false;
@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
 	route.directoryListing = true;
 	route.location = "";
 	route.redirect = false;
-	route.root = "../www";
+	route.root = "./www";
 	route.uploadDir = "www/uploads";
 
-	HttpRequest request(requestString);
+	HttpRequest request(requestStringStream.str());
 	HttpResponse response(request, route);
 
 	std::vector<char> responseVector = response.getResponse();
