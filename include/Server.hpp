@@ -8,6 +8,7 @@
 
 #include <list>
 #include <algorithm>
+#include <optional>
 
 #ifndef TIMEOUT_SEC
 # define TIMEOUT_SEC 5
@@ -22,6 +23,11 @@ struct Connection
     Route route;
     HttpRequest request;
     sockaddr_in addr;
+};
+
+struct ServerResponse {
+    std::optional<int> fd;
+    std::optional<int> pid;
 };
 
 class Server {
@@ -52,7 +58,7 @@ public:
     // gets called when server can read
     void getRequest(int fd);
     // gets called when request read and server can write
-    std::pair <int, int> respond(int fd);
+    ServerResponse respond(int fd);
     // checks if the connection is still alive
     std::vector<int> checkTimeouts();
 

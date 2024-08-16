@@ -22,8 +22,11 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
 		
 		this->path = this->route.root + request.getResourcePath();
-		if (this->path.find(".") == std::string::npos && this->path.back() != '/')
-			this->path += "/"; // Add to end of dir if not yet
+		if (std::filesystem::is_directory(this->path))
+		{
+			if (this->path.back() != '/')
+				this->path += "/"; // Standardize dir to end in /
+		}
 		std::cout << "Path: " << this->path << "\n";
 
 		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(request.getMethod())))
@@ -214,7 +217,7 @@ void HttpResponse::prepareHeadResponse(void)
 
 void HttpResponse::prepareGetResponse(void)
 {
-	if (this->directoryListingAllowed && (this->path.find(".") == std::string::npos))
+	if (this->directoryListingAllowed && std::filesystem::is_directory(this->path))
 	{
 		buildDirectoryList();
 		return ;
@@ -248,8 +251,6 @@ void HttpResponse::prepareGetResponse(void)
 
 void HttpResponse::preparePostResponse(HttpRequest &request)
 {
-	prepareGetResponse();
-
 	if (this->route.uploadDir.back() != '/') // Standardize uploadDir path to end in /
 		this->route.uploadDir += "/";
 
@@ -266,8 +267,11 @@ void HttpResponse::preparePostResponse(HttpRequest &request)
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
+		prepareGetResponse();
 		this->responseCode = 201;
 	}
+	else
+		prepareGetResponse();
 }
 
 void HttpResponse::prepareDeleteResponse(void)

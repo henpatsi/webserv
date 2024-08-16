@@ -55,6 +55,11 @@ class ServerManager
         void WaitForEvents();
         // checks if any connection has timed out
         void checkTimeouts();
+
+        void makeConnection(Server server, epoll_event event);
+        void readMore(Server server, epoll_event event);
+        void makeResponse(Server server, epoll_event event);
+        void checkCGIFds(epoll_event event);
     void handleCgiResponse(std::vector<cgiInfo>::iterator it);
     public:
         ServerManager(std::string path);
