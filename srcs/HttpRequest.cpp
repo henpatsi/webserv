@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 13:35:07 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 16:01:21 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -110,10 +110,12 @@ void HttpRequest::tryParseRequestLine()
 	std::string eol = "\r\n";
 	std::vector<char>::iterator start = this->rawRequest.begin();
 	std::vector<char>::iterator end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+	bool emptyFirstLine = false;
 	if (end == start) // Allow one empty line before request line
 	{
 		start = std::next(end, 2);
 		end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+		emptyFirstLine = true;
 	}
 	if (end == this->rawRequest.end()) // First line not yet read
 	{
@@ -138,6 +140,11 @@ void HttpRequest::tryParseRequestLine()
 		|| URI.empty() || URI == "\r"
 		|| this->httpVersion.empty() || this->httpVersion == "\r")
 		setErrorAndThrow(400, "Request line not complete");
+	// Check nothing extra is there
+	std::string remaining;
+	lineStream >> remaining;
+	if (!remaining.empty())
+		setErrorAndThrow(400, "Request line contains extra information");
 
 	// Check method
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
@@ -150,7 +157,9 @@ void HttpRequest::tryParseRequestLine()
 	if (this->httpVersion != "HTTP/1.1")
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
-	this->requestLineLength = requestLineString.length();
+	this->requestLineLength += requestLineString.length();
+	if (emptyFirstLine)
+		this->requestLineLength += 2;
 
 	// std::cerr << "- Request line parsed -\n";
 	// std::cerr << "Request line = '" << requestLineString << "'\n";
