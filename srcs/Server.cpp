@@ -169,6 +169,7 @@ ServerResponse Server::respond(int fd)
                 if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                     throw ServerManager::ManagerRuntimeException("Failed to send response");
                 disconnect(it);
+                close(fd);
             }
         }
     }

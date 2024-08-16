@@ -124,11 +124,8 @@ class HttpRequest
 		std::string 						host;
 		int									port = 80;
 		std::vector<multipartData>			multipartDataVector = {};
-<<<<<<< HEAD
 		std::map<std::string, std::string>	urlEncodedData = {};
 		std::string fileExtension;
-=======
->>>>>>> f1932b634dfbbdce6bab130cada878966641d5eb
 
 		void	readFD(void);
 		void	tryParseRequestLine(void);
