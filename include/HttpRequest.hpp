@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/12 08:27:07 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 12:24:01 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,6 +67,7 @@ class HttpRequest
 	public:
 		HttpRequest(void);
 		HttpRequest(int connectionFD);
+		HttpRequest(std::string requestString);
 
 		// Getters
 		std::string							getMethod(void) { return this->method; }
