@@ -75,7 +75,7 @@ class ServerManager
         class CharOutsideServerBlockException : MANAGEREXCEPTION;
         class ServerCreationException : MANAGEREXCEPTION;
         class UnclosedBraceException : MANAGEREXCEPTION;
-        class ManagerRuntimeException : std::exception {
+        class ManagerRuntimeException : public std::exception {
             private:
                 std::string error;
             public:
