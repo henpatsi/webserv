@@ -234,7 +234,7 @@ void ServerManager::DelFromEpoll(int fd)
 void ServerManager::registerServerSockets()
 {
 	// incomming connections
-	temp_event.events = EPOLLIN | EPOLLET;
+	temp_event.events = EPOLLIN;
 	for (Server *server : servers)
 	{
 		for (auto &socket : server->GetSocketFDs())
