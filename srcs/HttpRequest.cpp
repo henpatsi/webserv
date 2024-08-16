@@ -109,7 +109,7 @@ void HttpRequest::tryParseRequestLine()
 	// Check HTTP version
 	if (this->httpVersion.empty())
 		setErrorAndThrow(400, "HTTP version is empty");
-	if (this->httpVersion != "HTTP/1.1")
+	if (this->httpVersion != "HTTP/1.1" && this->httpVersion != "HTTP/1.0")
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
 	this->requestLineLength = requestLineString.length();
