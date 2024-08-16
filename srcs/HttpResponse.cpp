@@ -61,9 +61,10 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 {
 	try
 	{
-		if (response.getFailResponseCode() != 0)
-			setErrorAndThrow(response.getFailResponseCode(), "Cgi failed to respond");
-		this->responseCode = 200;
+		if (response.getFailResponseCode() == 0)
+			this->responseCode = 200;
+		else
+			setError(response.getFailResponseCode());
 	}
 	catch(ResponseException& e) // Known error, response ready to build
 	{
@@ -151,7 +152,10 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 	std::vector<char> responsecontent = response.getContent();
 	if (response.getMethod() != "HEAD")
+	{
+		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
 		this->response.insert(this->response.end(), responsecontent.begin(), responsecontent.end());
+	}
 }
 
 void HttpResponse::buildResponse(HttpRequest &request)

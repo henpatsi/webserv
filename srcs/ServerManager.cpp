@@ -312,7 +312,7 @@ int ServerManager::acceptConnection(epoll_event event)
 	return incommingFd;
 }
 
-void ServerManager::makeConnection(Server server, epoll_event event)
+void ServerManager::makeConnection(Server &server, epoll_event event)
 {
 	try
 	{
@@ -330,7 +330,7 @@ void ServerManager::makeConnection(Server server, epoll_event event)
 	}
 }
 
-void ServerManager::readMore(Server server, epoll_event event)
+void ServerManager::readMore(Server &server, epoll_event event)
 {
 	try
 	{
@@ -344,7 +344,7 @@ void ServerManager::readMore(Server server, epoll_event event)
 	}
 }
 
-void ServerManager::makeResponse(Server server, epoll_event event)
+void ServerManager::makeResponse(Server &server, epoll_event event)
 {
 	try
 	{
@@ -383,7 +383,6 @@ void ServerManager::checkCGIFds(epoll_event event)
 		{ return fdinfo.fd == event.data.fd; });
 	if (it != info.end())
 	{
-		std::cout << "got here" << std::endl;
 		if (it->response.isDone())
 		{
 			handleCgiResponse(it);
@@ -391,7 +390,16 @@ void ServerManager::checkCGIFds(epoll_event event)
 		}
 		else
 		{
-			it->response.readCgiResponse();
+			try
+			{
+				it->response.readCgiResponse();
+			}
+			catch(const std::exception &e)
+			{
+				std::cout << e.what() << std::endl;
+				handleCgiResponse(it);
+				info.erase(it);
+			}
 		}
 	}
 }

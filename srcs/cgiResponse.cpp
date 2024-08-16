@@ -3,7 +3,10 @@
 
 const char* cgiResponse::CgiRequestException::what() const throw()
 {
-	return this->message.c_str(); } void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
+	return this->message.c_str();
+} 
+
+void cgiResponse::setErrorAndThrow(int responseCode, std::string message)
 {
 	_failResponseCode = responseCode;
 	_done = true;

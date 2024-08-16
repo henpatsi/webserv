@@ -267,6 +267,8 @@ void HttpRequest::extractURI(std::string URI)
 		URI.erase(URI.find("#"));
 
 	std::string fullPathString = URI.substr(0, URI.find('?'));
+	fileExtension = fullPathString.substr(fullPathString.find_last_of("/"));
+	fileExtension = fileExtension.substr(fileExtension.find_last_of(".") + 1);
 	
 	if (fullPathString.front() != '/') // TODO use commented out portion below if absolute path accepted
 		setErrorAndThrow(400, "Invalid resource path");

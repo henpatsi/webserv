@@ -98,7 +98,7 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 		if (close(toCGI[1]) == -1 || close(toCGI[0]) == -1 || close(fromCGI[0]) == -1 || close(fromCGI[1]) == -1) 
 			throw RunCgiException("Close failed");
 		execve(cgiExecutable.c_str(), args, create_envs(envs, request, config, client_address, route));
-		throw RunCgiException("Execve failed");
+		std::terminate();
 	}
 	write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
 	if (close(toCGI[1]) == -1 || close(fromCGI[1]) == -1 || close(toCGI[0]) == -1)
