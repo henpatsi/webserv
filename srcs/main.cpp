@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 11:37:37 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/16 14:52:45 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/16 15:40:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,5 +45,5 @@ int main(int argc, char *argv[])
 	std::string responseString(responseVector.begin(), responseVector.end());
 	std::cout << responseString;
 
-	return 0;
+	return response.getResponseCode();
 }
