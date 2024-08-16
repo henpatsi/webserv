@@ -19,15 +19,17 @@ void	cgiResponse::setBodyBegin(std::string &temp)
 {
 	_bodyBegin = 0;
 	size_t	found;
-	found = temp.find_first_of("\r\n\r\n");
+	found = temp.find("\r\n\r\n");
 	if (found != temp.npos)
 	{
 		_bodyBegin = found + 4;
 		return;
 	}
-	found = temp.find_first_of("\n\n");
+	found = temp.find("\n\n");
 	if (found != temp.npos)
 		_bodyBegin = found + 2;
+	else
+		setErrorAndThrow(500, "Invalid CGI response header");
 }
 
 void	cgiResponse::checkMessageLength()

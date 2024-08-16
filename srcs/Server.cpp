@@ -55,9 +55,14 @@ Route Server::findCorrectRoute(HttpRequest request)
 	    std::string cgiPath = fitting.root;
             cgiPath += request.getResourcePath();
             std::cout << "cgi Path: " << cgiPath << std::endl;
+            if (access(cgiPath.c_str(), F_OK) != 0)
+            {
+                std::cout << "CGI doesn't exist" << std::endl;
+                throw RouteException();
+            }
             if (access(cgiPath.c_str(), F_OK | X_OK) != 0)
             {
-                std::cout << "CGI path not valid" << std::endl;
+                std::cout << "CGI is not executable" << std::endl;
                 throw RouteException();
             }
         }

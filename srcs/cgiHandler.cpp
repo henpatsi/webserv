@@ -90,7 +90,7 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	setFdNonBlocking(fromCGI[0]);
 	setFdNonBlocking(fromCGI[1]);
 	std::cout << "Executable: " << cgiExecutable << std::endl;
-	std::cout << "Script :" << args[1] << std::endl;
+	std::cout << "Script: " << args[1] << std::endl;
 	pid = fork();
 	if (pid == 0)
 	{
