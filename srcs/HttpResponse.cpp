@@ -63,10 +63,7 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 	{
 		if (response.getFailResponseCode() != 0)
 			setErrorAndThrow(response.getFailResponseCode(), "Cgi failed to respond");
-		
-		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(response.getMethod())))
-			setErrorAndThrow(405, "Method not allowed");
-
+		this->responseCode = 200;
 	}
 	catch(ResponseException& e) // Known error, response ready to build
 	{
@@ -76,10 +73,7 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 	{
 		setError(500);
 	}
-
 	buildResponse(response);
-
-	std::cout << "Response code: " << this->responseCode << "\n";
 }
 
 // MEMBER FUNCTIONS
@@ -150,10 +144,12 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	responseString += "Date: " + std::string(buffer) + "\r\n";
 	responseString += response.getHeaders();
 	responseString += "\r\n";
+	std::cout << responseString << std::endl;
 
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
+	std::vector<char> responsecontent = response.getContent();
 	if (response.getMethod() != "HEAD")
-		this->response.insert(this->response.end(), response.getContent().begin(), response.getContent().end());
+		this->response.insert(this->response.end(), responsecontent.begin(), responsecontent.end());
 }
 
 void HttpResponse::buildResponse(HttpRequest &request)

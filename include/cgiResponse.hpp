@@ -23,11 +23,11 @@ class	cgiResponse
 	int		_fd = 0;
 	int		_reponseCode = 0;
 	int		_failResponseCode = 0;
-	size_t		_contentLength;
-	size_t		_bodyBegin;
+	size_t		_contentLength = 0;
+	size_t		_bodyBegin = 0;
 	std::map<std::string, std::string>	_headers = {};
-	bool		_contentLengthSet;
-	bool		_done;
+	bool		_contentLengthSet = 0;
+	bool		_done = 0;
 	std::vector<char>	_content;
 	char		_buffer[1024];
 	std::vector<char>	_message;

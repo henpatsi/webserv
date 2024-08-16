@@ -261,14 +261,15 @@ void ServerManager::WaitForEvents()
 
 void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
 {
-	Route _;
-	HttpResponse response(it->response, _);
-	if (send(it->listeningFd, &response.getResponse()[0],
-			 response.getResponse().size(), 0) == -1)
-		throw ManagerRuntimeException("Failed to send response");
-	DelFromEpoll(it->fd);
-	close(it->fd);
-	close(it->listeningFd);
+  Route _;
+  HttpResponse response (it->response, _);
+  if (send (it->listeningFd, &response.getResponse()[0],
+            response.getResponse().size (), 0)
+      == -1)
+    throw ManagerRuntimeException ("Failed to send response");
+  DelFromEpoll (it->fd);
+  if (close(it->fd) == -1 || close (it->listeningFd))
+    throw ManagerRuntimeException ("Failed to close fd");
 }
 
 void ServerManager::checkTimeouts()
