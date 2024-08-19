@@ -34,6 +34,10 @@ class ServerConfig {
 		bool							_isRequestSizeSet 	= false;
 		std::list<struct Route>			_routes;
 		bool							_isRouteSet			= false;
+		int								_sessionTimeout;
+		bool							_isSessionTimeoutSet;
+		std::string						_errorPage;
+		bool							_isErrorPageSet;
 
 	public:
 		ServerConfig(std::stringstream& config);
@@ -87,6 +91,8 @@ class ServerConfig {
 		void parseAddress(std::string pair, std::string key);
 		void parseRoute(std::string pair, std::string key);
 		void parseRequestSize(std::string pair, std::string key);
+		void parseSessionTimeout(std::string pair, std::string key);
+		void parseErrorPage(std::string pair, std::string key);
 
 		/* ---- RouteParser ----*/
 		void parseAllowedMethods(std::string pair, std::string key, Route& res);
