@@ -78,7 +78,7 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
     Connection connection;
     connection.fd = incommingFD;
     connection.connectTime = std::time(nullptr);
-    connection.request = HttpRequest(incommingFD);
+    connection.request = HttpRequest(incommingFD, config.getRequestSizeLimit());
     connection.addr = addr;
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)

@@ -120,7 +120,7 @@ void ServerConfig::parseAddress(std::string pair, std::string key)
 void ServerConfig::parseRequestSize(std::string pair, std::string key)
 {
     if (_isRequestSizeSet)
-        throw SameKeyRepeatException("port");
+        throw SameKeyRepeatException("size_limit");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _clientBodyLimit = std::atol(s.c_str());
     _isRequestSizeSet = true;

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 11:22:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:30:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,9 +16,10 @@
 
 HttpRequest::HttpRequest(){};
 
-HttpRequest::HttpRequest(int connectionFD)
+HttpRequest::HttpRequest(int connectionFD, long serverclientBodyLimit)
 {
 	this->requestFD = connectionFD;
+	this->clientBodyLimit = serverclientBodyLimit;
 }
 
 void HttpRequest::readFD()
@@ -208,7 +209,7 @@ void HttpRequest::tryParseHeader()
 		{
 			setErrorAndThrow(400, "Invalid content length");
 		}
-		if (this->contentLength > clientBodyLimit)
+		if (this->contentLength > this->clientBodyLimit)
 			setErrorAndThrow(413, "Request body larger than client body limit");
 	}
 	else if (this->headers.find("content-type") != this->headers.end())

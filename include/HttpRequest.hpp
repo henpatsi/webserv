@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 11:17:55 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:37:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,12 +44,6 @@
 #  define SPACECHARS " \f\n\r\t\v"
 # endif
 
-// TODO temporary hard coded server config values
-
-# ifndef clientBodyLimit
-#  define clientBodyLimit 300000
-# endif
-
 struct multipartData
 {
 	std::string					name;
@@ -69,7 +63,7 @@ class HttpRequest
 {
 	public:
 		HttpRequest(void);
-		HttpRequest(int connectionFD);
+		HttpRequest(int connectionFD, long serverClientBodyLimit);
 
 		// Getters
 		std::string							getMethod(void) { return this->method; }
@@ -104,6 +98,7 @@ class HttpRequest
 	
 	private:
 		int									requestFD;
+		size_t								clientBodyLimit;
 		std::vector<char>					rawRequest = {};
 		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
 		
