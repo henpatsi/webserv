@@ -1,4 +1,4 @@
 import os
- 
-# printing environment variables
+print("content-type:text/html")
+print("")
 print(os.environ)
