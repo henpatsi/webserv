@@ -1,14 +1,17 @@
 TODO
 
-Default values for a route?
-
-Check HttpRequest is HTTP/1.1 compliant
-
-
+default 400 and 500 pages from config
+default file to search when directory
 
 check for std::next overflow / std::prev underflow
 make delete not default to success page
-
+make sure timeout response checks for epollout before write
+	- also all other reads and writes
+one read OR one write, so if EPOLLIN (or better, if request complete) else if EPOLLOUT
+	- currently if request read fully in loop, writes in same loop
+should read error try respond or immediately disconnect
+currently not disconnecting if send fails?
+send must also check for 0
 
 - fix in main branch
 request line length if empty line
