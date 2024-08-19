@@ -55,7 +55,9 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[9] = (char *) hostname.c_str();
 	port = "SERVER_PORT=" + std::to_string(htons(config.getPorts().at(0)));
 	envs[10] = (char *) port.c_str();
-	envs[11] = 0;
+	length = "CONTENT_LENGTH=" + std::to_string(request.getRawContent().size());
+	envs[11] = (char *) length.c_str();
+	envs[12] = 0;
 	return envs;
 	//need client network address, server port and server name from somewhere??
 }
@@ -94,7 +96,8 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	pid = fork();
 	if (pid == 0)
 	{
-		std::string path = route.root + route.location;
+		std::string path = route.root + request.getResourcePath();
+		path = path.substr(0, path.find_last_of("/"));
 		chdir(path.c_str());
 		std::cout << "chdir " << path.c_str() << std::endl;
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)

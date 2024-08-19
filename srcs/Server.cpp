@@ -195,22 +195,20 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
     return (std::pair<bool, ServerResponse>(requestComplete, res));
 }
 
-std::vector<int> Server::checkTimeouts()
+int    Server::checkTimeout(int fd)
 {
-    std::vector<int> timedOutFDs;
 
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        if (currentTime - it->connectTime > TIMEOUT_SEC)
+        if (fd == it->fd && currentTime - it->connectTime > TIMEOUT_SEC)
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
-            timedOutFDs.push_back(it->fd);
             it->request.setFailResponseCode(408);
             respond(it->fd);
             it = listeningFDS.begin();
         }
+        return (1);
     }
-
-    return timedOutFDs;
+    return 0;
 }

@@ -194,19 +194,16 @@ void ServerManager::runServers()
 				{
 					if (events[i].events & EPOLLIN)
 						readMore(*server, events[i]);
+					if (events[i].events & EPOLLOUT && server->checkTimeout(events[i].data.fd) != 0)
+					{
+						DelFromEpoll(events[i].data.fd);
+						close(events[i].data.fd);
+					}
 					if (events[i].events & EPOLLOUT)
 						makeResponse(*server, events[i]);
 				}
 			}
 			checkCGIFds(events[i]);
-		}
-		try
-		{
-			checkTimeouts();
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr << e.what() << std::endl;
 		}
 	}
 }
@@ -270,44 +267,6 @@ void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
   DelFromEpoll (it->fd);
   if (close(it->fd) == -1 || close (it->listeningFd))
     throw ManagerRuntimeException ("Failed to close fd");
-}
-
-void ServerManager::checkTimeouts()
-{
-	for (Server *server : servers)
-	{
-		try
-		{
-			std::vector<int> timedOutFDs = server->checkTimeouts();
-			for (int fd : timedOutFDs)
-			{
-				DelFromEpoll(fd);
-				close(fd);
-			}
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr
-				<< "ServerManager: CheckTimeoutsError: " << e.what()
-				<< "\n";
-			// TODO check that nothing needs to be done here
-		}
-	}
-	std::time_t currentTime = std::time(nullptr);
-	for (auto it = info.begin(); it != info.end();)
-	{
-		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
-		{
-			std::cout << "Cgi timed out\n";
-			it->response.setFailResponseCode(504);
-			handleCgiResponse(it);
-			kill(it->pid, SIGKILL);
-			std::cout << "Killed " << it->pid << std::endl;
-			it = info.erase(it);
-		}
-		else
-			it++;
-	}
 }
 
 int ServerManager::acceptConnection(epoll_event event)
@@ -389,6 +348,7 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 
 void ServerManager::checkCGIFds(epoll_event event)
 {
+	std::time_t currentTime = std::time(nullptr);
 	std::vector<cgiInfo>::iterator it = std::find_if(
 		info.begin(), info.end(),
 		[&](cgiInfo fdinfo)
@@ -399,6 +359,15 @@ void ServerManager::checkCGIFds(epoll_event event)
 		{
 			handleCgiResponse(it);
 			info.erase(it);
+		}
+		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
+		{
+			std::cout << "Cgi timed out\n";
+			it->response.setFailResponseCode(504);
+			handleCgiResponse(it);
+			kill(it->pid, SIGKILL);
+			std::cout << "Killed " << it->pid << std::endl;
+			it = info.erase(it);
 		}
 		else
 		{

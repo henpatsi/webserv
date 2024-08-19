@@ -60,7 +60,7 @@ public:
     // gets called when request read and server can write
     std::pair<bool, ServerResponse> respond(int fd);
     // checks if the connection is still alive
-    std::vector<int> checkTimeouts();
+    int checkTimeout(int fd);
 
     class SocketOpenException : public std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }
