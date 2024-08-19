@@ -185,6 +185,8 @@ void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route&
         res.allowedMethods |= parseRequestMethod("GET");
     if (s.find("DELETE") != std::string::npos)
         res.allowedMethods |= parseRequestMethod("DELETE");
+    if (s.find("HEAD") != std::string::npos)
+        res.allowedMethods |= parseRequestMethod("HEAD");
 }
 
 void ServerConfig::parseRedirect(std::string pair, std::string key, Route& res)

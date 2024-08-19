@@ -6,12 +6,12 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 14:17:11 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 15:08:33 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "HttpResponse.hpp"
-#include <filesystem>
+
 // CONSTRUCTOR
 
 HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
