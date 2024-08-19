@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 13:30:03 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:56:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -264,17 +264,17 @@ void HttpRequest::extractURI(std::string URI)
 	if (URI.find("#") != std::string::npos) // ignore anythign after #
 		URI.erase(URI.find("#"));
 
-	std::string fullPathString = URI.substr(0, URI.find('?'));
-	fileExtension = fullPathString.substr(fullPathString.find_last_of("/"));
-	fileExtension = fileExtension.substr(fileExtension.find_last_of(".") + 1);
-	
-	if (fullPathString.front() != '/') // TODO use commented out portion below if absolute path accepted
-		setErrorAndThrow(400, "Invalid resource path");
-
-	// The resource path should be the remaining full path string
-	this->resourcePath = fullPathString;
+	this->resourcePath = URI.substr(0, URI.find('?'));
 	if (this->resourcePath.empty())
 		setErrorAndThrow(400, "Resource path is empty");
+	if (this->resourcePath.front() != '/')
+		setErrorAndThrow(400, "Invalid resource path");
+
+	this->fileExtension = this->resourcePath.substr(this->resourcePath.find_last_of("/"));
+	if (this->fileExtension.find(".") != std::string::npos && this->fileExtension.back() != '.')
+		this->fileExtension = fileExtension.substr(fileExtension.find_last_of(".") + 1);
+	else
+		this->fileExtension = "";
 
 	// Extract the query string if any
 	if (URI.find('?') != std::string::npos && URI.back() != '?')

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 12:34:56 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:40:15 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,6 @@ class HttpResponse
 		int responseCode = 500;
 		std::vector<char> content;
 		std::vector<char> response;
-		bool directoryListingAllowed = true; // TODO get this from config file
 		std::map<int, std::string> defaultErrorMessages = {
 			{ 400, "Bad Request" },
 			{ 403, "Forbidden" },

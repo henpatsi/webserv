@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 12:46:52 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:55:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -233,7 +233,7 @@ void HttpResponse::prepareHeadResponse(void)
 
 void HttpResponse::prepareGetResponse(void)
 {
-	if (this->directoryListingAllowed && std::filesystem::is_directory(this->path))
+	if (this->route.directoryListing && std::filesystem::is_directory(this->path))
 	{
 		buildDirectoryList();
 		return ;
@@ -327,10 +327,10 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
 
-		if (!file.good()) // TODO Can one file fail and another succeed?
+		if (!file.good())
 			return (500);
-
-		file.write(data.data.data(), data.data.size()); // TODO check write success
+		if (!file.write(data.data.data(), data.data.size()))
+			return (500);
 		file.close();
 	}
 
