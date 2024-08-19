@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 12:37:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 12:46:52 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,7 @@ void HttpResponse::buildDefaultSuccessContent(void)
 	contentString = "<!DOCTYPE html><html><body><h1>Success</h1></body></html>";
 
 	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
+	this->contentType = "text/html";
 }
 
 // Create error page with default message if none provided or other error
@@ -97,12 +98,12 @@ void HttpResponse::buildDefaultErrorContent(int code)
 	contentString += this->defaultErrorMessages[code] + "</h1></body></html>";
 
 	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
+	this->contentType = "text/html";
 }
 
 void HttpResponse::setError(int code)
 {
 	this->responseCode = code;
-	this->contentType = "text/html";
 
 	if (this->customErrorPages.find(code) != this->customErrorPages.end())
 	{
@@ -132,6 +133,8 @@ void HttpResponse::setError(int code)
 			buildDefaultErrorContent(code);
 			return ;
 		}
+		
+		this->contentType = "text/html";
 	}
 	else
 		buildDefaultErrorContent(code);
@@ -206,8 +209,6 @@ void HttpResponse::buildDirectoryList(void)
 		setErrorAndThrow(500, "Unknown error while listing directory");
 	}
 
-	this->contentType = "text/html";
-
 	contentString = "<html><body>";
 	contentString += "<h1>Directory listing for " + this->path + "</h1>";
 	contentString += "<ul>";
@@ -220,6 +221,7 @@ void HttpResponse::buildDirectoryList(void)
 	contentString += "</body></html>";
 
 	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
+	this->contentType = "text/html";
 
 	this->responseCode = 200;
 }
