@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 15:50:52 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 10:35:18 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 			if (this->path.back() != '/')
 				this->path += "/"; // Standardize dir to end in /
 		}
-		std::cout << "Path: " << this->path << "\n";
+		std::cerr << "Path: " << this->path << "\n";
 
 		if (!(this->route.allowedMethods & ServerConfig::parseRequestMethod(request.getMethod())))
 			setErrorAndThrow(405, "Method not allowed");
@@ -54,7 +54,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 
 	buildResponse(request);
 
-	std::cout << "Response code: " << this->responseCode << "\n";
+	std::cerr << "Response code: " << this->responseCode << "\n";
 }
 
 HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
@@ -147,7 +147,6 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	responseString += "Date: " + std::string(buffer) + "\r\n";
 	responseString += response.getHeaders();
 	responseString += "\r\n";
-	std::cout << responseString << std::endl;
 
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 	std::vector<char> responsecontent = response.getContent();
@@ -317,8 +316,6 @@ int writeMultipartData(std::vector<multipartData> dataVector, std::string direct
 
 		std::string path = directory + data.filename;
 		std::ofstream file(path);
-
-		std::cout << "path = " << path << "\n";
 
 		if (!file.good()) // TODO Can one file fail and another succeed?
 			return (500);

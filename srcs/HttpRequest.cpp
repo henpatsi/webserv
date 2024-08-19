@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/12 17:02:54 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 10:37:55 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,10 @@ void HttpRequest::tryParseRequestLine()
 	{
 		start = std::next(end, 2);
 		end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
+		this->requestLineLength = 2;
 	}
+	else
+		this->requestLineLength = 0;
 	if (end == this->rawRequest.end()) // First line not yet read
 	{
 		if (this->totalRead > MAX_REQUEST_LINE_LENGTH)
@@ -100,6 +103,11 @@ void HttpRequest::tryParseRequestLine()
 		|| URI.empty() || URI == "\r"
 		|| this->httpVersion.empty() || this->httpVersion == "\r")
 		setErrorAndThrow(400, "Request line not complete");
+	// Check that nothing extra remaining
+	std::string remaining;
+	lineStream >> remaining;
+	if (!remaining.empty())
+		setErrorAndThrow(400, "Request line contains extra data");
 
 	// Check method
 	if (std::find(this->allowedMethods.begin(), this->allowedMethods.end(), this->method) == this->allowedMethods.end())
@@ -112,11 +120,9 @@ void HttpRequest::tryParseRequestLine()
 	if (this->httpVersion != "HTTP/1.1" && this->httpVersion != "HTTP/1.0")
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
-	this->requestLineLength = requestLineString.length();
+	this->requestLineLength += requestLineString.length();
 
-	std::cout << "- Request line parsed -\n";
-	// std::cout << "Request line = '" << requestLineString << "'\n";
-	// std::cout << "Request line length = " << this->requestLineLength << "\n";
+	std::cerr << "- Request line parsed -\n";
 }
 
 void HttpRequest::tryParseHeader()
@@ -214,17 +220,11 @@ void HttpRequest::tryParseHeader()
 
 	this->headerLength = headerString.length();
 
-	std::cout << "- Header parsed -\n";
-	// std::cout << "Header line = '" << headerString << "'\n";
-	// std::cout << "Header length = " << this->headerLength << "\n";
+	std::cerr << "- Header parsed -\n";
 }
 
 void HttpRequest::tryParseContent()
 {
-	std::cout << "Content length = " << this->contentLength << "\n";
-	std::cout << "Total read = " << this->totalRead << "\n";
-	std::cout << "Content read = " << this->totalRead - this->requestLineLength - this->headerLength << "\n";
-
 	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
@@ -240,21 +240,18 @@ void HttpRequest::tryParseContent()
 	}
 	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
 		return ;
-	else if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
+	else if (this->headers.find("content-type") != this->headers.end()
+			&& this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
-		std::vector<char> rawContent = getRawContent();
+		std::vector<char> rawContent = getRawContent(this->contentLength);
 		int extractRet = extractMultipartData(this->multipartDataVector, rawContent, boundary);
 		if (extractRet != 0)
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
 
-	std::cout << "- Content parsed -\n";
-	// std::vector<char> rawContent = getRawContent();
-	// std::string rawContentString = std::string(rawContent.begin(), rawContent.end());
-	// std::cout << "Raw content = '" << rawContentString << "'\n";
-	// std::cout << "Raw content length = " << rawContentString.length() << "\n";
+	std::cerr << "- Content parsed -\n";
 
 	this->requestComplete = true;
 }
@@ -273,36 +270,6 @@ void HttpRequest::extractURI(std::string URI)
 	if (fullPathString.front() != '/') // TODO use commented out portion below if absolute path accepted
 		setErrorAndThrow(400, "Invalid resource path");
 
-	// // Extract host if any
-	// if (fullPathString.front() != '/')
-	// {
-	// 	if (fullPathString.find("http://") != std::string::npos)
-	// 	{
-	// 		if (fullPathString.find("http://") != 0)
-	// 			setErrorAndThrow(400, "Invalid URI format");
-	// 		fullPathString.erase(0, 7);
-	// 	}
-	// 	if (!std::isdigit(fullPathString.front()))
-	// 		this->resourcePathHost = fullPathString.substr(0, fullPathString.find('/'));
-	// 	else
-	// 		this->resourcePathIP = fullPathString.substr(0, fullPathString.find('/'));
-	// 	fullPathString.erase(0, fullPathString.find('/'));
-	// }
-
-	// // Extract port if any
-	// if (this->resourcePathHost.find(':') != std::string::npos)
-	// {
-	// 	try
-	// 	{
-	// 		this->resourcePathPort = std::stoi(this->resourcePathHost.substr(this->resourcePathHost.find(':') + 1));
-	// 		this->resourcePathHost.erase(this->resourcePathHost.find(':'));
-	// 	}
-	// 	catch(const std::exception& e)
-	// 	{
-	// 		setErrorAndThrow(400, "Invalid port number in URI");
-	// 	}
-	// }
-
 	// The resource path should be the remaining full path string
 	this->resourcePath = fullPathString;
 	if (this->resourcePath.empty())
@@ -311,10 +278,6 @@ void HttpRequest::extractURI(std::string URI)
 	// Extract the query string if any
 	if (URI.find('?') != std::string::npos && URI.back() != '?')
 		this->queryString = URI.substr(URI.find('?') + 1);
-
-	// std::cout << "URI host: '" << this->resourcePathHost << "'\n";
-	// std::cout << "URI port: '" << this->resourcePathPort << "'\n";
-	// std::cout << "URI IP: '" << this->resourcePathIP << "'\n";
 }
 
 void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
@@ -374,43 +337,47 @@ void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
 void HttpRequest::debugPrint()
 {
 	/* DEBUG PRINT */
-	std::cout << "\nMethod: " << this->method << "\n";
-	std::cout << "Resource path: " << this->resourcePath << "\n";
-	std::cout << "Query string: " << this->queryString << "\n"; 
-	std::cout << "HTTP version: " << this->httpVersion << "\n";
-	std::cout << "Headers:\n";
+	std::cerr << "\nMethod: " << this->method << "\n";
+	std::cerr << "Resource path: " << this->resourcePath << "\n";
+	std::cerr << "Query string: " << this->queryString << "\n"; 
+	std::cerr << "HTTP version: " << this->httpVersion << "\n";
+	std::cerr << "Headers:\n";
 	for (auto param : this->headers)
-		std::cout << "  " << param.first << " = " << param.second << "\n";
+		std::cerr << "  " << param.first << " = " << param.second << "\n";
 
 	// std::vector<char> rawContent = getRawContent();
-	// std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	// std::cerr << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
-		std::cout << "Multipart data:";
+		std::cerr << "Multipart data:";
 		for (multipartData data : this->multipartDataVector)
 		{
-			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
+			std::cerr << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
 			// std::string dataString(data.data.begin(), data.data.end());
-			// std::cout << "\n  Data: '" << dataString << "'\n";
+			// std::cerr << "\n  Data: '" << dataString << "'\n";
 			// if (data.filename == "")
 			// {
-			// 	std::cout << "\n  Nested multipart data:";
+			// 	std::cerr << "\n  Nested multipart data:";
 			// 	for (multipartData nestedData : data.multipartDataVector)
 			// 	{
-			// 		std::cout << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
+			// 		std::cerr << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
 			// 		// std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
-			// 		// std::cout << "\n    Data: '" << nestedDataString << "'\n";
+			// 		// std::cerr << "\n    Data: '" << nestedDataString << "'\n";
 			// 	}
 			// }
 		}
 	}
-
-	std::cout << "\nREQUEST INFO FINISHED\n\n";
 }
 
-std::vector<char>	HttpRequest::getRawContent(void)
+std::vector<char>	HttpRequest::getRawContent(size_t length)
 {
-	std::vector<char> rawContent(std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength), this->rawRequest.end());
+	std::vector<char>::iterator start = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+	std::vector<char>::iterator end;
+	if (length == 0)
+		end = this->rawRequest.end();
+	else
+		end = std::next(start, length);
+	std::vector<char> rawContent(start, end);
 	return rawContent;
 }
 
