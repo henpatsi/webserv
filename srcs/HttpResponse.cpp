@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 13:55:32 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 14:17:11 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 	}
 	catch(...) // Something that was not considered went wrong
 	{
+		std::cerr << "ResponseException: Unknown error\n";
 		setError(500);
 	}
 
@@ -233,10 +234,17 @@ void HttpResponse::prepareHeadResponse(void)
 
 void HttpResponse::prepareGetResponse(void)
 {
-	if (this->route.directoryListing && std::filesystem::is_directory(this->path))
+	if (std::filesystem::is_directory(this->path))
 	{
-		buildDirectoryList();
-		return ;
+		if (this->route.directoryListing)
+		{
+			buildDirectoryList();
+			return ;
+		}
+		
+		if (this->route.defaultAnswer == "")
+			setErrorAndThrow(403, "Directory listing not allowed");
+		this->path += this->route.defaultAnswer;
 	}
 
 	if (this->path.find(".html") != std::string::npos)

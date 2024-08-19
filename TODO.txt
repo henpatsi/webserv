@@ -1,7 +1,6 @@
 TODO
 
 default 400 and 500 pages from config
-default file to search when directory
 
 getting paths with spaces does not work from browser (encodes spaces as %20)
 

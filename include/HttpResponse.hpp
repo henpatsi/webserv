@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 13:40:15 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 14:08:20 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,11 +43,11 @@ class HttpResponse
 		HttpResponse(HttpRequest& request, Route& route);
 		HttpResponse(cgiResponse& cgiresponse, Route& route);
 
-		std::string getPath(void) { return this->path; }
-		std::string getContentType(void) { return this->contentType; };
-		int getResponseCode(void) { return this->responseCode; }
-		std::vector<char> getContent(void) { return this->content; }
-		std::vector<char> getResponse(void) { return this->response; }
+		std::string	getPath(void) { return this->path; }
+		std::string	getContentType(void) { return this->contentType; };
+		int			getResponseCode(void) { return this->responseCode; }
+		std::vector<char>	getContent(void) { return this->content; }
+		std::vector<char>	getResponse(void) { return this->response; }
 
 		class ResponseException : public std::exception
 		{
@@ -80,8 +80,9 @@ class HttpResponse
 			{ 504, "Gateway Timeout" },
 			{ 505, "HTTP Version Not Supported" }
 		};
+
 		std::map<int, std::string> customErrorPages = {
-			{ 404, "www/html/400/404.html" } // TODO get these from config file
+			{ 404, "www/html/400/404.html" } // TODO get these from config
 		};
 
 		void buildDefaultSuccessContent(void);
