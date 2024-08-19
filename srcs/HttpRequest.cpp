@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 10:37:55 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 11:22:54 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ void HttpRequest::tryParseRequestLine()
 	std::vector<char>::iterator end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
 	if (end == start) // Allow one empty line before request line
 	{
-		start = std::next(end, 2);
+		start = safeNext(end, this->rawRequest.end(), 2);
 		end = std::search(start, this->rawRequest.end(), eol.begin(), eol.end());
 		this->requestLineLength = 2;
 	}
@@ -89,7 +89,7 @@ void HttpRequest::tryParseRequestLine()
 	if (end == start)
 		setErrorAndThrow(400, "Request line is empty");
 
-	std::string requestLineString(start, std::next(end, 2)); // Get line including \r\n
+	std::string requestLineString(start, safeNext(end, this->rawRequest.end(), 2)); // Get line including \r\n
 	if (requestLineString.length() > MAX_REQUEST_LINE_LENGTH)
 		setErrorAndThrow(400, "Request line too long");
 
@@ -137,7 +137,7 @@ void HttpRequest::tryParseHeader()
 		return ;
 	}
 
-	std::string headerString(headerStart, std::next(it,4)); // Get string including end of header \r\n
+	std::string headerString(headerStart, safeNext(it, this->rawRequest.end(), 4)); // Get string including end of header \r\n
 	if (headerString.length() > MAX_REQUEST_LINE_LENGTH)
 		setErrorAndThrow(400, "Header too long");
 	std::istringstream sstream(headerString);
@@ -234,7 +234,7 @@ void HttpRequest::tryParseContent()
 		if (it == rawContent.end()) // Chunked content not fully read
 			return ;
 		unchunkContent(rawContent);
-		it = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+		it = safeNext(this->rawRequest.begin(), this->rawRequest.end(), this->requestLineLength + this->headerLength);
 		this->rawRequest.erase(it, this->rawRequest.end());
 		this->rawRequest.insert(this->rawRequest.end(), rawContent.begin(), rawContent.end());
 	}
@@ -310,15 +310,15 @@ void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 		if (chunkSize == 0)
 			break ;
 		
-		start = std::next(end, 2);
-		end = std::next(start, chunkSize);
+		start = safeNext(end, chunkedVector.end(), 2);
+		end = safeNext(start, chunkedVector.end(), chunkSize);
 		if (end == chunkedVector.end())
 			setErrorAndThrow(400, "Chunk size larger than remaining content");
 
 		unchunkedVector.insert(unchunkedVector.end(), start, end);
 
 		start = end;
-		end = std::next(start, 2);
+		end = safeNext(start, chunkedVector.end(), 2);
 		if (std::search(start, end, eol.begin(), eol.end()) != start)
 			setErrorAndThrow(400, "Chunk missing EOL");
 		start = end;
@@ -371,12 +371,12 @@ void HttpRequest::debugPrint()
 
 std::vector<char>	HttpRequest::getRawContent(size_t length)
 {
-	std::vector<char>::iterator start = std::next(this->rawRequest.begin(), this->requestLineLength + this->headerLength);
+	std::vector<char>::iterator start = safeNext(this->rawRequest.begin(), this->rawRequest.end(), this->requestLineLength + this->headerLength);
 	std::vector<char>::iterator end;
 	if (length == 0)
 		end = this->rawRequest.end();
 	else
-		end = std::next(start, length);
+		end = safeNext(start, this->rawRequest.end(), length);
 	std::vector<char> rawContent(start, end);
 	return rawContent;
 }
@@ -480,4 +480,17 @@ bool	HttpRequest::isCgi(void)
 const char* HttpRequest::RequestException::what() const throw()
 {
 	return this->message.c_str();
+}
+
+// TEMPLATE FUNCTIONS
+
+template <typename T>
+T safeNext(T i, T end, size_t amount)
+{
+	while (i != end && amount > 0)
+	{
+		i++;
+		amount--;
+	}
+	return i;
 }

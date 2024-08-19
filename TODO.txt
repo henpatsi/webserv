@@ -5,7 +5,6 @@ default file to search when directory
 
 getting paths with spaces does not work from browser (encodes spaces as %20)
 
-check for std::next overflow / std::prev underflow
 make delete not default to success page
 make sure timeout response checks for epollout before write
 	- also all other reads and writes

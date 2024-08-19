@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 10:36:12 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 11:17:55 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,7 +60,10 @@ struct multipartData
 	std::vector<multipartData>	multipartDataVector = {};
 };
 
-int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
+int	extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
+
+template <typename T>
+T safeNext(T i, T end, size_t amount);
 
 class HttpRequest
 {
