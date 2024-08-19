@@ -6,10 +6,10 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 14:34:47 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 12:34:56 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-#pragma once
+
 #ifndef HTTPRESPONSE_HPP
 # define HTTPRESPONSE_HPP
 
@@ -85,6 +85,7 @@ class HttpResponse
 			{ 404, "www/html/400/404.html" } // TODO get these from config file
 		};
 
+		void buildDefaultSuccessContent(void);
 		void buildDefaultErrorContent(int code);
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);

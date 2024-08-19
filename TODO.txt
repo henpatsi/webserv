@@ -5,7 +5,6 @@ default file to search when directory
 
 getting paths with spaces does not work from browser (encodes spaces as %20)
 
-make delete not default to success page
 make sure timeout response checks for epollout before write
 	- also all other reads and writes
 one read OR one write, so if EPOLLIN (or better, if request complete) else if EPOLLOUT

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 10:35:18 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 12:37:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,12 +79,21 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 
 // MEMBER FUNCTIONS
 
+void HttpResponse::buildDefaultSuccessContent(void)
+{
+	std::string contentString;
+
+	contentString = "<!DOCTYPE html><html><body><h1>Success</h1></body></html>";
+
+	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
+}
+
 // Create error page with default message if none provided or other error
 void HttpResponse::buildDefaultErrorContent(int code)
 {
 	std::string contentString;
 
-	contentString = "<html><body><h1>" + std::to_string(code) + " ";
+	contentString = "<!DOCTYPE html><html><body><h1>" + std::to_string(code) + " ";
 	contentString += this->defaultErrorMessages[code] + "</h1></body></html>";
 
 	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
@@ -272,8 +281,8 @@ void HttpResponse::preparePostResponse(HttpRequest &request)
 		if (ret != 0)
 			setErrorAndThrow(ret, "Failed to open / write multipart data to file");
 
-		prepareGetResponse();
 		this->responseCode = 201;
+		buildDefaultSuccessContent();
 	}
 	else
 		prepareGetResponse();
@@ -281,20 +290,19 @@ void HttpResponse::preparePostResponse(HttpRequest &request)
 
 void HttpResponse::prepareDeleteResponse(void)
 {
-	if (this->path == this->route.uploadDir)
-		setErrorAndThrow(405, "DELETE not allowed for request path");
-	
 	if (access(this->path.c_str(), F_OK) == -1)
 	{
-		this->path = "www/html/failure.html";
-		prepareGetResponse();
-		return ;
+		if (errno == EACCES)
+			setErrorAndThrow(403, "Access denied");
+		else
+			setErrorAndThrow(404, "File not found");
 	}
+	
 	if (remove(this->path.c_str()) != 0)
 		setErrorAndThrow(500, "Failed to delete file");
-	
-	this->path = "www/html/success.html";
-	prepareGetResponse();
+
+	this->responseCode = 201;
+	buildDefaultSuccessContent();
 }
 
 // HELPER FUNCTIONS
