@@ -104,7 +104,8 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 		execve(cgiExecutable.c_str(), args, create_envs(envs, request, config, client_address, route));
 		std::terminate();
 	}
-	write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
+	if (request.getMethod() == "POST")
+		write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
 	if (close(toCGI[1]) == -1 || close(fromCGI[1]) == -1 || close(toCGI[0]) == -1)
 		throw RunCgiException("Close failed");
 	std::pair <int, int> pair{pid, fromCGI[0]};
