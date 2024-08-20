@@ -257,7 +257,7 @@ void ServerManager::WaitForEvents()
 void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
 {
   Route _;
-  HttpResponse response (it->response, _);
+  HttpResponse response (it->response, _, ""); // TODO Error page not passed to response here
   if (send (it->listeningFd, &response.getResponse()[0],
             response.getResponse().size (), 0)
       == -1)

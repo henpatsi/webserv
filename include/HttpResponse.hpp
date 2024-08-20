@@ -39,9 +39,8 @@ bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 class HttpResponse
 {
 	public:
-		HttpResponse(void);
-		HttpResponse(HttpRequest& request, Route& route);
-		HttpResponse(cgiResponse& cgiresponse, Route& route);
+		HttpResponse(HttpRequest& request, Route& route, std::string errorPage);
+		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
 
 		std::string	getPath(void) { return this->path; }
 		std::string	getContentType(void) { return this->contentType; };
@@ -65,6 +64,7 @@ class HttpResponse
 		int responseCode = 500;
 		std::vector<char> content;
 		std::vector<char> response;
+		std::string errorPage;
 		std::map<int, std::string> defaultErrorMessages = {
 			{ 400, "Bad Request" },
 			{ 403, "Forbidden" },
@@ -81,17 +81,14 @@ class HttpResponse
 			{ 505, "HTTP Version Not Supported" }
 		};
 
-		std::map<int, std::string> customErrorPages = {
-			{ 404, "www/html/400/404.html" } // TODO get these from config
-		};
-
-		void buildDefaultSuccessContent(void);
-		void buildDefaultErrorContent(int code);
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
+		void buildDefaultSuccessContent(void);
+		void buildDefaultErrorContent(int code);
+		void buildCustomErrorContent(int code);
+		void buildDirectoryList(void);
 		void buildResponse(HttpRequest &request);
 		void buildResponse(cgiResponse& response);
-		void buildDirectoryList(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);
 		void preparePostResponse(HttpRequest &request);

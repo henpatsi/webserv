@@ -14,7 +14,7 @@
 
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string errorPage) : route(route), errorPage(errorPage)
 {
 	try
 	{
@@ -58,7 +58,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route) : route(route)
 	std::cerr << "Response code: " << this->responseCode << "\n";
 }
 
-HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
+HttpResponse::HttpResponse(cgiResponse& response, Route& route, std::string errorPage) : route(route), errorPage(errorPage)
 {
 	try
 	{
@@ -80,6 +80,22 @@ HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 
 // MEMBER FUNCTIONS
 
+void HttpResponse::setError(int code)
+{
+	this->responseCode = code;
+
+	if (this->errorPage != "")
+		buildCustomErrorContent(code);
+	else
+		buildDefaultErrorContent(code);
+}
+
+void HttpResponse::setErrorAndThrow(int code, std::string message)
+{
+	setError(code);
+	throw ResponseException(message);
+}
+
 void HttpResponse::buildDefaultSuccessContent(void)
 {
 	std::string contentString;
@@ -90,7 +106,6 @@ void HttpResponse::buildDefaultSuccessContent(void)
 	this->contentType = "text/html";
 }
 
-// Create error page with default message if none provided or other error
 void HttpResponse::buildDefaultErrorContent(int code)
 {
 	std::string contentString;
@@ -102,49 +117,91 @@ void HttpResponse::buildDefaultErrorContent(int code)
 	this->contentType = "text/html";
 }
 
-void HttpResponse::setError(int code)
+void HttpResponse::buildCustomErrorContent(int code)
 {
-	this->responseCode = code;
-
-	if (this->customErrorPages.find(code) != this->customErrorPages.end())
+	// Open file as binary file
+	std::ifstream file(this->errorPage, std::ifstream::binary); // TODO this could be string?
+	if (!file.good())
 	{
-		// Open file as binary file
-		std::ifstream file(this->customErrorPages[code], std::ifstream::binary);
-		if (!file.good())
-		{
-			std::cerr << "Custom error page could not be opened\n";
-			buildDefaultErrorContent(code);
-			return ;
-		}
+		std::cerr << "Custom error page could not be opened\n";
+		buildDefaultErrorContent(code);
+		return ;
+	}
+
+	// Read file into content
+	try
+	{
+		file.unsetf(std::ios::skipws); // Prevents skipping spaces
+		// Set content size to filesize
+		file.seekg(0, std::ios::end);
+		this->content.reserve(file.tellg());
+		file.seekg(0, std::ios::beg);
+		// Read file content into content
+		this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << "Custom error read error\n";
+		buildDefaultErrorContent(code);
+		return ;
+	}
+
+	// Replace error code placeholder with code
+	std::string errorCodePlaceholder = "<%ERROR%>";
+	std::vector<char>::iterator it = std::search(this->content.begin(), this->content.end(), errorCodePlaceholder.begin(), errorCodePlaceholder.end());
+	if (it != this->content.end())
+	{
 		try
 		{
-			file.unsetf(std::ios::skipws); // Prevents skipping spaces
-			// Get size of file
-			file.seekg(0, std::ios::end);
-			std::streampos fileSize = file.tellg();
-			file.seekg(0, std::ios::beg);
-			// Set content size to filesize
-			this->content.reserve(fileSize);
-			// Read file content into content
-			this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+			std::string codeString = std::to_string(code);
+			this->content.erase(it, safeNext(it, this->content.end(), errorCodePlaceholder.length()));
+			this->content.insert(it, codeString.begin(), codeString.end());
 		}
 		catch(const std::exception& e)
 		{
-			std::cerr << "Custom error read error\n";
+			std::cerr << "Error inserting code into custom page\n";
 			buildDefaultErrorContent(code);
 			return ;
 		}
-		
-		this->contentType = "text/html";
 	}
-	else
-		buildDefaultErrorContent(code);
+	
+	this->contentType = "text/html";
 }
 
-void HttpResponse::setErrorAndThrow(int code, std::string message)
+void HttpResponse::buildDirectoryList(void)
 {
-	setError(code);
-	throw ResponseException(message);
+	std::vector<std::string> files;
+	std::string contentString;
+
+	try
+	{
+		for (auto file : std::filesystem::directory_iterator(this->path))
+			files.push_back(file.path().filename().string());
+	}
+	catch(const std::exception& e)
+	{
+		setErrorAndThrow(404, "Directory for listing not found or not accessible");
+	}
+	catch (...)
+	{
+		setErrorAndThrow(500, "Unknown error while listing directory");
+	}
+
+	contentString = "<html><body>";
+	contentString += "<h1>Directory listing for " + this->path + "</h1>";
+	contentString += "<ul>";
+	for (std::string file : files)
+	{
+		std::string noRootPath = this->path.substr(this->route.root.length());
+		contentString += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
+	}
+	contentString += "</ul>";
+	contentString += "</body></html>";
+
+	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
+	this->contentType = "text/html";
+
+	this->responseCode = 200;
 }
 
 void HttpResponse::buildResponse(cgiResponse& response)
@@ -189,42 +246,6 @@ void HttpResponse::buildResponse(HttpRequest &request)
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 	if (request.getMethod() != "HEAD")
 		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
-}
-
-void HttpResponse::buildDirectoryList(void)
-{
-	std::vector<std::string> files;
-	std::string contentString;
-
-	try
-	{
-		for (auto file : std::filesystem::directory_iterator(this->path))
-			files.push_back(file.path().filename().string());
-	}
-	catch(const std::exception& e)
-	{
-		setErrorAndThrow(404, "Directory for listing not found or not accessible");
-	}
-	catch (...)
-	{
-		setErrorAndThrow(500, "Unknown error while listing directory");
-	}
-
-	contentString = "<html><body>";
-	contentString += "<h1>Directory listing for " + this->path + "</h1>";
-	contentString += "<ul>";
-	for (std::string file : files)
-	{
-		std::string noRootPath = this->path.substr(this->route.root.length());
-		contentString += "<li><a href=\"" + noRootPath + file + "\">" + file + "</a></li>";
-	}
-	contentString += "</ul>";
-	contentString += "</body></html>";
-
-	this->content.insert(this->content.end(), contentString.begin(), contentString.end());
-	this->contentType = "text/html";
-
-	this->responseCode = 200;
 }
 
 void HttpResponse::prepareHeadResponse(void)

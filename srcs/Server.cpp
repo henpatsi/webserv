@@ -157,7 +157,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            HttpResponse response(it->request, it->route);
+            HttpResponse response(it->request, it->route, config.getErrorPage());
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
             disconnect(it);
@@ -177,7 +177,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 it->request.setFailResponseCode(403);
                 std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route);
+                HttpResponse response(it->request, it->route, config.getErrorPage());
                 if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                     throw ServerManager::ManagerRuntimeException("Failed to send response");
                 disconnect(it);
