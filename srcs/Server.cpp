@@ -190,7 +190,8 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
 
 int    Server::checkTimeout(int fd)
 {
-
+    try
+    {
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
@@ -199,9 +200,13 @@ int    Server::checkTimeout(int fd)
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             it->request.setFailResponseCode(408);
             respond(it->fd);
-            listeningFDS.erase(it);
             return (1);
         }
+    }
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
     }
     return 0;
 }

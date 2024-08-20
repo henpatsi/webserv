@@ -200,6 +200,7 @@ void ServerManager::runServers()
 			}
 			checkCGIFds(events[i]);
 		}
+			checkCGITimeouts();
 	}
 }
 
@@ -341,9 +342,36 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 	}
 }
 
+void	ServerManager::checkCGITimeouts()
+{
+	try
+	{
+	std::time_t currentTime = std::time(nullptr);
+	for (auto it = info.begin(); it != info.end();)
+	{
+		if (currentTime - it->cgiStarted >= CGI_TIMEOUT)
+		{
+			std::cout << "Cgi timed out\n";
+			it->response.setFailResponseCode(504);
+			handleCgiResponse(it);
+			kill(it->pid, SIGKILL);
+			std::cout << "Killed " << it->pid << std::endl;
+			it = info.erase(it);
+		}
+		else
+		it++;
+	}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
+}
+
 void ServerManager::checkCGIFds(epoll_event event)
 {
-	std::time_t currentTime = std::time(nullptr);
+	try
+	{
 	std::vector<cgiInfo>::iterator it = std::find_if(
 		info.begin(), info.end(),
 		[&](cgiInfo fdinfo)
@@ -353,17 +381,6 @@ void ServerManager::checkCGIFds(epoll_event event)
 		if (it->response.isDone())
 		{
 			handleCgiResponse(it);
-			info.erase(it);
-			return;
-		}
-		if (currentTime - it->cgiStarted >= CGI_TIMEOUT)
-		{
-			std::cout << "Cgi timed out\n";
-			it->response.setFailResponseCode(504);
-			handleCgiResponse(it);
-			kill(it->pid, SIGKILL);
-			std::cout << "Killed " << it->pid << std::endl;
-			close(it->fd);
 			info.erase(it);
 			return;
 		}
@@ -380,5 +397,10 @@ void ServerManager::checkCGIFds(epoll_event event)
 				info.erase(it);
 			}
 		}
+	}
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << e.what() << std::endl;
 	}
 }
