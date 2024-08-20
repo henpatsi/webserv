@@ -78,7 +78,7 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
     Connection connection;
     connection.fd = incommingFD;
     connection.connectTime = std::time(nullptr);
-    connection.request = HttpRequest(incommingFD);
+    connection.request = HttpRequest(incommingFD, config.getRequestSizeLimit());
     connection.addr = addr;
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
@@ -154,10 +154,10 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             }
         }
 
-        if (it->request.isCgi() == 0 && it->request.getFailResponseCode() == 0)
+        if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            HttpResponse response(it->request, it->route);
+            HttpResponse response(it->request, it->route, config.getErrorPage());
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
             disconnect(it);
@@ -177,7 +177,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 it->request.setFailResponseCode(403);
                 std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route);
+                HttpResponse response(it->request, it->route, config.getErrorPage());
                 if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                     throw ServerManager::ManagerRuntimeException("Failed to send response");
                 disconnect(it);
@@ -194,7 +194,7 @@ int    Server::checkTimeout(int fd)
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        if (fd == it->fd && currentTime - it->connectTime > TIMEOUT_SEC)
+        if (fd == it->fd && currentTime - it->connectTime >= config.getSessionTimeout())
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             it->request.setFailResponseCode(408);

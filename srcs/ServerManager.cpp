@@ -92,11 +92,6 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 			std::cerr << "really stupid" << "\n";
 		}
 	}
-	if (!success)
-	{
-		std::cout << "failed to create\n";
-		throw ServerCreationException();
-	}
 	// setup epoll
 	polled = epoll_create(EPOLL_SIZE);
 	if (polled == -1)
@@ -259,7 +254,7 @@ void ServerManager::WaitForEvents()
 void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
 {
   Route _;
-  HttpResponse response (it->response, _);
+  HttpResponse response (it->response, _, ""); // TODO Error page not passed to response here
   if (send (it->listeningFd, &response.getResponse()[0],
             response.getResponse().size (), 0)
       == -1)
@@ -361,7 +356,7 @@ void ServerManager::checkCGIFds(epoll_event event)
 			info.erase(it);
 			return;
 		}
-		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
+		if (currentTime - it->cgiStarted >= CGI_TIMEOUT)
 		{
 			std::cout << "Cgi timed out\n";
 			it->response.setFailResponseCode(504);

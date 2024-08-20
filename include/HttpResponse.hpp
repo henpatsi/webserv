@@ -6,10 +6,10 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/11 14:34:47 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 14:08:20 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-#pragma once
+
 #ifndef HTTPRESPONSE_HPP
 # define HTTPRESPONSE_HPP
 
@@ -39,15 +39,14 @@ bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 class HttpResponse
 {
 	public:
-		HttpResponse(void);
-		HttpResponse(HttpRequest& request, Route& route);
-		HttpResponse(cgiResponse& cgiresponse, Route& route);
+		HttpResponse(HttpRequest& request, Route& route, std::string errorPage);
+		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
 
-		std::string getPath(void) { return this->path; }
-		std::string getContentType(void) { return this->contentType; };
-		int getResponseCode(void) { return this->responseCode; }
-		std::vector<char> getContent(void) { return this->content; }
-		std::vector<char> getResponse(void) { return this->response; }
+		std::string	getPath(void) { return this->path; }
+		std::string	getContentType(void) { return this->contentType; };
+		int			getResponseCode(void) { return this->responseCode; }
+		std::vector<char>	getContent(void) { return this->content; }
+		std::vector<char>	getResponse(void) { return this->response; }
 
 		class ResponseException : public std::exception
 		{
@@ -65,7 +64,7 @@ class HttpResponse
 		int responseCode = 500;
 		std::vector<char> content;
 		std::vector<char> response;
-		bool directoryListingAllowed = true; // TODO get this from config file
+		std::string errorPage;
 		std::map<int, std::string> defaultErrorMessages = {
 			{ 400, "Bad Request" },
 			{ 403, "Forbidden" },
@@ -81,16 +80,15 @@ class HttpResponse
 			{ 504, "Gateway Timeout" },
 			{ 505, "HTTP Version Not Supported" }
 		};
-		std::map<int, std::string> customErrorPages = {
-			{ 404, "www/html/400/404.html" } // TODO get these from config file
-		};
 
-		void buildDefaultErrorContent(int code);
 		void setError(int code);
 		void setErrorAndThrow(int code, std::string message);
+		void buildDefaultSuccessContent(void);
+		void buildDefaultErrorContent(int code);
+		void buildCustomErrorContent(int code);
+		void buildDirectoryList(void);
 		void buildResponse(HttpRequest &request);
 		void buildResponse(cgiResponse& response);
-		void buildDirectoryList(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);
 		void preparePostResponse(HttpRequest &request);
