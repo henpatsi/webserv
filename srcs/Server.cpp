@@ -151,17 +151,10 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
                 it->request.setFailResponseCode(404);
-                std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route);
-                if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                    throw ServerManager::ManagerRuntimeException("Failed to send response");
-                disconnect(it);
-                close(fd);
-                return (std::pair<bool, ServerResponse>(true, res));
             }
         }
 
-        if (it->request.isCgi() == 0)
+        if (it->request.isCgi() == 0 && it->request.getFailResponseCode() == 0)
         {
             std::cout << "\n--- Responding to client ---\n";
             HttpResponse response(it->request, it->route);
@@ -206,9 +199,9 @@ int    Server::checkTimeout(int fd)
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             it->request.setFailResponseCode(408);
             respond(it->fd);
-            it = listeningFDS.begin();
+            listeningFDS.erase(it);
+            return (1);
         }
-        return (1);
     }
     return 0;
 }

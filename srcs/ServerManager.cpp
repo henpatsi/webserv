@@ -199,7 +199,7 @@ void ServerManager::runServers()
 						DelFromEpoll(events[i].data.fd);
 						close(events[i].data.fd);
 					}
-					if (events[i].events & EPOLLOUT)
+					else if (events[i].events & EPOLLOUT)
 						makeResponse(*server, events[i]);
 				}
 			}
@@ -359,6 +359,7 @@ void ServerManager::checkCGIFds(epoll_event event)
 		{
 			handleCgiResponse(it);
 			info.erase(it);
+			return;
 		}
 		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
 		{
@@ -367,7 +368,9 @@ void ServerManager::checkCGIFds(epoll_event event)
 			handleCgiResponse(it);
 			kill(it->pid, SIGKILL);
 			std::cout << "Killed " << it->pid << std::endl;
-			it = info.erase(it);
+			close(it->fd);
+			info.erase(it);
+			return;
 		}
 		else
 		{
