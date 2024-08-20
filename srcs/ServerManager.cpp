@@ -189,14 +189,16 @@ void ServerManager::runServers()
 				{
 					if (events[i].events & EPOLLIN)
 						readMore(*server, events[i]);
-					if (events[i].events & EPOLLOUT && server->checkTimeout(events[i].data.fd) != 0)
-					{
-						DelFromEpoll(events[i].data.fd);
-						close(events[i].data.fd);
-					}
 					else if (events[i].events & EPOLLOUT)
 						makeResponse(*server, events[i]);
 				}
+				std::vector<int> clearedFDs = server->clearTimedOut(); // If timed out but EPOLLOUT did not respond
+				for (int fd : clearedFDs)
+				{
+					DelFromEpoll(fd);
+					close(fd);
+				}
+				server->checkTimeouts();
 			}
 			checkCGIFds(events[i]);
 		}

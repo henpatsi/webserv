@@ -187,25 +187,45 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
     return (std::pair<bool, ServerResponse>(requestComplete, res));
 }
 
-int    Server::checkTimeout(int fd)
+std::vector<int>    Server::clearTimedOut(void)
 {
+    std::vector<int> timedOutFDS;
+
     try
     {
-    std::time_t currentTime = std::time(nullptr);
-    for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
-    {
-        if (fd == it->fd && currentTime - it->connectTime >= config.getConnectionTimeout())
+        for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
         {
-            std::cout << "Connection timed out on fd " << it->fd << "\n";
-            it->request.setFailResponseCode(408);
-            respond(it->fd);
-            return (1);
+            if (it->timedOut)
+            {
+                timedOutFDS.push_back(it->fd);
+                disconnect(it);
+            }
         }
-    }
     }
     catch(const std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "clearTimedOut Error: " << e.what() << std::endl;
     }
-    return 0;
+    return timedOutFDS;
+}
+
+void    Server::checkTimeouts(void)
+{
+    try
+    {
+        std::time_t currentTime = std::time(nullptr);
+        for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
+        {
+            if (currentTime - it->connectTime >= config.getConnectionTimeout())
+            {
+                std::cout << "Connection timed out on fd " << it->fd << "\n";
+                it->request.setFailResponseCode(408);
+                it->timedOut = true;
+            }
+        }
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "checkTimeouts Error: " << e.what() << std::endl;
+    }
 }

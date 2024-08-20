@@ -19,6 +19,7 @@ struct Connection
     Route route;
     HttpRequest request;
     sockaddr_in addr;
+    bool timedOut;
 };
 
 struct ServerResponse {
@@ -56,7 +57,9 @@ public:
     // gets called when request read and server can write
     std::pair<bool, ServerResponse> respond(int fd);
     // checks if the connection is still alive
-    int checkTimeout(int fd);
+    void checkTimeouts(void);
+
+    std::vector<int> clearTimedOut(void);
 
     class SocketOpenException : public std::exception {
         const char * what() const noexcept { return ("Couldnt open socket"); }
