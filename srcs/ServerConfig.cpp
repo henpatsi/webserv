@@ -37,7 +37,7 @@ ServerConfig::ServerConfig(std::stringstream& config)
         (field){"host:", &ServerConfig::parseAddress},
         (field){"size_limit:", &ServerConfig::parseRequestSize},
         (field){"location", &ServerConfig::parseRoute},
-        (field){"session_timeout:", &ServerConfig::parseSessionTimeout},
+        (field){"connection_timeout:", &ServerConfig::parseConnectionTimeout},
         (field){"error_page:", &ServerConfig::parseErrorPage}
     }};
     for (std::string key_value_pair; std::getline(config, key_value_pair, '\n');)
@@ -128,13 +128,13 @@ void ServerConfig::parseRequestSize(std::string pair, std::string key)
     _isRequestSizeSet = true;
 }
 
-void ServerConfig::parseSessionTimeout(std::string pair, std::string key)
+void ServerConfig::parseConnectionTimeout(std::string pair, std::string key)
 {
-    if (_isSessionTimeoutSet)
-        throw SameKeyRepeatException("session_timeout");
+    if (_isConnectionTimeoutSet)
+        throw SameKeyRepeatException("connection_timeout");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    _sessionTimeout = std::atoi(s.c_str());
-    _isSessionTimeoutSet = true;
+    _connectionTimeout = std::atoi(s.c_str());
+    _isConnectionTimeoutSet = true;
 }
 
 void ServerConfig::parseErrorPage(std::string pair, std::string key)

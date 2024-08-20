@@ -185,7 +185,7 @@ void ServerManager::runServers()
 				if (server->IsServerSocketFD(events[i].data.fd))
 					makeConnection(*server, events[i]);
 				// if we can send them data and resolve the request
-				else if (server->IsListeningFD(events[i].data.fd))
+				else if (server->IsServerConnection(events[i].data.fd))
 				{
 					if (events[i].events & EPOLLIN)
 						readMore(*server, events[i]);

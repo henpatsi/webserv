@@ -1,11 +1,9 @@
 TODO
 
-default 400 and 500 pages from config
-
 getting paths with spaces does not work from browser (encodes spaces as %20)
 
-make sure timeout response checks for epollout before write
-	- also all other reads and writes
+Timeout sometimes when hovering over link / typing url for over timeout time
+
 one read OR one write, so if EPOLLIN (or better, if request complete) else if EPOLLOUT
 	- currently if request read fully in loop, writes in same loop
 should read error try respond or immediately disconnect

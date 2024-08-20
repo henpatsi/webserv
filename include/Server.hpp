@@ -31,7 +31,7 @@ private:
     // sockets filedescriptor used for connecting to us
     std::list<std::pair<int, bool>> serverSocketFDS;
     // fd created on accepting a connection
-    std::list<Connection> listeningFDS;
+    std::list<Connection> connections;
     // contains all info and routes about the server
     ServerConfig config;
 
@@ -45,7 +45,7 @@ public:
 
     /* ---- Getters ---- */
     int     IsServerSocketFD(int fd)    { return std::any_of(serverSocketFDS.begin(), serverSocketFDS.end(), [&](std::pair<int, bool> x){return x.first == fd && !x.second; }); }
-    bool    IsListeningFD(int fd)       { return std::any_of(listeningFDS.begin(), listeningFDS.end(), [&](Connection x){return x.fd == fd; });}
+    bool    IsServerConnection(int fd)       { return std::any_of(connections.begin(), connections.end(), [&](Connection x){return x.fd == fd; });}
     std::list<std::pair<int, bool>> GetSocketFDs() { return serverSocketFDS; }; 
     // method called on incomming request 
     void connect(int incommingFD, int socketFD, sockaddr_in client_address);

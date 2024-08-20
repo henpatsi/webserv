@@ -90,7 +90,7 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
         }
     }
 
-    listeningFDS.push_back(connection);
+    connections.push_back(connection);
 
     std::cout << "Connected " << connection.fd << " to server\n";
 }
@@ -99,7 +99,6 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
 {
     std::cout << "Disconnecting " << connectionIT->fd << " from server\n";
 
-
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
         if (it->first == connectionIT->socketFD)
@@ -107,13 +106,13 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
             it->second = false;
         }
     }
-    listeningFDS.erase(connectionIT);
+    connections.erase(connectionIT);
 }
 
 void Server::getRequest(int fd)
 {
     std::list<Connection>::iterator it;
-    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    for (it = connections.begin(); it != connections.end(); ++it)
     {
         if (it->fd == fd)
             break;
@@ -130,7 +129,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
 {
     ServerResponse res;
     std::list<Connection>::iterator it;
-    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    for (it = connections.begin(); it != connections.end(); ++it)
     {
         if (it->fd == fd)
             break;
@@ -193,9 +192,9 @@ int    Server::checkTimeout(int fd)
     try
     {
     std::time_t currentTime = std::time(nullptr);
-    for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
     {
-        if (fd == it->fd && currentTime - it->connectTime >= config.getSessionTimeout())
+        if (fd == it->fd && currentTime - it->connectTime >= config.getConnectionTimeout())
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             it->request.setFailResponseCode(408);
