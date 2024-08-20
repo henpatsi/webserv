@@ -9,6 +9,8 @@
 #include "ServerConfig.hpp"
 #include "Server.hpp"
 
+#define CGI_TIMEOUT 2
+
 #define MANAGEREXCEPTION public std::exception { \
             const char * what() const noexcept; \
         }

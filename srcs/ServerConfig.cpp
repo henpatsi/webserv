@@ -36,7 +36,9 @@ ServerConfig::ServerConfig(std::stringstream& config)
         (field){"port:", &ServerConfig::parsePort},
         (field){"host:", &ServerConfig::parseAddress},
         (field){"size_limit:", &ServerConfig::parseRequestSize},
-        (field){"location", &ServerConfig::parseRoute}
+        (field){"location", &ServerConfig::parseRoute},
+        (field){"session_timeout:", &ServerConfig::parseSessionTimeout},
+        (field){"error_page:", &ServerConfig::parseErrorPage}
     }};
     for (std::string key_value_pair; std::getline(config, key_value_pair, '\n');)
     {
@@ -120,10 +122,28 @@ void ServerConfig::parseAddress(std::string pair, std::string key)
 void ServerConfig::parseRequestSize(std::string pair, std::string key)
 {
     if (_isRequestSizeSet)
-        throw SameKeyRepeatException("port");
+        throw SameKeyRepeatException("size_limit");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
     _clientBodyLimit = std::atol(s.c_str());
     _isRequestSizeSet = true;
+}
+
+void ServerConfig::parseSessionTimeout(std::string pair, std::string key)
+{
+    if (_isSessionTimeoutSet)
+        throw SameKeyRepeatException("session_timeout");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    _sessionTimeout = std::atoi(s.c_str());
+    _isSessionTimeoutSet = true;
+}
+
+void ServerConfig::parseErrorPage(std::string pair, std::string key)
+{
+    if (_isErrorPageSet)
+        throw SameKeyRepeatException("errorpage");
+    std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
+    _errorPage = s;
+    _isErrorPageSet = true;
 }
 
 void ServerConfig::parseRoute(std::string pair, std::string key)
@@ -185,6 +205,8 @@ void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route&
         res.allowedMethods |= parseRequestMethod("GET");
     if (s.find("DELETE") != std::string::npos)
         res.allowedMethods |= parseRequestMethod("DELETE");
+    if (s.find("HEAD") != std::string::npos)
+        res.allowedMethods |= parseRequestMethod("HEAD");
 }
 
 void ServerConfig::parseRedirect(std::string pair, std::string key, Route& res)
