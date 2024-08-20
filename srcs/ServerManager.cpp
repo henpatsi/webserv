@@ -288,10 +288,11 @@ void ServerManager::checkTimeouts()
 			// TODO check that nothing needs to be done here
 		}
 	}
+
 	std::time_t currentTime = std::time(nullptr);
 	for (auto it = info.begin(); it != info.end();)
 	{
-		if (currentTime - it->cgiStarted > TIMEOUT_SEC)
+		if (currentTime - it->cgiStarted > CGI_TIMEOUT) // TODO should server timeout also be used here?
 		{
 			std::cout << "Cgi timed out\n";
 			it->response.setFailResponseCode(504);

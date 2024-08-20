@@ -34,10 +34,10 @@ class ServerConfig {
 		bool							_isRequestSizeSet 	= false;
 		std::list<struct Route>			_routes;
 		bool							_isRouteSet			= false;
-		int								_sessionTimeout;
-		bool							_isSessionTimeoutSet;
+		int								_sessionTimeout		= 2;
+		bool							_isSessionTimeoutSet = false;
 		std::string						_errorPage;
-		bool							_isErrorPageSet;
+		bool							_isErrorPageSet		= false;
 
 	public:
 		ServerConfig(std::stringstream& config);
@@ -49,6 +49,8 @@ class ServerConfig {
 		std::vector<struct sockaddr_in>	getAddress() 			{ return _addresses; };
 		long 							getRequestSizeLimit() 	{ return _clientBodyLimit; };
 		std::list<struct Route> 		getRoutes()				{ return _routes; };
+		int								getSessionTimeout()		{ return _sessionTimeout; };
+		std::string						getErrorPage()			{ return _errorPage; };
 
 		/* ---- Exceptions ----*/
 		class SameKeyRepeatException : public std::exception

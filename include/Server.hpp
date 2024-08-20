@@ -10,10 +10,6 @@
 #include <algorithm>
 #include <optional>
 
-#ifndef TIMEOUT_SEC
-# define TIMEOUT_SEC 5
-#endif
-
 struct Connection
 {
     int fd;

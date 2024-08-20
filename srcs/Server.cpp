@@ -195,7 +195,7 @@ std::vector<int> Server::checkTimeouts()
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        if (currentTime - it->connectTime > TIMEOUT_SEC)
+        if (currentTime - it->connectTime >= config.getSessionTimeout())
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             timedOutFDs.push_back(it->fd);
