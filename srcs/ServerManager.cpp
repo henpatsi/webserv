@@ -92,11 +92,6 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 			std::cerr << "really stupid" << "\n";
 		}
 	}
-	if (!success)
-	{
-		std::cout << "failed to create\n";
-		throw ServerCreationException();
-	}
 	// setup epoll
 	polled = epoll_create(EPOLL_SIZE);
 	if (polled == -1)
