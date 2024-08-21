@@ -1,5 +1,11 @@
 content-type: html/text
 
-<?php
-echo "Hello " . $_POST['person'] ."<br>";
+<html>
+<body>
+      <?php
+while (FALSE !== ($line = fgets(STDIN))) {
+   echo $line;
+}
 ?>
+</body>
+</html>
