@@ -99,11 +99,11 @@ echo "---Test Empty Header Value3---" # NGINX allows
 curl -H "Key:  " http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
-echo "---Test Empty Header Key1---" # NGINX does not allow
+echo "---Test Empty Header Key1---" # NGINX does not allow?
 curl -H ": asdf" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 
-echo "---Test Empty Header Key2---" # NGINX does not allow
+echo "---Test Empty Header Key2---" # NGINX does not allow?
 curl -H " : asdf" http://$SERVER_IP:$SERVER_PORT/success.html
 echo ""
 

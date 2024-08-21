@@ -90,7 +90,7 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
         }
     }
 
-    listeningFDS.push_back(connection);
+    connections.push_back(connection);
 
     std::cout << "Connected " << connection.fd << " to server\n";
 }
@@ -99,7 +99,6 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
 {
     std::cout << "Disconnecting " << connectionIT->fd << " from server\n";
 
-
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
     {
         if (it->first == connectionIT->socketFD)
@@ -107,17 +106,19 @@ void Server::disconnect(std::list<Connection>::iterator connectionIT)
             it->second = false;
         }
     }
-    listeningFDS.erase(connectionIT);
+    connections.erase(connectionIT);
 }
 
 void Server::getRequest(int fd)
 {
     std::list<Connection>::iterator it;
-    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    for (it = connections.begin(); it != connections.end(); ++it)
     {
         if (it->fd == fd)
             break;
     }
+
+	it->readAttempted = true;
 
     if (!it->request.isComplete())
     {
@@ -130,17 +131,21 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
 {
     ServerResponse res;
     std::list<Connection>::iterator it;
-    for (it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    for (it = connections.begin(); it != connections.end(); ++it)
     {
         if (it->fd == fd)
             break;
     }
 
+	if (!it->readAttempted)
+		return (std::pair<bool, ServerResponse>(false, res));
+
     bool requestComplete = it->request.isComplete();
 
     if (requestComplete)
     {
-        if (it->request.getFailResponseCode() == 0) // Only find route if no previous error occured
+		// Only find route if no previous error occured
+        if (it->request.getFailResponseCode() == 0)
         {
             std::cout << "\n--- Finding route ---\n";
             try
@@ -158,9 +163,13 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         {
             std::cout << "\n--- Responding to client ---\n";
             HttpResponse response(it->request, it->route, config.getErrorPage());
-            if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                throw ServerManager::ManagerRuntimeException("Failed to send response");
-            disconnect(it);
+			ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
+			// On failed send, disconnect as with successfull send
+            if (ret == -1)
+                std::cerr << "Failed to send response\n";
+			if (ret == 0)
+				std::cerr << "Sent empty response\n";
+			disconnect(it);
         }
         else
         {
@@ -171,39 +180,72 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                 disconnect(it);
                 res.pid = ret.first;
                 res.fd = ret.second;
-                return (std::pair<bool, ServerResponse>(requestComplete, res));
             }
             catch(const std::exception &e)
             {
                 it->request.setFailResponseCode(403);
-                std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route, config.getErrorPage());
-                if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                    throw ServerManager::ManagerRuntimeException("Failed to send response");
-                disconnect(it);
-                close(fd);
+                std::cerr << "RunCGI Error: " << e.what() << std::endl;
+				// Returns false to indicate that the response was not sent
+				// will be sent in next epoll loop
+				return (std::pair<bool, ServerResponse>(false, res));
             }
         }
     }
     return (std::pair<bool, ServerResponse>(requestComplete, res));
 }
 
-std::vector<int> Server::checkTimeouts()
+std::vector<int>    Server::clearTimedOut(void)
 {
-    std::vector<int> timedOutFDs;
+    std::vector<int> timedOutFDS;
 
-    std::time_t currentTime = std::time(nullptr);
-    for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
+    try
     {
-        if (currentTime - it->connectTime >= config.getSessionTimeout())
+        for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
         {
-            std::cout << "Connection timed out on fd " << it->fd << "\n";
-            timedOutFDs.push_back(it->fd);
-            it->request.setFailResponseCode(408);
-            respond(it->fd);
-            it = listeningFDS.begin();
+            if (it->timedOut)
+            {
+                timedOutFDS.push_back(it->fd);
+                disconnect(it);
+				it = connections.begin();
+            }
         }
     }
+    catch(const std::exception& e)
+    {
+        std::cerr << "clearTimedOut Error: " << e.what() << std::endl;
+    }
+    return timedOutFDS;
+}
 
-    return timedOutFDs;
+void    Server::checkTimeouts(void)
+{
+    try
+    {
+        std::time_t currentTime = std::time(nullptr);
+        for (std::list<Connection>::iterator it = connections.begin(); it != connections.end(); ++it)
+        {
+            if (currentTime - it->connectTime >= config.getConnectionTimeout())
+            {
+                std::cout << "Connection timed out on fd " << it->fd << "\n";
+                it->request.setFailResponseCode(408);
+                it->timedOut = true;
+            }
+        }
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "checkTimeouts Error: " << e.what() << std::endl;
+    }
+}
+
+bool	Server::requestComplete(int fd)
+{
+	std::list<Connection>::iterator it;
+	for (it = connections.begin(); it != connections.end(); ++it)
+	{
+		if (it->fd == fd)
+			break;
+	}
+
+	return it->request.isComplete();
 }

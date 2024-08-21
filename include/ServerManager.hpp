@@ -62,7 +62,8 @@ class ServerManager
         void readMore(Server &server, epoll_event event);
         void makeResponse(Server &server, epoll_event event);
         void checkCGIFds(epoll_event event);
-    void handleCgiResponse(std::vector<cgiInfo>::iterator it);
+        void handleCgiResponse(std::vector<cgiInfo>::iterator it);
+        void checkCGITimeouts();
     public:
         ServerManager(std::string path);
         ~ServerManager();
