@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/12 08:27:07 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/19 13:37:32 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@
 # include <algorithm>
 # include <chrono>
 # include <thread>
-#include <unistd.h>
+# include <unistd.h>
 
 # ifndef READ_BUFFER_SIZE
 #  define READ_BUFFER_SIZE 1024
@@ -44,12 +44,6 @@
 #  define SPACECHARS " \f\n\r\t\v"
 # endif
 
-// TODO temporary hard coded server config values
-
-# ifndef clientBodyLimit
-#  define clientBodyLimit 300000
-# endif
-
 struct multipartData
 {
 	std::string					name;
@@ -60,13 +54,16 @@ struct multipartData
 	std::vector<multipartData>	multipartDataVector = {};
 };
 
-int		extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
+int	extractMultipartData(std::vector<multipartData>& multipartDataVector, std::vector<char>& rawContent, std::string boundary);
+
+template <typename T>
+T safeNext(T i, T end, size_t amount);
 
 class HttpRequest
 {
 	public:
 		HttpRequest(void);
-		HttpRequest(int connectionFD);
+		HttpRequest(int connectionFD, long serverClientBodyLimit);
 
 		// Getters
 		std::string							getMethod(void) { return this->method; }
@@ -76,7 +73,7 @@ class HttpRequest
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
-		std::vector<char>					getRawContent(void);
+		std::vector<char>					getRawContent(size_t length = 0);
 		std::vector<multipartData>			getMultipartData(void) { return this->multipartDataVector; }
 		std::string							getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
@@ -101,6 +98,7 @@ class HttpRequest
 	
 	private:
 		int									requestFD;
+		size_t								clientBodyLimit;
 		std::vector<char>					rawRequest = {};
 		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
 		

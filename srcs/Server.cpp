@@ -78,7 +78,7 @@ void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up
     Connection connection;
     connection.fd = incommingFD;
     connection.connectTime = std::time(nullptr);
-    connection.request = HttpRequest(incommingFD);
+    connection.request = HttpRequest(incommingFD, config.getRequestSizeLimit());
     connection.addr = addr;
 
     for (std::list<std::pair<int, bool>>::iterator it = serverSocketFDS.begin(); it != serverSocketFDS.end(); ++it)
@@ -151,20 +151,13 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
                 it->request.setFailResponseCode(404);
-                std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route);
-                if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                    throw ServerManager::ManagerRuntimeException("Failed to send response");
-                disconnect(it);
-                close(fd);
-                return (std::pair<bool, ServerResponse>(true, res));
             }
         }
 
-        if (it->request.isCgi() == 0)
+        if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            HttpResponse response(it->request, it->route);
+            HttpResponse response(it->request, it->route, config.getErrorPage());
             if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                 throw ServerManager::ManagerRuntimeException("Failed to send response");
             disconnect(it);
@@ -184,7 +177,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 it->request.setFailResponseCode(403);
                 std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route);
+                HttpResponse response(it->request, it->route, config.getErrorPage());
                 if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
                     throw ServerManager::ManagerRuntimeException("Failed to send response");
                 disconnect(it);
@@ -202,7 +195,7 @@ std::vector<int> Server::checkTimeouts()
     std::time_t currentTime = std::time(nullptr);
     for (std::list<Connection>::iterator it = listeningFDS.begin(); it != listeningFDS.end(); ++it)
     {
-        if (currentTime - it->connectTime > TIMEOUT_SEC)
+        if (currentTime - it->connectTime >= config.getSessionTimeout())
         {
             std::cout << "Connection timed out on fd " << it->fd << "\n";
             timedOutFDs.push_back(it->fd);
