@@ -180,21 +180,14 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                 disconnect(it);
                 res.pid = ret.first;
                 res.fd = ret.second;
-                return (std::pair<bool, ServerResponse>(requestComplete, res));
             }
             catch(const std::exception &e)
             {
                 it->request.setFailResponseCode(403);
-                std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route, config.getErrorPage()); // TODO could optionally also return false and be handled by next epoll loop
-                ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
-				// On failed send, disconnect as with successfull send
-				if (ret == -1)
-					std::cerr << "Failed to send response\n";
-				if (ret == 0)
-					std::cerr << "Sent empty response\n";
-                disconnect(it);
-                close(fd); // TODO is this also done in ServerManager in this case?
+                std::cerr << "RunCGI Error: " << e.what() << std::endl;
+				// Returns false to indicate that the response was not sent
+				// will be sent in next epoll loop
+				return (std::pair<bool, ServerResponse>(false, res));
             }
         }
     }
