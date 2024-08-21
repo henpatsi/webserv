@@ -144,7 +144,8 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
 
     if (requestComplete)
     {
-        if (it->request.getFailResponseCode() == 0) // Only find route if no previous error occured
+		// Only find route if no previous error occured
+        if (it->request.getFailResponseCode() == 0)
         {
             std::cout << "\n--- Finding route ---\n";
             try
@@ -162,9 +163,13 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         {
             std::cout << "\n--- Responding to client ---\n";
             HttpResponse response(it->request, it->route, config.getErrorPage());
-            if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                throw ServerManager::ManagerRuntimeException("Failed to send response");
-            disconnect(it);
+			ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
+			// On failed send, disconnect as with successfull send
+            if (ret == -1)
+                std::cerr << "Failed to send response\n";
+			if (ret == 0)
+				std::cerr << "Sent empty response\n";
+			disconnect(it);
         }
         else
         {
@@ -181,11 +186,15 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 it->request.setFailResponseCode(403);
                 std::cerr << e.what() << std::endl;
-                HttpResponse response(it->request, it->route, config.getErrorPage());
-                if (send(fd, &response.getResponse()[0], response.getResponse().size(), 0) == -1)
-                    throw ServerManager::ManagerRuntimeException("Failed to send response");
+                HttpResponse response(it->request, it->route, config.getErrorPage()); // TODO could optionally also return false and be handled by next epoll loop
+                ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
+				// On failed send, disconnect as with successfull send
+				if (ret == -1)
+					std::cerr << "Failed to send response\n";
+				if (ret == 0)
+					std::cerr << "Sent empty response\n";
                 disconnect(it);
-                close(fd);
+                close(fd); // TODO is this also done in ServerManager in this case?
             }
         }
     }

@@ -339,7 +339,7 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 		std::cerr
 			<< "ServerManager: RunServerError: " << e.what()
 			<< "\n";
-		// send error response here???
+		// send error response here??? might mean server failed to send response so no
 	}
 }
 

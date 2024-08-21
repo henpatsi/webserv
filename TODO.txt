@@ -2,10 +2,5 @@ TODO
 
 getting paths with spaces does not work from browser (encodes spaces as %20)
 
-Timeout sometimes when hovering over link / typing url for over timeout time
-
-one read OR one write, so if EPOLLIN (or better, if request complete) else if EPOLLOUT
-	- currently if request read fully in loop, writes in same loop
 should read error try respond or immediately disconnect
-currently not disconnecting if send fails?
-send must also check for 0
+
