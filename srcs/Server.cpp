@@ -118,6 +118,8 @@ void Server::getRequest(int fd)
             break;
     }
 
+	it->readAttempted = true;
+
     if (!it->request.isComplete())
     {
         std::cout << "\n--- Reading request ---\n";
@@ -134,6 +136,9 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         if (it->fd == fd)
             break;
     }
+
+	if (!it->readAttempted)
+		return (std::pair<bool, ServerResponse>(false, res));
 
     bool requestComplete = it->request.isComplete();
 
@@ -199,6 +204,7 @@ std::vector<int>    Server::clearTimedOut(void)
             {
                 timedOutFDS.push_back(it->fd);
                 disconnect(it);
+				it = connections.begin();
             }
         }
     }
@@ -228,4 +234,16 @@ void    Server::checkTimeouts(void)
     {
         std::cerr << "checkTimeouts Error: " << e.what() << std::endl;
     }
+}
+
+bool	Server::requestComplete(int fd)
+{
+	std::list<Connection>::iterator it;
+	for (it = connections.begin(); it != connections.end(); ++it)
+	{
+		if (it->fd == fd)
+			break;
+	}
+
+	return it->request.isComplete();
 }

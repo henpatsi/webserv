@@ -73,7 +73,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 		throw UnclosedBraceException();
 
 	// Initialises the Serverconfigs with the correct string
-	bool success = true;
+	// bool success = true;
 	for (std::stringstream &configuration : configs)
 	{
 		try
@@ -83,12 +83,12 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 		}
 		catch (std::exception const &e)
 		{
-			success = false;
+			// success = false;
 			std::cerr << "ServerManager: ServerInitError: " << e.what() << "\n";
 		}
 		catch (...)
 		{
-			success = false;
+			// success = false;
 			std::cerr << "really stupid" << "\n";
 		}
 	}
@@ -174,35 +174,34 @@ void ServerManager::runServers()
 {
 	while (1)
 	{
-		//  std::cout << "waiting...\n";
+		// std::cout << "waiting...\n";
 		WaitForEvents();
 		for (int i = 0; i < eventAmount; i++)
 		{
-			//     std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
+			// std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
 			for (Server *server : servers)
 			{
-				// if someone initiates a connection to the registered sockets
+				// new connection
 				if (server->IsServerSocketFD(events[i].data.fd))
-					makeConnection(*server, events[i]);
-				// if we can send them data and resolve the request
-				else if (server->IsServerConnection(events[i].data.fd))
 				{
-					if (events[i].events & EPOLLIN)
+					makeConnection(*server, events[i]);
+					break ;
+				}
+
+				// event on server connection
+				if (server->IsServerConnection(events[i].data.fd))
+				{
+					if (!server->requestComplete(events[i].data.fd) && events[i].events & EPOLLIN)
 						readMore(*server, events[i]);
 					else if (events[i].events & EPOLLOUT)
 						makeResponse(*server, events[i]);
+					break ;
 				}
-				std::vector<int> clearedFDs = server->clearTimedOut(); // If timed out but EPOLLOUT did not respond
-				for (int fd : clearedFDs)
-				{
-					DelFromEpoll(fd);
-					close(fd);
-				}
-				server->checkTimeouts();
 			}
 			checkCGIFds(events[i]);
 		}
-			checkCGITimeouts();
+		checkTimeouts();
+		checkCGITimeouts();
 	}
 }
 
@@ -341,6 +340,23 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 			<< "ServerManager: RunServerError: " << e.what()
 			<< "\n";
 		// send error response here???
+	}
+}
+
+void	ServerManager::checkTimeouts()
+{
+	for (Server *server : servers)
+	{
+		// clear previously timed out that were not responded to
+		std::vector<int> clearedFDs = server->clearTimedOut();
+		for (int fd : clearedFDs)
+		{
+			DelFromEpoll(fd);
+			close(fd);
+			std::cout << "Timed out connection on fd " << fd << " cleared without response\n";
+		}
+		// check if any new connections have timed out
+		server->checkTimeouts();
 	}
 }
 
