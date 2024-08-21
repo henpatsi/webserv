@@ -255,15 +255,16 @@ void ServerManager::WaitForEvents()
 
 void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
 {
-  Route _;
-  HttpResponse response (it->response, _, ""); // TODO Error page not passed to response here
-  if (send (it->listeningFd, &response.getResponse()[0],
-            response.getResponse().size (), 0)
-      == -1)
-    throw ManagerRuntimeException ("Failed to send response");
-  DelFromEpoll (it->fd);
-  if (close(it->fd) == -1 || close (it->listeningFd))
-    throw ManagerRuntimeException ("Failed to close fd");
+	Route _;
+	HttpResponse response (it->response, _, ""); // TODO Error page not passed to response here
+	ssize_t ret = send (it->listeningFd, &response.getResponse()[0], response.getResponse().size (), 0);
+	if (ret == -1)
+		std::cerr << "Failed to send CGI response" << std::endl;
+	if (ret == 0)
+		std::cerr << "Sent empty response to " << it->listeningFd << std::endl;
+	DelFromEpoll (it->fd);
+	if (close(it->fd) == -1 || close (it->listeningFd))
+		throw ManagerRuntimeException ("Failed to close fd");
 }
 
 int ServerManager::acceptConnection(epoll_event event)

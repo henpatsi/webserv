@@ -69,7 +69,7 @@ class HttpRequest
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
-		std::map<std::string, std::string>	getHeaders(void) { return this->headers; }
+		std::map<std::string, std::string>				&getHeaders(void) { return this->headers; }
 		std::string							getHeader(std::string key) { return this->headers[key]; }
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }

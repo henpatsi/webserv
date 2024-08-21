@@ -46,7 +46,7 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[6] = (char *) content_length.c_str();
 	if (request.getHeaders().find("content-type") != request.getHeaders().end())
 	{
-	content_type = "CONTENT_TYPE=" + request.getHeaders().at("content-type");
+		content_type = "CONTENT_TYPE=" + request.getHeaders().at("content-type");
 	}
 	else
 		content_type = "CONTENT_TYPE=";

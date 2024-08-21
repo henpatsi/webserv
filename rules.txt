@@ -1,7 +1,0 @@
-
-RULES
-
-A recipient of a bare CR MUST consider that element to be invalid or replace each bare CR with SP before processing the element or forwarding the message. 
-	Currently not handled. Not sure where to test. Check that when \r is found, next char is \n in readLine? 
-
-ERRORS ABOVE: 400 (Bad Request)
