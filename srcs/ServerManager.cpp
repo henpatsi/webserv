@@ -73,7 +73,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 		throw UnclosedBraceException();
 
 	// Initialises the Serverconfigs with the correct string
-	bool success = true;
+	// bool success = true;
 	for (std::stringstream &configuration : configs)
 	{
 		try
@@ -83,12 +83,12 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 		}
 		catch (std::exception const &e)
 		{
-			success = false;
+			// success = false;
 			std::cerr << "ServerManager: ServerInitError: " << e.what() << "\n";
 		}
 		catch (...)
 		{
-			success = false;
+			// success = false;
 			std::cerr << "really stupid" << "\n";
 		}
 	}
@@ -174,35 +174,34 @@ void ServerManager::runServers()
 {
 	while (1)
 	{
-		//  std::cout << "waiting...\n";
+		// std::cout << "waiting...\n";
 		WaitForEvents();
 		for (int i = 0; i < eventAmount; i++)
 		{
-			//     std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
+			// std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
 			for (Server *server : servers)
 			{
-				// if someone initiates a connection to the registered sockets
+				// new connection
 				if (server->IsServerSocketFD(events[i].data.fd))
-					makeConnection(*server, events[i]);
-				// if we can send them data and resolve the request
-				else if (server->IsListeningFD(events[i].data.fd))
 				{
-					if (events[i].events & EPOLLIN)
+					makeConnection(*server, events[i]);
+					break ;
+				}
+
+				// event on server connection
+				if (server->IsServerConnection(events[i].data.fd))
+				{
+					if (!server->requestComplete(events[i].data.fd) && events[i].events & EPOLLIN)
 						readMore(*server, events[i]);
-					if (events[i].events & EPOLLOUT)
+					else if (events[i].events & EPOLLOUT)
 						makeResponse(*server, events[i]);
+					break ;
 				}
 			}
 			checkCGIFds(events[i]);
 		}
-		try
-		{
-			checkTimeouts();
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr << e.what() << std::endl;
-		}
+		checkTimeouts();
+		checkCGITimeouts();
 	}
 }
 
@@ -265,45 +264,6 @@ void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
   DelFromEpoll (it->fd);
   if (close(it->fd) == -1 || close (it->listeningFd))
     throw ManagerRuntimeException ("Failed to close fd");
-}
-
-void ServerManager::checkTimeouts()
-{
-	for (Server *server : servers)
-	{
-		try
-		{
-			std::vector<int> timedOutFDs = server->checkTimeouts();
-			for (int fd : timedOutFDs)
-			{
-				DelFromEpoll(fd);
-				close(fd);
-			}
-		}
-		catch (const std::exception &e)
-		{
-			std::cerr
-				<< "ServerManager: CheckTimeoutsError: " << e.what()
-				<< "\n";
-			// TODO check that nothing needs to be done here
-		}
-	}
-
-	std::time_t currentTime = std::time(nullptr);
-	for (auto it = info.begin(); it != info.end();)
-	{
-		if (currentTime - it->cgiStarted > CGI_TIMEOUT) // TODO should server timeout also be used here?
-		{
-			std::cout << "Cgi timed out\n";
-			it->response.setFailResponseCode(504);
-			handleCgiResponse(it);
-			kill(it->pid, SIGKILL);
-			std::cout << "Killed " << it->pid << std::endl;
-			it = info.erase(it);
-		}
-		else
-			it++;
-	}
 }
 
 int ServerManager::acceptConnection(epoll_event event)
@@ -379,12 +339,57 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 		std::cerr
 			<< "ServerManager: RunServerError: " << e.what()
 			<< "\n";
-		// send error response here???
+		// send error response here??? might mean server failed to send response so no
+	}
+}
+
+void	ServerManager::checkTimeouts()
+{
+	for (Server *server : servers)
+	{
+		// clear previously timed out that were not responded to
+		std::vector<int> clearedFDs = server->clearTimedOut();
+		for (int fd : clearedFDs)
+		{
+			DelFromEpoll(fd);
+			close(fd);
+			std::cout << "Timed out connection on fd " << fd << " cleared without response\n";
+		}
+		// check if any new connections have timed out
+		server->checkTimeouts();
+	}
+}
+
+void	ServerManager::checkCGITimeouts()
+{
+	try
+	{
+	std::time_t currentTime = std::time(nullptr);
+	for (auto it = info.begin(); it != info.end();)
+	{
+		if (currentTime - it->cgiStarted >= CGI_TIMEOUT)
+		{
+			std::cout << "Cgi timed out\n";
+			it->response.setFailResponseCode(504);
+			handleCgiResponse(it);
+			kill(it->pid, SIGKILL);
+			std::cout << "Killed " << it->pid << std::endl;
+			it = info.erase(it);
+		}
+		else
+		it++;
+	}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
 	}
 }
 
 void ServerManager::checkCGIFds(epoll_event event)
 {
+	try
+	{
 	std::vector<cgiInfo>::iterator it = std::find_if(
 		info.begin(), info.end(),
 		[&](cgiInfo fdinfo)
@@ -395,6 +400,7 @@ void ServerManager::checkCGIFds(epoll_event event)
 		{
 			handleCgiResponse(it);
 			info.erase(it);
+			return;
 		}
 		else
 		{
@@ -409,5 +415,10 @@ void ServerManager::checkCGIFds(epoll_event event)
 				info.erase(it);
 			}
 		}
+	}
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << e.what() << std::endl;
 	}
 }

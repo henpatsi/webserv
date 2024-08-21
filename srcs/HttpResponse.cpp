@@ -219,11 +219,10 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	responseString += "\r\n";
 
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
-	std::vector<char> responsecontent = response.getContent();
 	if (response.getMethod() != "HEAD")
 	{
 		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
-		this->response.insert(this->response.end(), responsecontent.begin(), responsecontent.end());
+		this->response.insert(this->response.end(), response.getContent().begin(), response.getContent().end());
 	}
 }
 

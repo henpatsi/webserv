@@ -170,7 +170,7 @@ std::string	cgiResponse::getHeaders()
 	return (headerString);
 }
 	
-std::vector<char>	cgiResponse::getContent()
+std::vector<char>	&cgiResponse::getContent()
 {
 	return _content;
 }

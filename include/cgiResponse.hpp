@@ -50,7 +50,7 @@ class	cgiResponse
 	bool	isDone(){ return _done;}
 	std::string	getMethod();
 	std::string	getHeaders();
-	std::vector<char>	getContent();
+	std::vector<char>	&getContent();
 	class CgiRequestException : public std::exception
 		{
 			public:

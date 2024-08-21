@@ -13,7 +13,7 @@ static void setFdNonBlocking(int fd)
 
 std::string	ntoa(sockaddr_in &address)
 {
-	uint32_t a = address.sin_addr.s_addr;
+	uint32_t a = htonl(address.sin_addr.s_addr);
 	std::string s(std::to_string(a % 256));
 	s.insert(0, ".");
 	a /= 256;
@@ -32,7 +32,7 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	gateway = "GATEWAY_INTERFACE=CGI/1.1";
 	envs[0] = (char *) gateway.c_str();
 	path_info = "PATH_INFO=";
-	path_info += route.root + route.location;
+	path_info += route.root + request.getResourcePath();
 	envs[1] = (char *) path_info.c_str();
 	query_string = "QUERY_STRING=" + request.getQueryString();
 	envs[2] = (char *) query_string.c_str();
@@ -44,8 +44,10 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[5] = (char *) server_protocol.c_str();
 	content_length = "CONTENT_LENGTH=" + std::to_string(request.getRawContent().size());
 	envs[6] = (char *) content_length.c_str();
-	if (request.getHeaders().find("content-type:") != request.getHeaders().end())
-		content_type = "CONTENT_TYPE=" + request.getHeaders()["content-type:"];
+	if (request.getHeaders().find("content-type") != request.getHeaders().end())
+	{
+	content_type = "CONTENT_TYPE=" + request.getHeaders().at("content-type");
+	}
 	else
 		content_type = "CONTENT_TYPE=";
 	envs[7] = (char *) content_type.c_str();
@@ -57,7 +59,6 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[10] = (char *) port.c_str();
 	envs[11] = 0;
 	return envs;
-	//need client network address, server port and server name from somewhere??
 }
 
 std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address, Route &route)
@@ -94,7 +95,8 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	pid = fork();
 	if (pid == 0)
 	{
-		std::string path = route.root + route.location;
+		std::string path = route.root + request.getResourcePath();
+		path = path.substr(0, path.find_last_of("/"));
 		chdir(path.c_str());
 		std::cout << "chdir " << path.c_str() << std::endl;
 		if (dup2(toCGI[0], 0) == -1 || dup2(fromCGI[1], 1) == -1)

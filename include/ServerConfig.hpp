@@ -34,8 +34,8 @@ class ServerConfig {
 		bool							_isRequestSizeSet 	= false;
 		std::list<struct Route>			_routes;
 		bool							_isRouteSet			= false;
-		int								_sessionTimeout		= 2;
-		bool							_isSessionTimeoutSet = false;
+		int								_connectionTimeout	= 10;
+		bool							_isConnectionTimeoutSet = false;
 		std::string						_errorPage;
 		bool							_isErrorPageSet		= false;
 
@@ -49,7 +49,7 @@ class ServerConfig {
 		std::vector<struct sockaddr_in>	getAddress() 			{ return _addresses; };
 		long 							getRequestSizeLimit() 	{ return _clientBodyLimit; };
 		std::list<struct Route> 		getRoutes()				{ return _routes; };
-		int								getSessionTimeout()		{ return _sessionTimeout; };
+		int								getConnectionTimeout()	{ return _connectionTimeout; };
 		std::string						getErrorPage()			{ return _errorPage; };
 
 		/* ---- Exceptions ----*/
@@ -93,7 +93,7 @@ class ServerConfig {
 		void parseAddress(std::string pair, std::string key);
 		void parseRoute(std::string pair, std::string key);
 		void parseRequestSize(std::string pair, std::string key);
-		void parseSessionTimeout(std::string pair, std::string key);
+		void parseConnectionTimeout(std::string pair, std::string key);
 		void parseErrorPage(std::string pair, std::string key);
 
 		/* ---- RouteParser ----*/
