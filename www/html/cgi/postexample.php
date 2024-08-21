@@ -1,11 +1,10 @@
-content-type: html/text
+content-type: text/html
 
 <html>
 <body>
-      <?php
-while (FALSE !== ($line = fgets(STDIN))) {
-   echo $line;
-}
-?>
+
+Welcome <?php echo $_POST["name"]; ?><br>
+Your email address is: <?php echo $_POST["email"]; ?>
+
 </body>
 </html>
