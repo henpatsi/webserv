@@ -39,7 +39,7 @@ bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 class HttpResponse
 {
 	public:
-		HttpResponse(HttpRequest& request, Route& route, std::string errorPage);
+		HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, int sessionId);
 		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
 
 		std::string	getPath(void) { return this->path; }
@@ -87,7 +87,7 @@ class HttpResponse
 		void buildDefaultErrorContent(int code);
 		void buildCustomErrorContent(int code);
 		void buildDirectoryList(void);
-		void buildResponse(HttpRequest &request);
+		void buildResponse(HttpRequest &request, bool hasSession = false, int sessionId = 0);
 		void buildResponse(cgiResponse& response);
 		void buildRedirectResponse(void);
 		void prepareHeadResponse(void);

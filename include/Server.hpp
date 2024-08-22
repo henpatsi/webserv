@@ -10,6 +10,11 @@
 #include <algorithm>
 #include <optional>
 
+struct Session {
+    int sessionid;
+    std::time_t timeout;
+};
+
 struct Connection
 {
     int fd;
@@ -42,6 +47,12 @@ private:
     // utilfunction of getAnswer, finds the route that matches request location
     Route findCorrectRoute(HttpRequest request);
     cgiHandler  cgi_handler;
+
+    // all valid sessions at any time
+    std::list<Session> sessions;
+    int nextSessionId;
+    // session timeout check on each request check
+    void checkSessionTimeout(void);
 public:
     Server(ServerConfig config);
 

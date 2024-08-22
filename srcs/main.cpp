@@ -16,6 +16,11 @@ int main(int argc, char *argv[])
 {
 	(void) argc;
 
+	if (argc != 2)
+	{
+		std::cerr << "Usage: ./webserv <config file path>\n";
+		return 1;
+	}
 	try
 	{
 		ServerManager s(argv[1]);

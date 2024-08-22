@@ -28,6 +28,7 @@ Server::Server(ServerConfig _config) : config(_config)
             throw ListenException();
         std::cout << "\t" << ntohs(address.sin_port) << "\n";
     }
+    sessions = std::list<Session>();
 }
 
 Route Server::findCorrectRoute(HttpRequest request)
@@ -164,7 +165,52 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            HttpResponse response(it->request, it->route, config.getErrorPage());
+            int sessionIndex = 0;
+            if (config.hasSessions())
+            {
+                // timeout sessions, not sure if this point in the code is the best for it
+                for (std::list<Session>::iterator s = sessions.begin(); s != sessions.end();)
+                {
+                    if (s->timeout > std::time(nullptr))
+                        s = sessions.erase(s);
+                    else
+                        s++;
+                }
+                std::string cookies = it->request.getHeader("Cookie");
+                if (cookies == "")
+                {
+                    size_t pos = cookies.find("session=");
+                    if (pos != std::string::npos)
+                    {
+                        size_t end = cookies.find(';', pos);
+                        int sessionid = std::atoi(cookies.substr(pos, end == std::string::npos ? end : cookies.length()).c_str());
+                        std::list<Session>::iterator session = std::find_if(
+                            sessions.begin(), sessions.end(),
+                            [&](Session s){return s.sessionid == sessionid;});
+                        if (session == sessions.end())
+                            it->request.setFailResponseCode(403); // quite unsure about how to invalidate it
+                        else
+                            sessionIndex = sessionid;
+                    }
+                    else
+                    {
+                        int sessionid = nextSessionId++;
+                        if (sessionid == std::numeric_limits<int>::max())
+                            sessionid = 0;
+                        sessions.push_back((Session){sessionid, std::time(nullptr)});
+                        sessionIndex = sessionid;
+                    }
+                }
+                else
+                {
+                    int sessionid = nextSessionId++;
+                    if (sessionid == std::numeric_limits<int>::max())
+                        sessionid = 0;
+                    sessions.push_back((Session){sessionid, std::time(nullptr)});
+                    sessionIndex = sessionid;
+                }
+            }
+            HttpResponse response(it->request, it->route, config.getErrorPage(), config.hasSessions(), sessionIndex);
 			ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
 			// On failed send, disconnect as with successfull send
             if (ret == -1)
