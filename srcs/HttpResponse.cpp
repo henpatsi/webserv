@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 15:08:33 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 09:34:51 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,7 +58,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string error
 	std::cerr << "Response code: " << this->responseCode << "\n";
 }
 
-HttpResponse::HttpResponse(cgiResponse& response, Route& route, std::string errorPage) : route(route), errorPage(errorPage)
+HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 {
 	try
 	{

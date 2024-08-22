@@ -309,7 +309,7 @@ unsigned int ServerConfig::convertIP(std::string ip)
     std::cout << ip_long << "\n";
     std::cout << inet_addr(ip.c_str()) << "\n";
     //return ip_long;
-	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order
+	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order, inet_addr not allowed
 }
 
 uint8_t ServerConfig::parseRequestMethod(std::string s)

@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 14:08:20 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 09:35:01 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ class HttpResponse
 {
 	public:
 		HttpResponse(HttpRequest& request, Route& route, std::string errorPage);
-		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
+		HttpResponse(cgiResponse& cgiresponse, Route& route);
 
 		std::string	getPath(void) { return this->path; }
 		std::string	getContentType(void) { return this->contentType; };
