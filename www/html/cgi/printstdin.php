@@ -1,5 +1,3 @@
-content-type: html/text
-
 <html>
 <body>
       <?php

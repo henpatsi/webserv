@@ -1,5 +1,3 @@
-content-type: text/html
-
 <html>
 <body>
 

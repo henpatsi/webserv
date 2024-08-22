@@ -59,7 +59,11 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	envs[9] = (char *) hostname.c_str();
 	port = "SERVER_PORT=" + std::to_string(htons(config.getPorts().at(0)));
 	envs[10] = (char *) port.c_str();
-	envs[11] = 0;
+	redirect_status = "REDIRECT_STATUS=200";
+	envs[11] = (char *) redirect_status.c_str();
+	script_filename = "SCRIPT_FILENAME=" + request.getResourcePath().substr(request.getResourcePath().find_last_of("/") + 1);
+	envs[12] = (char *) script_filename.c_str();
+	envs[13] = 0;
 	return envs;
 }
 
@@ -77,7 +81,7 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 	}
 	std::string cgiExecutable;
 	if (request.getFileExtension() == "php")
-		cgiExecutable = "/usr/bin/php";
+		cgiExecutable = "/usr/bin/php-cgi";
 	if (request.getFileExtension() == "py")
 		cgiExecutable = "/usr/bin/python3";
 	std::string cgiPath = route.root + request.getResourcePath();
