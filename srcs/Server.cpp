@@ -151,6 +151,8 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             try
             {
                 it->route = findCorrectRoute(it->request);
+				if (it->route.redirect != "")
+					it->request.setFailResponseCode(307);
             }
             catch(const std::exception& e)
             {
