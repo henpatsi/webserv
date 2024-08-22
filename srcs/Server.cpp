@@ -176,14 +176,14 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                     else
                         s++;
                 }
-                std::string cookies = it->request.getHeader("Cookie");
-                if (cookies == "")
+                std::string cookies = it->request.getHeader("cookie");
+                if (cookies != "")
                 {
                     size_t pos = cookies.find("session=");
                     if (pos != std::string::npos)
                     {
                         size_t end = cookies.find(';', pos);
-                        int sessionid = std::atoi(cookies.substr(pos, end == std::string::npos ? end : cookies.length()).c_str());
+                        int sessionid = std::atoi(cookies.substr(pos + 8, end == std::string::npos ? end : cookies.length()).c_str());
                         std::list<Session>::iterator session = std::find_if(
                             sessions.begin(), sessions.end(),
                             [&](Session s){return s.sessionid == sessionid;});
