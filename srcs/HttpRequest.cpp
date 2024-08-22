@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 09:35:59 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 11:55:07 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ void HttpRequest::readRequest()
 			tryParseRequestLine();
 		if (this->requestLineLength > 0 && this->headerLength == 0)
 			tryParseHeader();
-		if (!this->requestComplete)
+		if (this->headerLength > 0 && !this->requestComplete)
 			tryParseContent();
 		
 		if (this->requestComplete)
@@ -226,6 +226,7 @@ void HttpRequest::tryParseHeader()
 
 void HttpRequest::tryParseContent()
 {
+	// Chunked content prioritized over content-length
 	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
@@ -238,7 +239,8 @@ void HttpRequest::tryParseContent()
 		this->rawRequest.erase(it, this->rawRequest.end());
 		this->rawRequest.insert(this->rawRequest.end(), rawContent.begin(), rawContent.end());
 	}
-	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
+	// Check if content-length fully read
+	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength)
 		return ;
 	else if (this->headers.find("content-type") != this->headers.end()
 			&& this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
@@ -282,6 +284,8 @@ void HttpRequest::extractURI(std::string URI)
 
 void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 {
+	std::cerr << "Unchunking content\n";
+
 	std::string eol = "\r\n";
 	std::vector<char> unchunkedVector;
 	std::vector<char>::iterator start;
@@ -345,8 +349,8 @@ void HttpRequest::debugPrint()
 	for (auto param : this->headers)
 		std::cerr << "  " << param.first << " = " << param.second << "\n";
 
-	// std::vector<char> rawContent = getRawContent();
-	// std::cerr << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	std::vector<char> rawContent = getRawContent();
+	std::cerr << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
 	if (this->multipartDataVector.size() > 0)
 	{
 		std::cerr << "Multipart data:";
