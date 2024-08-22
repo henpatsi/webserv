@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 11:22:10 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 14:30:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -273,6 +273,8 @@ void HttpResponse::prepareGetResponse(void)
 		this->contentType = "image/jpg";
 	else if (this->path.find(".pdf") != std::string::npos)
 		this->contentType = "application/pdf";
+	else
+		this->contentType = "binary/octet-stream";
 
 	int ret = readBinaryFile(this->path, this->content);
 	if (ret != 0)
