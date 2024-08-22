@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 09:34:51 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 10:23:47 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,14 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string error
 {
 	try
 	{
+		if (request.getFailResponseCode() == 307)
+		{
+			this->responseCode = request.getFailResponseCode();
+			buildRedirectResponse();
+			std::cerr << "Response code: " << this->responseCode << "\n";
+			return ;
+		}
+
 		if (request.getFailResponseCode() != 0)
 			setErrorAndThrow(request.getFailResponseCode(), "Request failed");
 		
@@ -245,6 +253,16 @@ void HttpResponse::buildResponse(HttpRequest &request)
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 	if (request.getMethod() != "HEAD")
 		this->response.insert(this->response.end(), this->content.begin(), this->content.end());
+}
+
+void HttpResponse::buildRedirectResponse(void)
+{
+	std::string responseString;
+
+	responseString = "HTTP/1.1 307 Temporary Redirect\r\n";
+	responseString += "Location: " + this->route.redirect + "\r\n";
+
+	this->response.insert(this->response.end(), responseString.begin(), responseString.end());
 }
 
 void HttpResponse::prepareHeadResponse(void)

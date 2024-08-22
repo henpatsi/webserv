@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 09:35:01 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 10:23:33 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,6 +89,7 @@ class HttpResponse
 		void buildDirectoryList(void);
 		void buildResponse(HttpRequest &request);
 		void buildResponse(cgiResponse& response);
+		void buildRedirectResponse(void);
 		void prepareHeadResponse(void);
 		void prepareGetResponse(void);
 		void preparePostResponse(HttpRequest &request);
