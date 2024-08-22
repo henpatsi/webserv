@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 16:43:14 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 17:09:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,7 +75,7 @@ class HttpRequest
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
 		std::map<std::string, std::string>&	getHeaders(void) { return this->headers; }
-		std::string							getHeader(std::string key) { return this->headers[key]; }
+		std::string							getHeader(std::string key);
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(size_t length = 0);

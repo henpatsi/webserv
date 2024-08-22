@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 16:44:08 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 17:14:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,7 +223,7 @@ void HttpRequest::tryParseHeader()
 void HttpRequest::tryParseContent()
 {
 	// Chunked content prioritized over content-length
-	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
+	if (this->getHeader("transfer-encoding") == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
 		std::string eoc = "0\r\n\r\n";
@@ -238,8 +238,7 @@ void HttpRequest::tryParseContent()
 	// Check if content-length fully read
 	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength)
 		return ;
-	else if (this->headers.find("content-type") != this->headers.end()
-			&& this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
+	else if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
@@ -378,6 +377,8 @@ void HttpRequest::debugSummary()
 	}
 }
 
+// GETTERS AND SETTERS
+
 std::vector<char>	HttpRequest::getRawContent(size_t length)
 {
 	std::vector<char>::iterator start = safeNext(this->rawRequest.begin(), this->rawRequest.end(), this->requestLineLength + this->headerLength);
@@ -388,6 +389,13 @@ std::vector<char>	HttpRequest::getRawContent(size_t length)
 		end = safeNext(start, this->rawRequest.end(), length);
 	std::vector<char> rawContent(start, end);
 	return rawContent;
+}
+
+std::string	HttpRequest::getHeader(std::string key)
+{
+	if (this->headers.find(key) == this->headers.end())
+		return "";
+	return this->headers[key];
 }
 
 void	HttpRequest::setFailResponseCode(int code)
