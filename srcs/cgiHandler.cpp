@@ -1,4 +1,5 @@
 #include "../include/cgiHandler.hpp"
+#include <filesystem>
 
 static void setFdNonBlocking(int fd)
 {
@@ -32,7 +33,8 @@ char	**cgiHandler::create_envs(char **envs, HttpRequest &request, ServerConfig &
 	gateway = "GATEWAY_INTERFACE=CGI/1.1";
 	envs[0] = (char *) gateway.c_str();
 	path_info = "PATH_INFO=";
-	path_info += route.root + request.getResourcePath();
+	path_info += std::filesystem::current_path();
+	path_info += request.getResourcePath().erase(0, request.getResourcePath().find_last_of("/")); //route.root + request.getResourcePath();
 	envs[1] = (char *) path_info.c_str();
 	query_string = "QUERY_STRING=" + request.getQueryString();
 	envs[2] = (char *) query_string.c_str();
