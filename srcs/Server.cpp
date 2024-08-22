@@ -197,7 +197,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                         int sessionid = nextSessionId++;
                         if (sessionid == std::numeric_limits<int>::max())
                             sessionid = 0;
-                        sessions.push_back((Session){sessionid, std::time(nullptr)});
+                        sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
                         sessionIndex = sessionid;
                     }
                 }
@@ -206,7 +206,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                     int sessionid = nextSessionId++;
                     if (sessionid == std::numeric_limits<int>::max())
                         sessionid = 0;
-                    sessions.push_back((Session){sessionid, std::time(nullptr)});
+                    sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
                     sessionIndex = sessionid;
                 }
             }
