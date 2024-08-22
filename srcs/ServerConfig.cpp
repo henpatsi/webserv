@@ -29,8 +29,11 @@ ServerConfig::ServerConfig(std::stringstream& config)
     _routes     = std::list<Route>();
     std::string _;
     std::getline(config, _);
-    std::cout << _ << "\n";
-    std::cout << "full config:<" << config.str() << ">\n";
+	if (DEBUG)
+	{
+		std::cout << _ << "\n";
+		std::cout << "full config:<" << config.str() << ">\n";
+	}
     std::vector<field> fields {{
         (field){"name:", &ServerConfig::parseName},
         (field){"port:", &ServerConfig::parsePort},
@@ -306,8 +309,8 @@ unsigned int ServerConfig::convertIP(std::string ip)
             return (0);
         }
     }
-    std::cout << ip_long << "\n";
-    std::cout << inet_addr(ip.c_str()) << "\n";
+    // std::cout << ip_long << "\n";
+    // std::cout << inet_addr(ip.c_str()) << "\n";
     //return ip_long;
 	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order, inet_addr not allowed
 }

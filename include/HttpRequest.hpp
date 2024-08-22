@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 16:27:04 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 16:43:14 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,7 +135,6 @@ class HttpRequest
 		void	setErrorAndThrow(int code, std::string message);
 
 		void	debugSummary(void);
-		void	debugPrint(std::string message);
 };
 
 #endif

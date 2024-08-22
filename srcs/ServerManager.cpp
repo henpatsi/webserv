@@ -350,7 +350,6 @@ void	ServerManager::checkTimeouts()
 		{
 			DelFromEpoll(fd);
 			close(fd);
-			std::cout << "Timed out connection on fd " << fd << " cleared without response\n";
 		}
 		// check if any new connections have timed out
 		server->checkTimeouts();

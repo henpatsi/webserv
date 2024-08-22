@@ -6,6 +6,13 @@
 #include "HttpResponse.hpp"
 #include "cgiHandler.hpp"
 
+#include <iostream>
+#include <arpa/inet.h> 
+#include <sys/socket.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <fcntl.h>
+#include <iterator>
 #include <list>
 #include <algorithm>
 #include <optional>
@@ -37,8 +44,6 @@ private:
     // contains all info and routes about the server
     ServerConfig config;
 
-    // private function to construce answer for public method respond
-    std::string GetAnswer();
     // utilfunction of getAnswer, finds the route that matches request location
     Route findCorrectRoute(HttpRequest request);
     cgiHandler  cgi_handler;

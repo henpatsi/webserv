@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 16:32:44 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 16:44:08 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,8 +122,6 @@ void HttpRequest::tryParseRequestLine()
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
 	this->requestLineLength += requestLineString.length();
-
-	debugPrint("- Request line parsed -");
 }
 
 void HttpRequest::tryParseHeader()
@@ -220,8 +218,6 @@ void HttpRequest::tryParseHeader()
 		this->requestComplete = true;
 
 	this->headerLength = headerString.length();
-
-	debugPrint("- Header parsed -");
 }
 
 void HttpRequest::tryParseContent()
@@ -253,8 +249,6 @@ void HttpRequest::tryParseContent()
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
 
-	debugPrint("- Content parsed -");
-
 	this->requestComplete = true;
 }
 
@@ -284,8 +278,6 @@ void HttpRequest::extractURI(std::string URI)
 
 void HttpRequest::unchunkContent(std::vector<char>& chunkedVector)
 {
-	debugPrint("Unchunking content");
-
 	std::string eol = "\r\n";
 	std::vector<char> unchunkedVector;
 	std::vector<char>::iterator start;
@@ -384,12 +376,6 @@ void HttpRequest::debugSummary()
 			}
 		}
 	}
-}
-
-void HttpRequest::debugPrint(std::string message)
-{
-	if (DEBUG)
-		std::cout << message << std::endl;
 }
 
 std::vector<char>	HttpRequest::getRawContent(size_t length)
