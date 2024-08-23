@@ -181,14 +181,6 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             std::string sessionIndex;
             if (config.hasSessions())
             {
-                // timeout sessions, not sure if this point in the code is the best for it
-                /* for (std::list<Session>::iterator s = sessions.begin(); s != sessions.end();) */
-                /* { */
-                /*     if (s->timeout < std::time(nullptr)) */
-                /*         s = sessions.erase(s); */
-                /*     else */
-                /*         s++; */
-                /* } */
                 std::string cookies = it->request.getHeader("cookie");
                 if (cookies != "")
                 {
