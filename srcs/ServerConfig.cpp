@@ -297,11 +297,10 @@ unsigned int ServerConfig::convertIP(std::string ip)
     unsigned int ip_long = 0;
     for (int i = 3; i >= 0 && std::getline(s, val, '.'); i--)
     {
-        //std::cout << "<" << val << ">\n";
         try
         {
             unsigned int x = std::atoi(val.c_str());
-            ip_long += x << (i * 8);
+            ip_long += x << ((3 - i) * 8);
         }
         catch(const std::exception& e)
         {
@@ -309,10 +308,7 @@ unsigned int ServerConfig::convertIP(std::string ip)
             return (0);
         }
     }
-    // std::cout << ip_long << "\n";
-    // std::cout << inet_addr(ip.c_str()) << "\n";
-    //return ip_long;
-	return inet_addr(ip.c_str()); // TODO fix convert IP, now saving reverse order, inet_addr not allowed
+    return ip_long;
 }
 
 uint8_t ServerConfig::parseRequestMethod(std::string s)

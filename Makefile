@@ -6,7 +6,7 @@
 #    By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/07/10 11:39:42 by hpatsi            #+#    #+#              #
-#    Updated: 2024/08/22 16:36:42 by hpatsi           ###   ########.fr        #
+#    Updated: 2024/08/23 14:06:16 by hpatsi           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,7 +30,7 @@ INCLUDEDIR	=	include/
 
 CPP	=	c++
 FLAGS	=	-Wall -Wextra -Werror -std=c++17 \
-			-I$(INCLUDEDIR)
+			-I$(INCLUDEDIR) -D DEBUG=1
 
 SRC	=	$(wildcard $(SRCDIR)*.cpp)
 OBJ	=	$(addprefix $(OBJDIR), $(notdir $(SRC:.cpp=.o)))
