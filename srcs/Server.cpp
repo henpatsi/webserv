@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <iterator>
+#include <random>
+#include <limits>
 
 #include "Server.hpp"
 #include "ServerManager.hpp"
@@ -128,6 +130,17 @@ void Server::getRequest(int fd)
     }
 }
 
+std::string Server::newSessionId()
+{
+    std::stringstream stream;
+    std::numeric_limits<unsigned long long> ulonglonglim;
+    std::random_device rd;  // a seed source for the random number engine
+    std::mt19937 gen(rd()); // mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<unsigned long long> distrib(0, ulonglonglim.max());
+    stream << std::hex << distrib(gen);
+    return stream.str();
+}
+
 std::pair<bool, ServerResponse> Server::respond(int fd)
 {
     ServerResponse res;
@@ -165,17 +178,17 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            int sessionIndex = 0;
+            std::string sessionIndex;
             if (config.hasSessions())
             {
                 // timeout sessions, not sure if this point in the code is the best for it
-                for (std::list<Session>::iterator s = sessions.begin(); s != sessions.end();)
-                {
-                    if (s->timeout < std::time(nullptr))
-                        s = sessions.erase(s);
-                    else
-                        s++;
-                }
+                /* for (std::list<Session>::iterator s = sessions.begin(); s != sessions.end();) */
+                /* { */
+                /*     if (s->timeout < std::time(nullptr)) */
+                /*         s = sessions.erase(s); */
+                /*     else */
+                /*         s++; */
+                /* } */
                 std::string cookies = it->request.getHeader("cookie");
                 if (cookies != "")
                 {
@@ -183,29 +196,30 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                     if (pos != std::string::npos)
                     {
                         size_t end = cookies.find(';', pos);
-                        int sessionid = std::atoi(cookies.substr(pos + 8, end == std::string::npos ? end : cookies.length()).c_str());
+                        std::string sessionid = cookies.substr(pos + 8, end == std::string::npos ? end : cookies.length()).c_str();
                         std::list<Session>::iterator session = std::find_if(
                             sessions.begin(), sessions.end(),
                             [&](Session s){return s.sessionid == sessionid;});
                         if (session == sessions.end())
-                            it->request.setFailResponseCode(403); // quite unsure about how to invalidate it
+                            it->request.setFailResponseCode(401);
+                        if (session->timeout < std::time(nullptr))
+                        {
+                            it->request.setFailResponseCode(419);
+                            sessions.erase(session);
+                        }
                         else
                             sessionIndex = sessionid;
                     }
                     else
                     {
-                        int sessionid = nextSessionId++;
-                        if (sessionid == std::numeric_limits<int>::max())
-                            sessionid = 0;
+                        std::string sessionid = newSessionId();
                         sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
                         sessionIndex = sessionid;
                     }
                 }
                 else
                 {
-                    int sessionid = nextSessionId++;
-                    if (sessionid == std::numeric_limits<int>::max())
-                        sessionid = 0;
+                    std::string sessionid = newSessionId();
                     sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
                     sessionIndex = sessionid;
                 }

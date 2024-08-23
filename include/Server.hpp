@@ -11,7 +11,7 @@
 #include <optional>
 
 struct Session {
-    int sessionid;
+    std::string sessionid;
     std::time_t timeout;
 };
 
@@ -53,6 +53,7 @@ private:
     int nextSessionId;
     // session timeout check on each request check
     void checkSessionTimeout(void);
+    std::string newSessionId();
 public:
     Server(ServerConfig config);
 

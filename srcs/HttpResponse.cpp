@@ -14,7 +14,7 @@
 
 // CONSTRUCTOR
 
-HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, int sessionId) : route(route), errorPage(errorPage)
+HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, std::string sessionId) : route(route), errorPage(errorPage)
 {
 	try
 	{
@@ -237,7 +237,7 @@ void HttpResponse::buildResponse(cgiResponse& response)
 	}
 }
 
-void HttpResponse::buildResponse(HttpRequest &request, bool hasSession, int sessionId)
+void HttpResponse::buildResponse(HttpRequest &request, bool hasSession, std::string sessionId)
 {
 	std::string responseString;
 
@@ -252,7 +252,7 @@ void HttpResponse::buildResponse(HttpRequest &request, bool hasSession, int sess
 	responseString += "Content-Type: " + this->contentType + "\r\n";
 	responseString += "Content-Length: " + std::to_string(this->content.size()) + "\r\n";
 	if (hasSession && request.getMethod() != "HEAD") // not sure if head requests can recieve sessions or if they should
-		responseString += "Set-Cookie: session=" + std::to_string(sessionId) + "\r\n";
+		responseString += "Set-Cookie: session=" + sessionId + "\r\n";
 	responseString += "\r\n";
 
 	this->response.insert(this->response.end(), responseString.begin(), responseString.end());

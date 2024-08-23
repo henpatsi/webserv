@@ -39,7 +39,7 @@ bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 class HttpResponse
 {
 	public:
-		HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, int sessionId);
+		HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, std::string sessionId);
 		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
 
 		std::string	getPath(void) { return this->path; }
@@ -67,6 +67,7 @@ class HttpResponse
 		std::string errorPage;
 		std::map<int, std::string> defaultErrorMessages = {
 			{ 400, "Bad Request" },
+			{ 401, "Unautorized" },
 			{ 403, "Forbidden" },
 			{ 404, "Not Found" },
 			{ 405, "Method Not Allowed" },
@@ -75,6 +76,7 @@ class HttpResponse
 			{ 413, "Payload Too Large" },
 			{ 414, "URI Too Long" },
 			{ 415, "Unsupported Media Type" },
+			{ 419, "Session Has Expired" },
 			{ 500, "Internal Server Error" },
 			{ 501, "Not Implemented" },
 			{ 504, "Gateway Timeout" },
@@ -87,7 +89,7 @@ class HttpResponse
 		void buildDefaultErrorContent(int code);
 		void buildCustomErrorContent(int code);
 		void buildDirectoryList(void);
-		void buildResponse(HttpRequest &request, bool hasSession = false, int sessionId = 0);
+		void buildResponse(HttpRequest &request, bool hasSession = false, std::string sessionId = "");
 		void buildResponse(cgiResponse& response);
 		void buildRedirectResponse(void);
 		void prepareHeadResponse(void);
