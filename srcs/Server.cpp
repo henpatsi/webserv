@@ -171,7 +171,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                 // timeout sessions, not sure if this point in the code is the best for it
                 for (std::list<Session>::iterator s = sessions.begin(); s != sessions.end();)
                 {
-                    if (s->timeout > std::time(nullptr))
+                    if (s->timeout < std::time(nullptr))
                         s = sessions.erase(s);
                     else
                         s++;
