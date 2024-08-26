@@ -108,10 +108,8 @@ ServerManager::~ServerManager()
 {
 	// deletes all the servers managed by it
 	for (Server * s : servers)
-	delete s;
-	delete[] events;
-	for (Server* s : servers)
 		delete s;
+	delete[] events;
 }
 
 std::string
