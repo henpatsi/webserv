@@ -1,5 +1,7 @@
 #include "ServerManager.hpp"
 
+int stopper = 0;
+
 static void
 setFdNonBlocking(int fd)
 {
@@ -13,8 +15,20 @@ setFdNonBlocking(int fd)
 		throw std::system_error();
 }
 
+void	signal_handler(int signal)
+{
+	(void)signal;
+	stopper = 1;
+}
+
+void	register_signal(void)
+{
+	signal(SIGINT, &signal_handler);
+}
+
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
+	register_signal();
 	// keeps track of the stringstreams for each server
 	std::vector<std::stringstream> configs;
 	// utils for locations to have { } and for error handling
@@ -109,6 +123,8 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 ServerManager::~ServerManager()
 {
 	// deletes all the servers managed by it
+	for (Server * s : servers)
+	delete s;
 	delete[] events;
 }
 
@@ -168,7 +184,7 @@ ServerManager::ManagerRuntimeException::what() const noexcept
 
 void ServerManager::runServers()
 {
-	while (1)
+	while (stopper == 0)
 	{
 		// std::cout << "waiting...\n";
 		WaitForEvents();

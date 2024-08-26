@@ -177,7 +177,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
                             [&](Session s){return s.sessionid == sessionid;});
                         if (session == sessions.end())
                             it->request.setFailResponseCode(401);
-                        if (session->timeout < std::time(nullptr))
+                        else if (session->timeout < std::time(nullptr))
                         {
                             it->request.setFailResponseCode(419);
                             sessions.erase(session);
@@ -268,6 +268,13 @@ void    Server::checkTimeouts(void)
     catch(const std::exception& e)
     {
         std::cerr << "checkTimeouts Error: " << e.what() << std::endl;
+    }
+    for (auto it = sessions.begin() ; it != sessions.end();)
+    {
+        if (it->timeout < std::time(nullptr))
+            it = sessions.erase(it);
+        else
+         it++;
     }
 }
 
