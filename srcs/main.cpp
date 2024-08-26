@@ -14,16 +14,21 @@
 
 int main(int argc, char *argv[])
 {
-	(void) argc;
+	std::string filePath;
 
-	if (argc != 2)
+	if (argc > 2)
 	{
 		std::cerr << "Usage: ./webserv <config file path>\n";
 		return 1;
 	}
+	else if (argc == 2)
+		filePath = argv[1];
+	else
+		filePath = "/etc/conf/1.conf";
+
 	try
 	{
-		ServerManager s(argv[1]);
+		ServerManager s(filePath);
 		s.runServers();
 	}
 	catch(const std::exception& e)

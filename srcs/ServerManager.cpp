@@ -172,13 +172,9 @@ void ServerManager::runServers()
 {
 	while (stopper == 0 && servers.size() > 0)
 	{
-		if (DEBUG)
-			std::cout << "waiting...\n";
 		WaitForEvents();
 		for (int i = 0; i < eventAmount; i++)
 		{
-			if (DEBUG)
-				std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
 			for (Server *server : servers)
 			{
 				if (server->IsServerSocketFD(events[i].data.fd))
@@ -187,7 +183,6 @@ void ServerManager::runServers()
 					break ;
 				}
 
-				// event on server connection
 				if (server->IsServerConnection(events[i].data.fd))
 				{
 					if (!server->requestComplete(events[i].data.fd) && events[i].events & EPOLLIN)
