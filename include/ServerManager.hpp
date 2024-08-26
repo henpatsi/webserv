@@ -1,11 +1,15 @@
 #ifndef SERVERMANAGER_HPP
 #define SERVERMANAGER_HPP
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <unistd.h>
+
 #include "ServerConfig.hpp"
 #include "Server.hpp"
 

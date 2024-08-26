@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:53 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 13:56:03 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 17:14:03 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,11 +50,11 @@ void HttpRequest::readRequest()
 			tryParseRequestLine();
 		if (this->requestLineLength > 0 && this->headerLength == 0)
 			tryParseHeader();
-		if (!this->requestComplete)
+		if (this->headerLength > 0 && !this->requestComplete)
 			tryParseContent();
 		
 		if (this->requestComplete)
-			debugPrint();
+			debugSummary();
 	}
 	catch (RequestException& e)
 	{
@@ -122,8 +122,6 @@ void HttpRequest::tryParseRequestLine()
 		setErrorAndThrow(505, "HTTP version not supported or not correctly formatted");
 
 	this->requestLineLength += requestLineString.length();
-
-	std::cerr << "- Request line parsed -\n";
 }
 
 void HttpRequest::tryParseHeader()
@@ -220,16 +218,14 @@ void HttpRequest::tryParseHeader()
 		this->requestComplete = true;
 
 	this->headerLength = headerString.length();
-
-	std::cerr << "- Header parsed -\n";
 }
 
 void HttpRequest::tryParseContent()
 {
-	if (this->headers.find("transfer-encoding") != this->headers.end() && this->headers["transfer-encoding"] == "chunked")
+	// Chunked content prioritized over content-length
+	if (this->getHeader("transfer-encoding") == "chunked")
 	{
 		std::vector<char> rawContent = getRawContent();
-		// TODO fix potential problem of a chunk containing 0\r\n\r\n, needs a loop to check for all chunks
 		std::string eoc = "0\r\n\r\n";
 		std::vector<char>::iterator it = std::search(rawContent.begin(), rawContent.end(), eoc.begin(), eoc.end());
 		if (it == rawContent.end()) // Chunked content not fully read
@@ -239,10 +235,10 @@ void HttpRequest::tryParseContent()
 		this->rawRequest.erase(it, this->rawRequest.end());
 		this->rawRequest.insert(this->rawRequest.end(), rawContent.begin(), rawContent.end());
 	}
-	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength) // Content length not fully read
+	// Check if content-length fully read
+	else if (this->totalRead < this->requestLineLength + this->headerLength + this->contentLength)
 		return ;
-	else if (this->headers.find("content-type") != this->headers.end()
-			&& this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
+	else if (this->getHeader("content-type").find("multipart/form-data") != std::string::npos)
 	{
 		std::string boundary = this->getHeader("content-type");
 		boundary = boundary.substr(boundary.find("boundary=") + 9);
@@ -251,8 +247,6 @@ void HttpRequest::tryParseContent()
 		if (extractRet != 0)
 			setErrorAndThrow(extractRet, "Failed to extract multipart data");
 	}
-
-	std::cerr << "- Content parsed -\n";
 
 	this->requestComplete = true;
 }
@@ -335,40 +329,55 @@ void HttpRequest::setErrorAndThrow(int responseCode, std::string message)
 	throw RequestException(message);
 }
 
-void HttpRequest::debugPrint()
+void HttpRequest::debugSummary()
 {
-	/* DEBUG PRINT */
-	std::cerr << "\nMethod: " << this->method << "\n";
-	std::cerr << "Resource path: " << this->resourcePath << "\n";
-	std::cerr << "Query string: " << this->queryString << "\n"; 
-	std::cerr << "HTTP version: " << this->httpVersion << "\n";
-	std::cerr << "Headers:\n";
-	for (auto param : this->headers)
-		std::cerr << "  " << param.first << " = " << param.second << "\n";
+	if (!DEBUG)
+		return ;
 
-	// std::vector<char> rawContent = getRawContent();
-	// std::cerr << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	if (DEBUG >= 1)
+	{
+		std::cout << "\nMethod: " << this->method << "\n";
+		std::cout << "Resource path: " << this->resourcePath << "\n";
+		std::cout << "Query string: " << this->queryString << "\n"; 
+		std::cout << "HTTP version: " << this->httpVersion << "\n";
+		std::cout << "Headers:\n";
+		for (auto param : this->headers)
+			std::cout << "  " << param.first << " = " << param.second << "\n";
+	}
+
+	if (DEBUG == 2)
+	{
+		std::vector<char> rawContent = getRawContent();
+		std::cout << "Raw content:\n  " << std::string(rawContent.begin(), rawContent.end()) << "\n";
+	}
+
 	if (this->multipartDataVector.size() > 0)
 	{
-		std::cerr << "Multipart data:";
+		std::cout << "Multipart data:";
 		for (multipartData data : this->multipartDataVector)
 		{
-			std::cerr << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
-			// std::string dataString(data.data.begin(), data.data.end());
-			// std::cerr << "\n  Data: '" << dataString << "'\n";
-			// if (data.filename == "")
-			// {
-			// 	std::cerr << "\n  Nested multipart data:";
-			// 	for (multipartData nestedData : data.multipartDataVector)
-			// 	{
-			// 		std::cerr << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
-			// 		// std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
-			// 		// std::cerr << "\n    Data: '" << nestedDataString << "'\n";
-			// 	}
-			// }
+			std::cout << "\n  Name: " << data.name << "\n  Filename: " << data.filename << "\n  content-type: " << data.contentType;
+			
+			if (DEBUG == 3)
+			{
+				std::string dataString(data.data.begin(), data.data.end());
+				std::cout << "\n  Data: '" << dataString << "'\n";
+				if (data.filename == "")
+				{
+					std::cout << "\n  Nested multipart data:";
+					for (multipartData nestedData : data.multipartDataVector)
+					{
+						std::cout << "\n    Name: " << nestedData.name << "\n    Filename: " << nestedData.filename << "\n    content-type: " << nestedData.contentType;
+						std::string nestedDataString(nestedData.data.begin(), nestedData.data.end());
+						std::cout << "\n    Data: '" << nestedDataString << "'\n";
+					}
+				}
+			}
 		}
 	}
 }
+
+// GETTERS AND SETTERS
 
 std::vector<char>	HttpRequest::getRawContent(size_t length)
 {
@@ -380,6 +389,19 @@ std::vector<char>	HttpRequest::getRawContent(size_t length)
 		end = safeNext(start, this->rawRequest.end(), length);
 	std::vector<char> rawContent(start, end);
 	return rawContent;
+}
+
+std::string	HttpRequest::getHeader(std::string key)
+{
+	if (this->headers.find(key) == this->headers.end())
+		return "";
+	return this->headers[key];
+}
+
+void	HttpRequest::setFailResponseCode(int code)
+{
+	this->failResponseCode = code;
+	this->requestComplete = true;
 }
 
 // HELPER FUNCTIONS

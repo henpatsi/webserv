@@ -1,8 +1,4 @@
 #include "ServerManager.hpp"
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <vector>
 
 static void
 setFdNonBlocking(int fd)
@@ -256,7 +252,7 @@ void ServerManager::WaitForEvents()
 void ServerManager::handleCgiResponse(std::vector<cgiInfo>::iterator it)
 {
 	Route _;
-	HttpResponse response (it->response, _, ""); // TODO Error page not passed to response here
+	HttpResponse response (it->response, _);
 	ssize_t ret = send (it->listeningFd, &response.getResponse()[0], response.getResponse().size (), 0);
 	if (ret == -1)
 		std::cerr << "Failed to send CGI response" << std::endl;
@@ -354,7 +350,6 @@ void	ServerManager::checkTimeouts()
 		{
 			DelFromEpoll(fd);
 			close(fd);
-			std::cout << "Timed out connection on fd " << fd << " cleared without response\n";
 		}
 		// check if any new connections have timed out
 		server->checkTimeouts();

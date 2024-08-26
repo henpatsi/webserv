@@ -1,6 +1,7 @@
 TODO
 
 getting paths with spaces does not work from browser (encodes spaces as %20)
+	- fine for now
 
-should read error try respond or immediately disconnect
-
+fix ip address conversion
+	- inet_addr not allowed

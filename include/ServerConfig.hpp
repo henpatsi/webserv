@@ -9,6 +9,10 @@
 
 #define SPACECHARS " \f\n\r\t\v"
 
+#ifndef DEBUG
+# define DEBUG 0
+#endif
+
 struct Route {
 	std::string	location;
 	uint8_t		allowedMethods = 0;
