@@ -113,7 +113,14 @@ std::pair <int, int>	cgiHandler::runCGI(HttpRequest &request, ServerConfig &conf
 		std::terminate();
 	}
 	if (request.getMethod() == "POST")
-		write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
+	{
+		int ret;
+		ret = write(toCGI[1], request.getRawContent().data(), request.getRawContent().size());
+		if (ret == -1)
+			throw RunCgiException("Write failed");
+		else if (ret == 0)
+			std::cout << "CGI wrote 0\n";
+	}
 	if (close(toCGI[1]) == -1 || close(fromCGI[1]) == -1 || close(toCGI[0]) == -1)
 		throw RunCgiException("Close failed");
 	std::pair <int, int> pair{pid, fromCGI[0]};
