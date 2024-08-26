@@ -1,15 +1,4 @@
-#include <iostream>
-#include <arpa/inet.h> 
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <fcntl.h>
-#include <iterator>
-#include <random>
-#include <limits>
-
 #include "Server.hpp"
-#include "ServerManager.hpp"
 
 Server::Server(ServerConfig _config) : config(_config)
 {
@@ -50,22 +39,18 @@ Route Server::findCorrectRoute(HttpRequest request)
     }
     if (isFound)
     {
-        std::cout << "Route found!\n";
-        std::cout << "root: " << fitting.root << "\n";
-        std::cout << "location: " << fitting.location << "\n";
         if (request.isCgi())
         {
 	    std::string cgiPath = fitting.root;
             cgiPath += request.getResourcePath();
-            std::cout << "cgi Path: " << cgiPath << std::endl;
             if (access(cgiPath.c_str(), F_OK) != 0)
             {
-                std::cout << "CGI doesn't exist" << std::endl;
+                std::cerr << "CGI doesn't exist" << std::endl;
                 throw RouteException();
             }
             if (access(cgiPath.c_str(), F_OK | X_OK) != 0)
             {
-                std::cout << "CGI is not executable" << std::endl;
+                std::cerr << "CGI is not executable" << std::endl;
                 throw RouteException();
             }
         }
@@ -75,9 +60,8 @@ Route Server::findCorrectRoute(HttpRequest request)
         throw RouteException();
 }
 
-void Server::connect(int incommingFD, int socketFD, sockaddr_in addr) // Sets up the fd
+void Server::connect(int incommingFD, int socketFD, sockaddr_in addr)
 {
-    // Create connection, get header from request
     Connection connection;
     connection.fd = incommingFD;
     connection.connectTime = std::time(nullptr);
@@ -158,7 +142,6 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
 
     if (requestComplete)
     {
-		// Only find route if no previous error occured
         if (it->request.getFailResponseCode() == 0)
         {
             std::cout << "\n--- Finding route ---\n";
@@ -170,7 +153,7 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             }
             catch(const std::exception& e)
             {
-                std::cout << "Server: FindCorrectRouteError: " << e.what() << "\n";
+                std::cerr << "Server: FindCorrectRouteError: " << e.what() << "\n";
                 it->request.setFailResponseCode(404);
             }
         }
@@ -218,7 +201,6 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             }
             HttpResponse response(it->request, it->route, config.getErrorPage(), config.hasSessions(), sessionIndex);
 			ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
-			// On failed send, disconnect as with successfull send
             if (ret == -1)
                 std::cerr << "Failed to send response\n";
 			if (ret == 0)
@@ -239,8 +221,6 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
             {
                 it->request.setFailResponseCode(403);
                 std::cerr << "RunCGI Error: " << e.what() << std::endl;
-				// Returns false to indicate that the response was not sent
-				// will be sent in next epoll loop
 				return (std::pair<bool, ServerResponse>(false, res));
             }
         }
@@ -280,7 +260,6 @@ void    Server::checkTimeouts(void)
         {
             if (currentTime - it->connectTime >= config.getConnectionTimeout())
             {
-                std::cout << "Connection timed out on fd " << it->fd << "\n";
                 it->request.setFailResponseCode(408);
                 it->timedOut = true;
             }

@@ -6,14 +6,13 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/11 16:29:51 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/19 13:37:32 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 17:09:53 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPREQUEST_HPP
 # define HTTPREQUEST_HPP
 
-// TODO check what headers are needed
 # include <iostream>
 # include <sstream>
 # include <string>
@@ -21,7 +20,6 @@
 # include <vector>
 # include <algorithm>
 # include <chrono>
-# include <thread>
 # include <unistd.h>
 
 # ifndef READ_BUFFER_SIZE
@@ -42,6 +40,10 @@
 
 # ifndef SPACECHARS
 #  define SPACECHARS " \f\n\r\t\v"
+# endif
+
+# ifndef DEBUG
+#  define DEBUG 0
 # endif
 
 struct multipartData
@@ -65,12 +67,15 @@ class HttpRequest
 		HttpRequest(void);
 		HttpRequest(int connectionFD, long serverClientBodyLimit);
 
+		// Reading content
+		void	readRequest();
+
 		// Getters
 		std::string							getMethod(void) { return this->method; }
 		std::string							getResourcePath(void) { return this->resourcePath; }
 		std::string							getHttpVersion(void) { return this->httpVersion; }
-		std::map<std::string, std::string>				&getHeaders(void) { return this->headers; }
-		std::string							getHeader(std::string key) { return this->headers[key]; }
+		std::map<std::string, std::string>&	getHeaders(void) { return this->headers; }
+		std::string							getHeader(std::string key);
 		std::string							getHost(void) { return this->host; }
 		int									getPort(void) { return this->port; }
 		std::vector<char>					getRawContent(size_t length = 0);
@@ -78,15 +83,13 @@ class HttpRequest
 		std::string							getQueryString(void) {return this->queryString; }
 		int									getFailResponseCode(void) { return this->failResponseCode; }
 		bool								isComplete(void) { return this->requestComplete; }
-		bool	isCgi(void);
-		std::string getFileExtension(void) { return this->fileExtension; }
+		bool								isCgi(void);
+		std::string 						getFileExtension(void) { return this->fileExtension; }
 
-		// Reading content
-		void								readRequest();
+		// Setters
+		void	setFailResponseCode(int code);
 
-		// If fail occurs outside request parsing
-		void								setFailResponseCode(int code) { this->failResponseCode = code; this->requestComplete = true; }
-
+		// Exceptions
 		class RequestException : public std::exception
 		{
 			public:
@@ -97,12 +100,12 @@ class HttpRequest
 		};
 	
 	private:
+		// Initiation parameters
 		int									requestFD;
 		size_t								clientBodyLimit;
-		std::vector<char>					rawRequest = {};
 		std::vector<std::string>			allowedMethods = {"HEAD", "GET", "POST", "DELETE"};
 		
-		// Request state / position tracking for repeated reading
+		// Request state tracking
 		size_t								requestLineLength = 0;
 		size_t								headerLength = 0;
 		size_t								contentLength = 0;
@@ -111,19 +114,16 @@ class HttpRequest
 		bool								requestComplete = false;
 
 		// Saved parameters
+		std::vector<char>					rawRequest = {};
 		std::string							method;
 		std::string							resourcePath;
-		// std::string							resourcePathHost;
-		// std::string							resourcePathIP;
-		// int									resourcePathPort = 80;
 		std::string							queryString;
 		std::string							httpVersion;
 		std::map<std::string, std::string>	headers = {};
 		std::string 						host;
 		int									port = 80;
 		std::vector<multipartData>			multipartDataVector = {};
-		std::map<std::string, std::string>	urlEncodedData = {};
-		std::string fileExtension;
+		std::string							fileExtension;
 
 		void	readFD(void);
 		void	tryParseRequestLine(void);
@@ -133,7 +133,8 @@ class HttpRequest
 		void	extractURI(std::string URI);
 		void	unchunkContent(std::vector<char>& chunkedVector);
 		void	setErrorAndThrow(int code, std::string message);
-		void	debugPrint(void);
+
+		void	debugSummary(void);
 };
 
 #endif

@@ -1,5 +1,3 @@
-content-type: text/html
-
 <html>
 <head><title>tiny.php</title></head>
 <body>

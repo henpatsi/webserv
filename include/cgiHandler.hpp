@@ -24,6 +24,8 @@ class	cgiHandler
 	std::string	hostname;
 	std::string	remote_address;
 	std::string	length;
+	std::string	redirect_status;
+	std::string	script_filename;
 	public:
 	std::pair <int, int>	runCGI(HttpRequest &request, ServerConfig &config, sockaddr_in &client_address, Route &route);	
 	char	**create_envs(char **envs, HttpRequest &request, ServerConfig &config, sockaddr_in &client_address, Route& route);

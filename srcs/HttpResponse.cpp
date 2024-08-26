@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:12 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 10:20:24 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 14:30:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,7 @@ HttpResponse::HttpResponse(HttpRequest& request, Route& route, std::string error
 	std::cerr << "Response code: " << this->responseCode << "\n";
 }
 
-HttpResponse::HttpResponse(cgiResponse& response, Route& route, std::string errorPage) : route(route), errorPage(errorPage)
+HttpResponse::HttpResponse(cgiResponse& response, Route& route) : route(route)
 {
 	try
 	{
@@ -130,29 +130,9 @@ void HttpResponse::buildDefaultErrorContent(int code)
 
 void HttpResponse::buildCustomErrorContent(int code)
 {
-	// Open file as binary file
-	std::ifstream file(this->errorPage, std::ifstream::binary); // TODO this could be string?
-	if (!file.good())
+	if (readBinaryFile(this->errorPage, this->content) != 0)
 	{
-		std::cerr << "Custom error page could not be opened\n";
-		buildDefaultErrorContent(code);
-		return ;
-	}
-
-	// Read file into content
-	try
-	{
-		file.unsetf(std::ios::skipws); // Prevents skipping spaces
-		// Set content size to filesize
-		file.seekg(0, std::ios::end);
-		this->content.reserve(file.tellg());
-		file.seekg(0, std::ios::beg);
-		// Read file content into content
-		this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << "Custom error read error\n";
+		std::cerr << "Custom error page could not be read\n";
 		buildDefaultErrorContent(code);
 		return ;
 	}
@@ -298,20 +278,12 @@ void HttpResponse::prepareGetResponse(void)
 		this->contentType = "image/jpg";
 	else if (this->path.find(".pdf") != std::string::npos)
 		this->contentType = "application/pdf";
+	else
+		this->contentType = "binary/octet-stream";
 
-	// Open file as binary file
-	std::ifstream file(this->path, std::ifstream::binary);
-	if (!file.good())
-		setErrorAndThrow(404, "Failed to open file in GET");
-	file.unsetf(std::ios::skipws); // Prevents skipping spaces
-	// Get size of file
-	file.seekg(0, std::ios::end);
-	std::streampos fileSize = file.tellg();
-	file.seekg(0, std::ios::beg);
-	// Set content size to filesize
-	this->content.reserve(fileSize);
-	// Read file content into content
-	this->content.insert(this->content.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+	int ret = readBinaryFile(this->path, this->content);
+	if (ret != 0)
+		setErrorAndThrow(ret, "Failed to read file in GET");
 
 	this->responseCode = 200;
 }
@@ -359,6 +331,37 @@ void HttpResponse::prepareDeleteResponse(void)
 }
 
 // HELPER FUNCTIONS
+
+int readBinaryFile(std::string path, std::vector<char>& dest)
+{
+	if (!std::filesystem::exists(path))
+		return 404;
+	if (access(path.c_str(), R_OK) == -1)
+		return 403;
+
+	std::ifstream file(path, std::ifstream::binary);
+	if (!file.good())
+		return 500;
+
+	try
+	{
+		file.unsetf(std::ios::skipws); // Prevents skipping spaces
+		// Set content size to filesize
+		file.seekg(0, std::ios::end);
+		dest.reserve(file.tellg());
+		file.seekg(0, std::ios::beg);
+		// Read file content into content
+		dest.insert(dest.begin(), std::istream_iterator<char>(file), std::istream_iterator<char>());
+		file.close();
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		return 500;
+	}
+
+	return 0;
+}
 
 // Returns 0 for success, error code for failure
 int writeMultipartData(std::vector<multipartData> dataVector, std::string directory)

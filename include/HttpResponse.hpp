@@ -6,7 +6,7 @@
 /*   By: hpatsi <hpatsi@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/15 11:02:19 by hpatsi            #+#    #+#             */
-/*   Updated: 2024/08/22 10:16:50 by hpatsi           ###   ########.fr       */
+/*   Updated: 2024/08/22 11:14:34 by hpatsi           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@
 #  define FILE_READ_SIZE 1024
 # endif
 
+int		readBinaryFile(std::string path, std::vector<char>& dest);
 int		writeMultipartData(std::vector<multipartData> dataVector, std::string directory);
 bool	multipartDataContainsFile(std::vector<multipartData> dataVector);
 
@@ -40,7 +41,7 @@ class HttpResponse
 {
 	public:
 		HttpResponse(HttpRequest& request, Route& route, std::string errorPage, bool hasSession, std::string sessionId);
-		HttpResponse(cgiResponse& cgiresponse, Route& route, std::string errorPage);
+		HttpResponse(cgiResponse& cgiresponse, Route& route);
 
 		std::string	getPath(void) { return this->path; }
 		std::string	getContentType(void) { return this->contentType; };
