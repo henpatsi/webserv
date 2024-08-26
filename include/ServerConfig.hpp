@@ -115,7 +115,6 @@ class ServerConfig {
 		void parseAcceptUpload(std::string pair, std::string key, Route& res);
 		void parseUploadDir(std::string pair, std::string key, Route& res);
 
-		// TODO move separate
 		static unsigned int convertIP(std::string ip);
 		static uint8_t		parseRequestMethod(std::string s);
 };

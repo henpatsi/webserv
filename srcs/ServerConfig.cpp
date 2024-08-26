@@ -70,14 +70,10 @@ ServerConfig::ServerConfig(std::stringstream& config)
         catch (const std::exception& e)
         {
             std::cerr << "ServerConfig: ParseException: " << e.what() << "\n" ;
-            throw e; // shouldnt be here at all
+            throw e;
         }
     }
 
-    // if (!_isRouteSet)
-    //     throw MissingValueException("location");
-    // if (!_isAddressSet)
-    //     throw MissingValueException("Address");
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = _ip;
@@ -93,8 +89,8 @@ ServerConfig::ServerConfig(std::stringstream& config)
 /* ---- Parser Functions ---- */
 void ServerConfig::parseName(std::string pair, std::string key)
 {
-    // if (_isNameSet)
-    //     throw SameKeyRepeatException("name");
+    if (_isNameSet)
+        throw SameKeyRepeatException("name");
     size_t index = pair.find_first_not_of(SPACECHARS, key.length());
     if (index == std::string::npos)
         throw InvalidValueException("name");
@@ -197,7 +193,7 @@ void ServerConfig::parseRoute(std::string pair, std::string key)
         catch (const std::exception& e)
         {
             std::cerr << "ServerConfig: ParseException: RouteException: " << e.what() << "\n" ;
-            throw e; // shouldnt be here at all
+            throw e;
         }
     }
     _routes.push_back(res);
@@ -211,7 +207,6 @@ void ServerConfig::parseAllowedMethods(std::string pair, std::string key, Route&
     if (index == std::string::npos)
         throw InvalidValueException("address");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // validation missing
     if (s.find("POST") != std::string::npos)
         res.allowedMethods |= parseRequestMethod("POST");
     if (s.find("GET") != std::string::npos)
@@ -228,7 +223,6 @@ void ServerConfig::parseRedirect(std::string pair, std::string key, Route& res)
     if (index == std::string::npos)
         throw InvalidValueException("redirect");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // validation missing
     res.redirect = s;
 }
 
@@ -261,7 +255,6 @@ void ServerConfig::parseDefaultAnswer(std::string pair, std::string key, Route& 
     if (index == std::string::npos)
         throw InvalidValueException("Default Answer");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // check if file exists and is not a directory
     res.defaultAnswer = s;
 }
 
@@ -271,7 +264,6 @@ void ServerConfig::parseCGI(std::string pair, std::string key, Route& res)
     if (index == std::string::npos)
         throw InvalidValueException("Uploaddir");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // check if string is a valid file of correct file extension
     res.CGI = s;
 }
 
@@ -295,7 +287,6 @@ void ServerConfig::parseUploadDir(std::string pair, std::string key, Route& res)
     if (index == std::string::npos)
         throw InvalidValueException("Uploaddir");
     std::string s = pair.substr(pair.find_first_not_of(SPACECHARS, key.length()));
-    // check if string is a folder which we can write to
     res.uploadDir = s;
 }
 
