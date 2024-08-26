@@ -42,6 +42,8 @@ class ServerConfig {
 		bool							_isConnectionTimeoutSet = false;
 		std::string						_errorPage;
 		bool							_isErrorPageSet		= false;
+		int								_sessionTimeout;
+		bool							_isSessionTimeoutSet= false;
 
 	public:
 		ServerConfig(std::stringstream& config);
@@ -55,6 +57,8 @@ class ServerConfig {
 		std::list<struct Route> 		getRoutes()				{ return _routes; };
 		int								getConnectionTimeout()	{ return _connectionTimeout; };
 		std::string						getErrorPage()			{ return _errorPage; };
+		int								getSessionTimeout()		{ return _sessionTimeout; };
+		bool							hasSessions()			{ return _isSessionTimeoutSet; };
 
 		/* ---- Exceptions ----*/
 		class SameKeyRepeatException : public std::exception
@@ -99,6 +103,7 @@ class ServerConfig {
 		void parseRequestSize(std::string pair, std::string key);
 		void parseConnectionTimeout(std::string pair, std::string key);
 		void parseErrorPage(std::string pair, std::string key);
+		void parseSessionTimeout(std::string pair, std::string key);
 
 		/* ---- RouteParser ----*/
 		void parseAllowedMethods(std::string pair, std::string key, Route& res);

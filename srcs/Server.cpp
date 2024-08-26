@@ -19,6 +19,7 @@ Server::Server(ServerConfig _config) : config(_config)
             throw ListenException();
         std::cout << "\t" << ntohs(address.sin_port) << "\n";
     }
+    sessions = std::list<Session>();
 }
 
 Route Server::findCorrectRoute(HttpRequest request)
@@ -113,6 +114,17 @@ void Server::getRequest(int fd)
     }
 }
 
+std::string Server::newSessionId()
+{
+    std::stringstream stream;
+    std::numeric_limits<unsigned long long> ulonglonglim;
+    std::random_device rd;  // a seed source for the random number engine
+    std::mt19937 gen(rd()); // mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<unsigned long long> distrib(0, ulonglonglim.max());
+    stream << std::hex << distrib(gen);
+    return stream.str();
+}
+
 std::pair<bool, ServerResponse> Server::respond(int fd)
 {
     ServerResponse res;
@@ -149,7 +161,45 @@ std::pair<bool, ServerResponse> Server::respond(int fd)
         if (it->request.getFailResponseCode() != 0 || it->request.isCgi() == false)
         {
             std::cout << "\n--- Responding to client ---\n";
-            HttpResponse response(it->request, it->route, config.getErrorPage());
+            std::string sessionIndex;
+            if (config.hasSessions())
+            {
+                std::string cookies = it->request.getHeader("cookie");
+                if (cookies != "")
+                {
+                    size_t pos = cookies.find("session=");
+                    if (pos != std::string::npos)
+                    {
+                        size_t end = cookies.find(';', pos);
+                        std::string sessionid = cookies.substr(pos + 8, end == std::string::npos ? end : cookies.length()).c_str();
+                        std::list<Session>::iterator session = std::find_if(
+                            sessions.begin(), sessions.end(),
+                            [&](Session s){return s.sessionid == sessionid;});
+                        if (session == sessions.end())
+                            it->request.setFailResponseCode(401);
+                        if (session->timeout < std::time(nullptr))
+                        {
+                            it->request.setFailResponseCode(419);
+                            sessions.erase(session);
+                        }
+                        else
+                            sessionIndex = sessionid;
+                    }
+                    else
+                    {
+                        std::string sessionid = newSessionId();
+                        sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
+                        sessionIndex = sessionid;
+                    }
+                }
+                else
+                {
+                    std::string sessionid = newSessionId();
+                    sessions.push_back((Session){sessionid, std::time(nullptr) + config.getSessionTimeout()});
+                    sessionIndex = sessionid;
+                }
+            }
+            HttpResponse response(it->request, it->route, config.getErrorPage(), config.hasSessions(), sessionIndex);
 			ssize_t ret = send(fd, &response.getResponse()[0], response.getResponse().size(), 0);
             if (ret == -1)
                 std::cerr << "Failed to send response\n";
