@@ -1,7 +1,0 @@
-TODO
-
-getting paths with spaces does not work from browser (encodes spaces as %20)
-	- fine for now
-
-fix ip address conversion
-	- inet_addr not allowed
