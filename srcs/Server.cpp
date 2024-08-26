@@ -27,12 +27,10 @@ Route Server::findCorrectRoute(HttpRequest request)
     Route fitting;
     bool isFound = false;
     std::string requestPath = request.getResourcePath();
-    // just checks if resourcePath has the start of the location of the route
     for (Route route : config.getRoutes())
     {
         if (requestPath.compare(0, route.location.length(), route.location) != 0)
             continue;
-        // set the current one as matching or replace if the current route matches "more"
         if (!isFound || fitting.location.length() < route.location.length())
             fitting = route;
         isFound = true;
@@ -286,6 +284,5 @@ bool	Server::requestComplete(int fd)
 		if (it->fd == fd)
 			break;
 	}
-
 	return it->request.isComplete();
 }
