@@ -16,6 +16,7 @@
 #include <list>
 #include <algorithm>
 #include <optional>
+#include <random>
 
 struct Session {
     std::string sessionid;
