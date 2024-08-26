@@ -15,34 +15,23 @@ setFdNonBlocking(int fd)
 
 ServerManager::ServerManager(const std::string path) : _path(path)
 {
-	// keeps track of the stringstreams for each server
 	std::vector<std::stringstream> configs;
-	// utils for locations to have { } and for error handling
 	bool is_in_server = false;
 	int depth = 0;
-	// checks if file is openable
 	std::ifstream config{_path};
 	if (!config.is_open())
 		throw FileIssueException();
-
-	// reads the file into a stringstream
 	for (std::string line; std::getline(config, line);)
 	{
 		// ignores lines starting with #
 		size_t firstIndex = line.find_first_not_of(" \f\n\r\t\v");
 		if (firstIndex < line.length() && line[firstIndex] != '#')
 		{
-			// if we find {
 			size_t open_index = line.find('{');
 			if (open_index != std::string::npos)
 			{
-				// check if we are creating a new server
-				// should check if anything between server and {
 				if (line.compare(0, 6, "server") == 0)
 				{
-					// if (is_in_server)
-					//   throw ServerInServerException();
-					// start this servers config stringstream
 					configs.push_back(std::stringstream{""});
 					is_in_server = true;
 				}
@@ -51,8 +40,6 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 			size_t close_index = line.find('}');
 			if (close_index != std::string::npos)
 			{
-				// if we are not in parenthesies, or we just got into them but
-				// close before
 				if (depth == 0)
 					throw InvalidBraceException();
 				else
@@ -60,7 +47,7 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 			}
 			if (depth == 0)
 				is_in_server = false;
-			if (is_in_server) // remove tailing }
+			if (is_in_server)
 				configs.back() << line << "\n";
 		}
 	}
@@ -68,8 +55,6 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 	if (depth != 0)
 		throw UnclosedBraceException();
 
-	// Initialises the Serverconfigs with the correct string
-	// bool success = true;
 	for (std::stringstream &configuration : configs)
 	{
 		try
@@ -79,12 +64,10 @@ ServerManager::ServerManager(const std::string path) : _path(path)
 		}
 		catch (std::exception const &e)
 		{
-			// success = false;
 			std::cerr << "ServerManager: ServerInitError: " << e.what() << "\n";
 		}
 		catch (...)
 		{
-			// success = false;
 			std::cerr << "really stupid" << "\n";
 		}
 	}
@@ -110,6 +93,8 @@ ServerManager::~ServerManager()
 {
 	// deletes all the servers managed by it
 	delete[] events;
+	for (Server* s : servers)
+		delete s;
 }
 
 std::string
@@ -168,16 +153,17 @@ ServerManager::ManagerRuntimeException::what() const noexcept
 
 void ServerManager::runServers()
 {
-	while (1)
+	while (servers.size() > 0)
 	{
-		// std::cout << "waiting...\n";
+		if (DEBUG)
+			std::cout << "waiting...\n";
 		WaitForEvents();
 		for (int i = 0; i < eventAmount; i++)
 		{
-			// std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
+			if (DEBUG)
+				std::cout << "\nEvent on fd " << events[i].data.fd << "\n";
 			for (Server *server : servers)
 			{
-				// new connection
 				if (server->IsServerSocketFD(events[i].data.fd))
 				{
 					makeConnection(*server, events[i]);
@@ -207,7 +193,6 @@ void ServerManager::AddToEpoll(int fd)
 		std::cout << "Error while polling fds\n";
 	else
 		std::cout << "Added fd " << fd << " to epoll\n";
-	// keeps the tracked fds for epoll_wait
 	trackedFds++;
 }
 
@@ -217,7 +202,6 @@ void ServerManager::DelFromEpoll(int fd)
 		std::cout << "Error while removing fd\n";
 	else
 		std::cout << "Removed fd " << fd << " from epoll\n";
-	// keeps the tracked fds for epoll_wait
 	trackedFds--;
 }
 
@@ -243,8 +227,7 @@ void ServerManager::WaitForEvents()
 							 1000); // Block for max 1 second to allow timeouts
 	if (eventAmount == -1)
 	{
-		std::cerr << "ServerManager: WaitForEpollEvents: "; // should be changed
-															// to exception
+		std::cerr << "ServerManager: WaitForEpollEvents: ";
 		perror("");
 	}
 }
@@ -268,7 +251,7 @@ int ServerManager::acceptConnection(epoll_event event)
 	int incommingFd = accept(event.data.fd, (sockaddr *)&client_addr,
 							 (socklen_t *)&addressSize);
 	if (incommingFd == -1)
-		std::cerr << "ServerManager: AcceptException\n"; // should be exception
+		std::cerr << "ServerManager: AcceptException\n";
 	setFdNonBlocking(incommingFd);
 	temp_event.events = EPOLLIN | EPOLLOUT;
 	temp_event.data.fd = incommingFd;
@@ -282,14 +265,11 @@ void ServerManager::makeConnection(Server &server, epoll_event event)
 		int incommingFD = acceptConnection(event);
 		setFdNonBlocking(incommingFD);
 		AddToEpoll(incommingFD);
-		server.connect(incommingFD, event.data.fd,
-					   client_addr);
+		server.connect(incommingFD, event.data.fd, client_addr);
 	}
 	catch (std::exception &e)
 	{
-		std::cerr
-			<< "ServerManager: RunServerError: " << e.what()
-			<< "\n";
+		std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
 	}
 }
 
@@ -301,9 +281,7 @@ void ServerManager::readMore(Server &server, epoll_event event)
 	}
 	catch (std::exception &e)
 	{
-		std::cerr
-			<< "ServerManager: RunServerError: " << e.what()
-			<< "\n";
+		std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
 	}
 }
 
@@ -333,10 +311,7 @@ void ServerManager::makeResponse(Server &server, epoll_event event)
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr
-			<< "ServerManager: RunServerError: " << e.what()
-			<< "\n";
-		// send error response here??? might mean server failed to send response so no
+		std::cerr << "ServerManager: RunServerError: " << e.what() << "\n";
 	}
 }
 
@@ -351,7 +326,6 @@ void	ServerManager::checkTimeouts()
 			DelFromEpoll(fd);
 			close(fd);
 		}
-		// check if any new connections have timed out
 		server->checkTimeouts();
 	}
 }

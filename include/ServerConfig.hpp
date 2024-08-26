@@ -14,15 +14,15 @@
 #endif
 
 struct Route {
-	std::string	location;
+	std::string	location = "";
 	uint8_t		allowedMethods = 0;
-	std::string	redirect;
-	std::string	root;
+	std::string	redirect = "";
+	std::string	root = "";
 	bool		directoryListing = false;
-	std::string	defaultAnswer;
-	std::string	CGI;
+	std::string	defaultAnswer = "";
+	std::string	CGI = "";
 	bool		acceptUpload = false;
-	std::string	uploadDir;
+	std::string	uploadDir = "";
 };
 
 class ServerConfig {
@@ -115,7 +115,6 @@ class ServerConfig {
 		void parseAcceptUpload(std::string pair, std::string key, Route& res);
 		void parseUploadDir(std::string pair, std::string key, Route& res);
 
-		// TODO move separate
 		static unsigned int convertIP(std::string ip);
 		static uint8_t		parseRequestMethod(std::string s);
 };
