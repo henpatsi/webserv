@@ -17,13 +17,17 @@ make
 
 ### Config setup
 
-#### General server settings
+```
+server {
+ [server setting]: [value]
 
-Format:
+ location [route] {
+   [route setting]: [value]
+ }
+}
+```
 
-`[setting]: [value]`
-
-Fields:
+#### Server settings
 
  - `host` - ip address
  - `port`
@@ -33,17 +37,7 @@ Fields:
  - `size_limit` - maximum request body size
  - `error_page` - custom error page for all errors (400 and 500 codes), can contain <%ERROR%> which is replaced by the error code
 
-#### Routes
-
-Format:
-
-```
-location [route] {
-  [setting]: [value]
-}
-```
-
-Fields:
+#### Route settings
 
  - `root` - the root path for the route, relative to webserv
  - `allowedMethods` - request methods allowed by the route
